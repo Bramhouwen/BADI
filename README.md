@@ -113,7 +113,7 @@ De app draait dan op een in-memory backend met voorbeelddata: vier leden, check-
 
 ## Startrecepten
 
-Wil je de Kitchen gevuld starten? Voer `supabase/seed/recipes.sql` uit in de SQL Editor. Dat plaatst vijf recepten (ontbijt, middageten, avondeten en een tussendoortje) namens de beheerder, met placeholder-foto's uit de app. Vervang de foto's via "Recept bewerken".
+Wil je de Kitchen gevuld starten? Voer `supabase/seed/recipes.sql` uit in de SQL Editor. Dat plaatst vijf recepten (ontbijt, middageten, avondeten en een tussendoortje) namens de beheerder, met AI-gegenereerde foto's uit `public/recipes/` (originelen in `assets/recipes/`). Vervangen kan altijd via "Recept bewerken".
 
 ## Scripts
 

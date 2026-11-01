@@ -1,6 +1,6 @@
 -- Vijf startrecepten voor de Winter Arc, geplaatst namens de beheerder van de challenge.
 -- Uitvoeren in de Supabase SQL Editor (nieuw tabblad). Veilig om één keer te draaien.
--- Foto's zijn placeholders uit de app (static:/recipes/...); vervang ze via "Recept bewerken".
+-- Foto's zijn AI-gegenereerde beelden uit de app zelf (static:/recipes/...); vervangen kan via "Recept bewerken".
 
 with c as (
   select id as challenge_id, created_by as user_id from public.challenges order by created_at limit 1
