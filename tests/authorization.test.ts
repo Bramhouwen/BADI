@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOwnedAvatarPath, isOwnedMediaPath } from "@/lib/media-paths";
+import { isOwnedAvatarPath, isOwnedMediaPath, isStaticMediaPath } from "@/lib/media-paths";
 import { friendlyError } from "@/lib/errors";
 import { rotateMembers } from "@/lib/data-pure";
 
@@ -18,6 +18,14 @@ describe("photo upload authorization", () => {
     expect(isOwnedMediaPath(`${challenge}/${me}/../${other}/abc.jpg`, challenge, me)).toBe(false);
     expect(isOwnedMediaPath(`${challenge}/${me}/`, challenge, me)).toBe(false);
     expect(isOwnedMediaPath(`${challenge}/${me}/a b.jpg`, challenge, me)).toBe(false);
+  });
+
+  it("accepts bundled static recipe images but nothing outside /public images", () => {
+    expect(isStaticMediaPath("static:/recipes/overnight-oats.jpg")).toBe(true);
+    expect(isOwnedMediaPath("static:/recipes/overnight-oats.jpg", challenge, me)).toBe(true);
+    expect(isStaticMediaPath("static:/../etc/passwd")).toBe(false);
+    expect(isStaticMediaPath("static:/recipes/x.svg")).toBe(false);
+    expect(isStaticMediaPath("/recipes/overnight-oats.jpg")).toBe(false);
   });
 
   it("validates avatar paths", () => {

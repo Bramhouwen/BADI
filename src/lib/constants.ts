@@ -65,14 +65,16 @@ export const PRESET_COMPLIMENTS = [
   "❤️ Jij motiveert me!",
 ] as const;
 
-export const RECIPE_CATEGORIES = [
-  "Ontbijt",
-  "Lunch",
-  "Diner",
-  "Snack",
-  "Shake",
-  "Dessert",
-] as const;
+export const RECIPE_CATEGORIES = ["Ontbijt", "Middageten", "Avondeten", "Tussendoortje"] as const;
+export type RecipeCategory = (typeof RECIPE_CATEGORIES)[number];
+
+/** Label shown on the filter chips (plural for snacks). */
+export const RECIPE_CATEGORY_LABELS: Record<RecipeCategory, string> = {
+  Ontbijt: "Ontbijt",
+  Middageten: "Middageten",
+  Avondeten: "Avondeten",
+  Tussendoortje: "Tussendoortjes",
+};
 
 export const PRINCIPLES = [
   {

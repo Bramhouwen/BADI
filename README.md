@@ -111,6 +111,10 @@ De app draait dan op een in-memory backend met voorbeelddata: vier leden, check-
 3. Ga naar **Profiel > Squad uitnodigen** en maak een uitnodigingslink. Links zijn eenmalig, zeven dagen geldig en optioneel gebonden aan een e-mailadres. Deel ze via WhatsApp of de deelknop.
 4. Elke vriend opent de link, maakt een account of logt in, en tikt **Ik doe mee**. Na vier leden is de groep vol: de database weigert een vijfde lid.
 
+## Startrecepten
+
+Wil je de Kitchen gevuld starten? Voer `supabase/seed/recipes.sql` uit in de SQL Editor. Dat plaatst vijf recepten (ontbijt, middageten, avondeten en een tussendoortje) namens de beheerder, met placeholder-foto's uit de app. Vervang de foto's via "Recept bewerken".
+
 ## Scripts
 
 | Commando | Doel |

@@ -3,7 +3,9 @@ import Link from "next/link";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
-import { ChipTabs, Page, PageTitle } from "@/components/ui/page";
+import { Page, PageTitle } from "@/components/ui/page";
+import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABELS, type RecipeCategory } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { ChefHat, Heart } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -15,9 +17,12 @@ import type { Recipe } from "@/lib/types";
 
 export const metadata = { title: "Kitchen" };
 
+type Filter = "all" | "favorites" | RecipeCategory;
+
 async function Content({ searchParams }: { searchParams: Promise<{ filter?: string | string[] }> }) {
   const sp = await searchParams;
-  const filter = sp.filter === "favorites" ? "favorites" : "all";
+  const raw = typeof sp.filter === "string" ? sp.filter : "all";
+  const filter: Filter = raw === "favorites" || (RECIPE_CATEGORIES as readonly string[]).includes(raw) ? (raw as Filter) : "all";
   const ctx = await requireContext();
   const supabase = await createClient();
   const [squad, { data: recipeRows }, { data: favRows }] = await Promise.all([
@@ -27,7 +32,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
   ]);
   const favorites = new Set((favRows ?? []).map((f) => f.recipe_id as string));
   const all = (recipeRows ?? []) as Recipe[];
-  const recipes = filter === "favorites" ? all.filter((r) => favorites.has(r.id)) : all;
+  const recipes = filter === "favorites" ? all.filter((r) => favorites.has(r.id)) : filter === "all" ? all : all.filter((r) => r.category === filter);
   const [images, avatars] = await Promise.all([
     signedUrlMap("recipes", recipes.map((r) => r.image_path)),
     signedUrlMap("avatars", squad.map((m) => m.profile.avatar_path).filter((p): p is string => Boolean(p))),
@@ -38,21 +43,37 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
       <PageTitle title="Kitchen" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
-      <div className="mb-4">
-        <ChipTabs
-          label="Filter"
-          value={filter}
-          hrefFor={(k) => (k === "all" ? "/kitchen" : "/kitchen?filter=favorites")}
-          options={[
-            { key: "all", label: "Alles" },
-            { key: "favorites", label: "Mijn favorieten" },
-          ]}
-        />
+      <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1" role="tablist" aria-label="Filter">
+        {(
+          [
+            ["all", "Alles"],
+            ...RECIPE_CATEGORIES.map((c) => [c, RECIPE_CATEGORY_LABELS[c]] as const),
+            ["favorites", "Favorieten"],
+          ] as const
+        ).map(([key, label]) => {
+          const active = filter === key;
+          return (
+            <Link
+              key={key}
+              role="tab"
+              aria-selected={active}
+              href={key === "all" ? "/kitchen" : `/kitchen?filter=${key}`}
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition",
+                active ? "espresso shadow-none" : "soft hover:bg-blush-2",
+              )}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       {recipes.length === 0 ? (
         filter === "favorites" ? (
           <EmptyState icon={Heart} title="Nog geen favorieten" body="Tik op het hartje bij een recept om het hier te bewaren." />
+        ) : filter !== "all" ? (
+          <EmptyState icon={ChefHat} title={`Nog geen ${RECIPE_CATEGORY_LABELS[filter].toLowerCase()}`} body="Deel het eerste recept in deze categorie." />
         ) : (
           <EmptyState
             icon={ChefHat}

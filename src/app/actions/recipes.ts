@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
 import { friendlyError } from "@/lib/errors";
-import { isOwnedMediaPath } from "@/lib/storage";
+import { isOwnedMediaPath, isStaticMediaPath } from "@/lib/storage";
 import { REACTION_KEYS, RECIPE_CATEGORIES, type ReactionKey } from "@/lib/constants";
 import type { ActionResult } from "@/lib/types";
 
@@ -83,7 +83,7 @@ export async function deleteRecipe(id: string): Promise<ActionResult> {
   if (!recipe) return { ok: false, error: "Je kunt alleen je eigen recepten verwijderen." };
   const { error } = await supabase.from("recipes").delete().eq("id", id).eq("user_id", ctx.userId);
   if (error) return { ok: false, error: friendlyError(error) };
-  await supabase.storage.from("recipes").remove([recipe.image_path as string]);
+  if (!isStaticMediaPath(recipe.image_path as string)) await supabase.storage.from("recipes").remove([recipe.image_path as string]);
   revalidatePath("/kitchen");
   revalidatePath("/");
   redirect("/kitchen");

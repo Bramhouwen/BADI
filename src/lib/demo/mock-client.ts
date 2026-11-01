@@ -228,6 +228,7 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
 
 /** Resolves an object path to a URL: seeded demo images, or a placeholder for uploads made during the demo. */
 function demoUrl(path: string): string {
+  if (path.startsWith("static:")) return path.slice("static:".length);
   if (path.startsWith("demo/")) return `/${path}`;
   return "/demo/upload.jpg";
 }
