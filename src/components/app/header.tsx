@@ -26,20 +26,20 @@ async function HeaderStatus() {
   return (
     <div className="flex items-center gap-2">
       {phase === "during" ? (
-        <span className="flex h-11 items-center whitespace-nowrap rounded-full border border-white/25 bg-white/5 px-3.5 text-[12px] font-semibold tabular-nums text-text backdrop-blur">
+        <span className="flex h-11 items-center whitespace-nowrap rounded-full border border-ink/10 bg-white/70 px-3.5 text-[12px] font-semibold tabular-nums text-text shadow-sm backdrop-blur">
           Dag {day}
-          <span className="ml-0.5 text-text/50">/{total}</span>
+          <span className="ml-0.5 text-muted">/{total}</span>
         </span>
       ) : null}
       <Link
         href="/notifications"
-        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur hover:bg-white/15"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text shadow-sm backdrop-blur hover:bg-white"
         aria-label={unread > 0 ? `${unread} nieuwe meldingen` : "Meldingen"}
       >
         <Bell className="h-5 w-5" />
-        {unread > 0 ? <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#ff5a5f] ring-2 ring-[#13304a]" aria-hidden /> : null}
+        {unread > 0 ? <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-white" aria-hidden /> : null}
       </Link>
-      <Link href="/profile" aria-label="Profiel" className="rounded-full ring-2 ring-white/30">
+      <Link href="/profile" aria-label="Profiel" className="rounded-full ring-2 ring-white">
         <Avatar name={ctx.profile.display_name} src={avatar} size="md" className="h-11 w-11" />
       </Link>
     </div>
@@ -51,9 +51,9 @@ export function AppHeader() {
     <header className="sticky top-0 z-30" style={{ paddingTop: "var(--sat)" }}>
       <div className="mx-auto flex h-[68px] max-w-lg items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-3" aria-label="BADI home">
-          <Image src="/brand/wordmark.png" alt="BADI" width={96} height={21} priority className="h-[20px] w-auto" />
+          <Image src="/brand/wordmark-dark.png" alt="BADI" width={96} height={21} priority className="h-[20px] w-auto" />
           {isDemo() ? (
-            <span className="rounded-full bg-gold/90 px-2 py-0.5 text-[9px] font-extrabold tracking-wider text-ink" title="Demo-modus: voorbeelddata, geen Supabase">
+            <span className="rounded-full bg-gold/40 px-2 py-0.5 text-[9px] font-extrabold tracking-wider text-ink" title="Demo-modus: voorbeelddata, geen Supabase">
               DEMO
             </span>
           ) : null}

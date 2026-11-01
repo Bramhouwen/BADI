@@ -14,7 +14,7 @@ export default function OfflinePage() {
       </p>
       {/* Full reload on purpose: retries the network instead of the client router cache. */}
       {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-      <a href="/" className="mt-6 rounded-2xl bg-ice px-5 py-3 font-semibold text-bg">
+      <a href="/" className="mt-6 rounded-2xl bg-water-deep px-5 py-3 font-semibold text-bg">
         Opnieuw proberen
       </a>
     </main>

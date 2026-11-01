@@ -6,7 +6,7 @@ export function EmptyState({ emoji, title, body, action }: { emoji: string; titl
       <div className="tile flex h-16 w-16 items-center justify-center rounded-full text-3xl" aria-hidden>
         {emoji}
       </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <h3 className="mt-4 font-display text-xl">{title}</h3>
       {body ? <p className="mt-1 max-w-xs text-sm text-muted">{body}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>

@@ -52,7 +52,7 @@ export function SquadMemberCard({ member }: { member: SquadCardMember }) {
           <ComplimentSheet open={open} onClose={() => setOpen(false)} receiver={{ id: member.id, name: firstName(member.name) }} />
         </>
       ) : (
-        <p className="mt-3 rounded-full bg-white/10 py-2.5 text-center text-xs text-muted">Dit ben jij ❄️</p>
+        <p className="mt-3 rounded-full bg-white/70 py-2.5 text-center text-xs text-muted">Dit ben jij ❄️</p>
       )}
     </div>
   );

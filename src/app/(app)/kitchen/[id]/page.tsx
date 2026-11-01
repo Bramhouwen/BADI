@@ -40,23 +40,23 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="mx-auto w-full max-w-lg pb-6">
-      <div className="relative mx-4 mt-1 aspect-[4/4] overflow-hidden rounded-[28px] border border-white/20 bg-white/5">
+      <div className="relative mx-4 mt-1 aspect-[4/4] overflow-hidden rounded-[28px] border border-ink/10 bg-white/70">
         {image ? <Image src={image} alt={recipe.title} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : null}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-          <Link href="/kitchen" className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white backdrop-blur" aria-label="Terug naar Kitchen">
+          <Link href="/kitchen" className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/50 text-white backdrop-blur" aria-label="Terug naar Kitchen">
             ←
           </Link>
           <div className="flex gap-2">
             {isOwner ? (
-              <Link href={`/kitchen/${recipe.id}/edit`} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white backdrop-blur" aria-label="Recept bewerken">
+              <Link href={`/kitchen/${recipe.id}/edit`} className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/50 text-white backdrop-blur" aria-label="Recept bewerken">
                 <Pencil className="h-4 w-4" />
               </Link>
             ) : null}
             <FavoriteButton recipeId={recipe.id} favorite={Boolean(favRow)} large />
           </div>
         </div>
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b1f33]/95 via-[#0b1f33]/50 to-transparent px-4 pb-4 pt-16">
-          {recipe.category ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ice">{recipe.category}</p> : null}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#2b1a14]/90 via-[#2b1a14]/40 to-transparent px-4 pb-4 pt-16">
+          {recipe.category ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-water-deep">{recipe.category}</p> : null}
           <h1 className="text-2xl font-bold leading-tight">{recipe.title}</h1>
         </div>
       </div>
@@ -86,7 +86,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
               <ul className="space-y-2">
                 {ingredients.map((line, i) => (
                   <li key={i} className="flex gap-3 text-[15px]">
-                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-ice" aria-hidden />
+                    <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-water-deep" aria-hidden />
                     <span>{line.replace(/^[-*•]\s*/, "")}</span>
                   </li>
                 ))}

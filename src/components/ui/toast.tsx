@@ -37,10 +37,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               className={
                 "pointer-events-auto rounded-2xl border px-4 py-2.5 text-sm font-medium shadow-xl backdrop-blur " +
                 (t.tone === "success"
-                  ? "border-success/40 bg-[#102a1f]/95 text-success"
+                  ? "border-sage/50 bg-white text-success"
                   : t.tone === "error"
-                    ? "border-danger/40 bg-[#2a1414]/95 text-danger"
-                      : "border-white/20 bg-[#12293f]/95 text-text")
+                    ? "border-danger/40 bg-white text-danger"
+                      : "border-ink/10 bg-white text-text")
               }
             >
               {t.message}

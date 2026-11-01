@@ -15,7 +15,7 @@ export function PageTitle({ title, subtitle, back, action }: { title: ReactNode;
           {back ? (
             <Link
               href={back}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur hover:bg-white/15"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text shadow-sm backdrop-blur hover:bg-white"
               aria-label="Terug"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -26,7 +26,7 @@ export function PageTitle({ title, subtitle, back, action }: { title: ReactNode;
           {action}
         </div>
       ) : null}
-      <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{title}</h1>
+      <h1 className="font-display text-[30px] leading-tight">{title}</h1>
       {subtitle ? <p className="mt-1 text-[15px] text-muted">{subtitle}</p> : null}
     </div>
   );
@@ -52,7 +52,7 @@ export function ChipTabs<T extends string>({
         const active = o.key === value;
         const cls = cn(
           "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2.5 text-center text-[14px] font-semibold transition",
-          active ? "tile" : "text-text/80 hover:text-text",
+          active ? "espresso" : "text-text/80 hover:text-text",
         );
         return hrefFor ? (
           <Link key={o.key} role="tab" aria-selected={active} href={hrefFor(o.key)} className={cls}>

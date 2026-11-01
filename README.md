@@ -27,6 +27,7 @@ src/
       checkin/             Daily check-in
       kitchen/             Winter Arc Kitchen (lijst, detail, nieuw, bewerken)
       wall/                The Wall (feed, detail, nieuw)
+      water/               Waterteller per dag met zevendaags overzicht
       squad/               Squad, complimenten, inbox
       profile/             Profiel, uitnodigen, zeven principes
       notifications/       Meldingen
@@ -64,7 +65,7 @@ Vereisten: Node 22+, npm, een Supabase-project (gratis tier is genoeg).
 2. Maak een Supabase-project op https://supabase.com en voer de migratie uit:
    - Open **SQL Editor** in het Supabase dashboard.
    - Plak de inhoud van `supabase/migrations/0001_winter_arc_schema.sql` en voer uit.
-   - Voer daarna ook `supabase/migrations/0002_fix_pgcrypto_search_path.sql` uit (nodig op Supabase, waar pgcrypto in het schema `extensions` staat).
+   - Voer daarna ook `0002_fix_pgcrypto_search_path.sql` (nodig op Supabase, waar pgcrypto in het schema `extensions` staat) en `0003_water_entries.sql` (waterteller) uit, in die volgorde.
    - Heb je de Supabase CLI: `supabase link --project-ref <ref>` en daarna `supabase db push`.
 
    De migratie maakt alle tabellen, triggers (edit-venster, maximaal vier leden, rate limiting), RLS-policies, de private storage buckets (`wall`, `recipes`, `avatars`) met policies en de RPC's voor uitnodigingen.

@@ -16,7 +16,7 @@ export const metadata = { title: "Profiel" };
 
 function Row({ href, icon: Icon, title, body }: { href: string; icon: typeof BookOpen; title: string; body: string }) {
   return (
-    <Link href={href} className="glass flex items-center gap-3 rounded-full py-2.5 pl-2.5 pr-4 hover:bg-white/15">
+    <Link href={href} className="glass flex items-center gap-3 rounded-full py-2.5 pl-2.5 pr-4 hover:bg-white">
       <span className="tile flex h-11 w-11 items-center justify-center rounded-full">
         <Icon className="h-5 w-5" />
       </span>
@@ -65,7 +65,7 @@ async function Content() {
       </section>
 
       <form action="/auth/signout" method="post">
-        <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-full border border-white/25 py-3.5 text-sm font-medium text-text hover:bg-white/10">
+        <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-full border border-ink/10 py-3.5 text-sm font-medium text-text hover:bg-white/70">
           <LogOut className="h-4 w-4" /> Uitloggen
         </button>
       </form>

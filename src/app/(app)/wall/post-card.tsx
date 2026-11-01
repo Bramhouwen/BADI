@@ -37,7 +37,7 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
         </div>
         {post.isOwner ? (
           <div className="flex gap-1">
-            <button type="button" onClick={() => setEditing((e) => !e)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-text hover:bg-white/15" aria-label="Bijschrift bewerken">
+            <button type="button" onClick={() => setEditing((e) => !e)} className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text hover:bg-white" aria-label="Bijschrift bewerken">
               <Pencil className="h-4 w-4" />
             </button>
             <button
@@ -50,7 +50,7 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
                   if (r && !r.ok) toast(r.error, "error");
                 });
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-text hover:bg-white/15 hover:text-danger"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text hover:bg-white hover:text-danger"
               aria-label="Post verwijderen"
             >
               <Trash2 className="h-4 w-4" />
@@ -60,11 +60,11 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
       </header>
 
       {linkToDetail ? (
-        <Link href={`/wall/${post.id}`} className="relative mx-2 block aspect-[4/5] overflow-hidden rounded-[22px] bg-white/5">
+        <Link href={`/wall/${post.id}`} className="relative mx-2 block aspect-[4/5] overflow-hidden rounded-[22px] bg-white/70">
           {post.imageUrl ? <Image src={post.imageUrl} alt={post.caption ?? `Foto van ${post.author.name}`} fill sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : <div className="skeleton absolute inset-0 rounded-none" />}
         </Link>
       ) : (
-        <div className="relative mx-2 aspect-[4/5] overflow-hidden rounded-[22px] bg-white/5">
+        <div className="relative mx-2 aspect-[4/5] overflow-hidden rounded-[22px] bg-white/70">
           {post.imageUrl ? <Image src={post.imageUrl} alt={post.caption ?? `Foto van ${post.author.name}`} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : null}
         </div>
       )}

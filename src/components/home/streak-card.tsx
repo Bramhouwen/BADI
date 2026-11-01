@@ -28,14 +28,14 @@ function StatTile({
     <div className="tile flex w-[172px] shrink-0 flex-col justify-between rounded-[24px] p-4">
       <div>
         <p className="text-[13px] font-medium text-ink-muted">{label}</p>
-        <p className="mt-1 text-[26px] font-semibold leading-none tracking-tight">
+        <p className="mt-1 font-display text-[28px] leading-none">
           {value} <span className="text-[14px] font-medium text-ink-muted">{unit}</span>
         </p>
       </div>
       <div className="mt-5 flex items-end justify-between">
         <Badge tone={badgeTone}>{badge}</Badge>
         <Ring value={ring} size={60} stroke={6} color={ringColor}>
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm" aria-hidden>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-tile-2 text-lg" aria-hidden>
             {emoji}
           </span>
         </Ring>
@@ -50,7 +50,7 @@ export function StatTiles({ current, longest, total, challengeLength }: { curren
     <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2" aria-label="Jouw cijfers">
       <StatTile label="Huidige streak" value={current} unit={current === 1 ? "dag" : "dagen"} badge={streakBadge} badgeTone="ink" ring={longest > 0 ? current / Math.max(longest, 7) : 0} ringColor="var(--warm)" emoji="🔥" />
       <StatTile label="Persoonlijk record" value={longest} unit={longest === 1 ? "dag" : "dagen"} badge={longest >= 14 ? "Top" : "Record"} badgeTone="ink" ring={Math.min(1, longest / 30)} ringColor="var(--gold)" emoji="🏅" />
-      <StatTile label="Dagen voltooid" value={total} unit={`van ${challengeLength}`} badge={`${Math.round((total / Math.max(challengeLength, 1)) * 100)}%`} badgeTone="ink" ring={total / Math.max(challengeLength, 1)} ringColor="var(--ice-bright)" emoji="❄️" />
+      <StatTile label="Dagen voltooid" value={total} unit={`van ${challengeLength}`} badge={`${Math.round((total / Math.max(challengeLength, 1)) * 100)}%`} badgeTone="ink" ring={total / Math.max(challengeLength, 1)} ringColor="var(--water-deep)" emoji="❄️" />
     </div>
   );
 }
@@ -61,11 +61,11 @@ export function WeekCard({ calendar }: { calendar: CalendarDay[] }) {
       <ol className="flex justify-between">
         {calendar.map((d) => (
           <li key={d.date} className="flex flex-col items-center gap-2">
-            <span className={cn("text-[11px] font-semibold uppercase tracking-wide", d.isToday ? "text-ice" : "text-muted")}>{weekdayShortNl(d.date)}</span>
+            <span className={cn("text-[11px] font-semibold uppercase tracking-wide", d.isToday ? "text-ink" : "text-muted")}>{weekdayShortNl(d.date)}</span>
             <span
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums",
-                d.done ? "tile" : d.isToday ? "border-2 border-ice text-ice" : "border border-white/20 text-text/70",
+                d.done ? "bg-sage text-paper shadow-sm" : d.isToday ? "border-2 border-sage text-ink" : "border border-ink/10 bg-white/60 text-muted",
                 !d.inChallenge && "opacity-35",
               )}
               aria-label={`${d.date}${d.done ? ", ingecheckt" : ""}`}

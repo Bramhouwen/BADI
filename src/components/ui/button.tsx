@@ -8,11 +8,11 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "dark"
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  primary: "tile font-semibold hover:brightness-105 active:scale-[0.98]",
-  dark: "bg-ink text-text font-semibold border border-white/10 hover:bg-[#122a42] active:scale-[0.98]",
-  secondary: "glass text-text font-medium hover:bg-white/15 active:scale-[0.98]",
-  outline: "border border-white/25 text-text hover:bg-white/10 active:scale-[0.98]",
-  ghost: "text-muted hover:text-text hover:bg-white/10 active:scale-[0.98]",
+  primary: "espresso font-semibold hover:brightness-110 active:scale-[0.98]",
+  dark: "espresso font-semibold hover:brightness-110 active:scale-[0.98]",
+  secondary: "tile font-semibold hover:brightness-[0.98] active:scale-[0.98]",
+  outline: "border border-ink/15 text-text hover:bg-white/60 active:scale-[0.98]",
+  ghost: "text-muted hover:text-text hover:bg-white/60 active:scale-[0.98]",
   danger: "bg-danger/15 text-danger hover:bg-danger/25 active:scale-[0.98]",
 };
 
@@ -38,7 +38,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 select-none whitespace-nowrap transition-[background-color,transform,opacity,filter] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ice/70 disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-2 select-none whitespace-nowrap transition-[background-color,transform,opacity,filter] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-water-deep disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         className,
@@ -56,7 +56,7 @@ export function CircleButton({ className, ...props }: React.ButtonHTMLAttributes
   return (
     <button
       className={cn(
-        "flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur transition hover:bg-white/15 active:scale-95",
+        "flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text shadow-sm backdrop-blur transition hover:bg-white active:scale-95",
         className,
       )}
       {...props}

@@ -17,7 +17,7 @@ import { renderRecapImage } from "./recap-image";
 type Personal = PersonalWrapped & { avatarUrl: string | null };
 
 function Stat({ value, label, tone }: { value: number | string; label: string; tone?: "ice" | "gold" | "warm" }) {
-  const color = tone === "gold" ? "text-gold" : tone === "warm" ? "text-warm" : "text-ice";
+  const color = tone === "gold" ? "text-gold" : tone === "warm" ? "text-warm" : "text-water-deep";
   return (
     <div className="glass rounded-[24px] p-4">
       <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${color}`}>{value}</div>
@@ -75,7 +75,7 @@ export function WrappedView({
       <Page className="space-y-8 pt-6">
         <motion.header {...fade(0)} className="text-center">
           <p className="text-xs font-semibold tracking-[0.3em] text-gold">{status === "final" ? "WINTER ARC WRAPPED" : "VOORLOPIGE WRAPPED"}</p>
-          <h1 className="mt-2 text-4xl font-extrabold leading-tight tracking-tight">
+          <h1 className="mt-2 font-display text-4xl leading-tight">
             We showed up.
             <br />
             We grew together.
@@ -105,7 +105,7 @@ export function WrappedView({
             <div className="flex items-center gap-3">
               <Avatar name={me.member.display_name} src={me.avatarUrl} size="lg" ring />
               <div>
-                <p className="text-xs font-semibold tracking-[0.2em] text-ice">JOUW WINTER ARC</p>
+                <p className="text-xs font-semibold tracking-[0.2em] text-water-deep">JOUW WINTER ARC</p>
                 <h2 className="text-xl font-bold">{firstName(me.member.display_name)}</h2>
               </div>
             </div>
@@ -162,7 +162,7 @@ export function WrappedView({
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Memories</h2>
             <div className="grid grid-cols-3 gap-2">
               {memories.map((m) => (
-                <Link key={m.id} href={`/wall/${m.id}`} className="relative aspect-square overflow-hidden rounded-[18px] bg-white/5">
+                <Link key={m.id} href={`/wall/${m.id}`} className="relative aspect-square overflow-hidden rounded-[18px] bg-white/70">
                   {m.url ? <Image src={m.url} alt={m.caption ?? "Herinnering"} fill sizes="33vw" className="object-cover" unoptimized /> : null}
                 </Link>
               ))}
@@ -171,12 +171,12 @@ export function WrappedView({
         ) : null}
 
         <motion.footer {...fade(5)} className="glass rounded-[28px] px-6 py-10 text-center">
-          <p className="text-2xl font-extrabold leading-snug tracking-tight">
+          <p className="font-display text-2xl leading-snug">
             WE SHOWED UP.
             <br />
             WE GREW TOGETHER.
             <br />
-            <span className="text-ice">THIS WAS OUR WINTER ARC.</span>
+            <span className="text-water-deep">THIS WAS OUR WINTER ARC.</span>
           </p>
           <p className="mt-4 text-4xl" aria-hidden>
             ❄️

@@ -16,7 +16,7 @@ async function Content() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col px-5 pb-10" style={{ paddingTop: "calc(var(--sat) + 40px)" }}>
       <div className="mb-8 text-center">
-        <Image src="/brand/logo-full.png" alt="BADI" width={200} height={172} priority className="mx-auto mb-5 h-auto w-[180px]" />
+        <Image src="/brand/logo-full-dark.png" alt="BADI" width={200} height={172} priority className="mx-auto mb-5 h-auto w-[180px]" />
         <h1 className="text-2xl font-bold">Welkom bij BADI</h1>
         <p className="mt-2 text-sm text-muted">
           Je bent ingelogd, maar zit nog niet in een squad. Start een nieuwe Winter Arc of gebruik de uitnodigingslink van je vrienden.

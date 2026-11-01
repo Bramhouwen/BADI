@@ -81,12 +81,12 @@ export function ImagePicker({ bucket, pathPrefix, name = "image_path", initialUr
       <input type="hidden" name={name} value={path ?? ""} />
       <input ref={inputRef} id={id} type="file" accept="image/*" className="sr-only" onChange={(e) => handleFile(e.target.files?.[0])} />
       {preview ? (
-        <div className={cn("relative overflow-hidden border border-white/20 bg-white/5", round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[24px]", ratio))}>
+        <div className={cn("relative overflow-hidden border border-ink/10 bg-white/70", round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[24px]", ratio))}>
           <Image src={preview} alt="Gekozen foto" fill className="object-cover" unoptimized />
           <button
             type="button"
             onClick={clear}
-            className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white"
+            className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-ink/50 text-white"
             aria-label="Foto verwijderen"
           >
             <X className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function ImagePicker({ bucket, pathPrefix, name = "image_path", initialUr
         <label
           htmlFor={id}
           className={cn(
-            "glass flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed text-text/80 transition hover:border-ice/60 hover:text-text",
+            "glass flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed text-text/80 transition hover:border-water-deep hover:text-text",
             round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[24px]", ratio),
           )}
         >

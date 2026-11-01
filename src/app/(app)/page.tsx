@@ -27,6 +27,9 @@ import { SquadPreview } from "@/components/home/squad-preview";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
+import { WaterTracker } from "@/components/water/water-tracker";
+import { WATER_GOAL_ML } from "@/lib/constants";
+import type { WaterEntry } from "@/lib/types";
 import type { DailyCheckin, Recipe, WallPost } from "@/lib/types";
 
 async function Content() {
@@ -37,12 +40,14 @@ async function Content() {
   const phase = challengePhase(ctx.challenge, now);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
     supabase.from("recipes").select("id, user_id, image_path, title, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
+    supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today),
   ]);
+  const waterTotal = ((waterRows ?? []) as Pick<WaterEntry, "amount_ml">[]).reduce((s, r) => s + r.amount_ml, 0);
 
   const checkins = (checkinRows ?? []) as Pick<DailyCheckin, "user_id" | "checkin_date" | "activities" | "note" | "created_at">[];
   const mine = checkins.filter((c) => c.user_id === ctx.userId);
@@ -92,12 +97,11 @@ async function Content() {
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="px-1">
-        <h1 className="text-[28px] font-light leading-[1.2] tracking-tight text-text/90">
-          {greeting(now, ctx.challenge.timezone).replace("!", ",")} <span className="font-semibold text-text">{firstName(ctx.profile.display_name)}!</span>
-          <br />
-          <span className="font-medium text-text">dit is je dag in de Winter Arc.</span>
+        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">{formatDateNl(today, { weekday: "long", day: "numeric", month: "long" })}</p>
+        <h1 className="mt-1 font-display text-[34px] leading-[1.1] text-text">
+          {greeting(now, ctx.challenge.timezone).replace("!", ",")} <span className="italic">{firstName(ctx.profile.display_name)}</span>
         </h1>
-        <p className="mt-2 text-[14px] text-muted">Vandaag is {formatDateNl(today)}</p>
+        <p className="mt-2 text-[15px] text-muted">Dag {day} van je Winter Arc. Goed dat je er bent.</p>
       </div>
 
       <section>
@@ -106,6 +110,10 @@ async function Content() {
         <div className="mt-3">
           <WeekCard calendar={calendar} />
         </div>
+      </section>
+
+      <section>
+        <WaterTracker total={waterTotal} goal={WATER_GOAL_ML} variant="compact" />
       </section>
 
       {phase === "during" ? (
@@ -125,14 +133,14 @@ async function Content() {
             ) : null}
           </Card>
         ) : (
-          <Card className="space-y-4 p-5">
+          <Card variant="dark" className="space-y-4 rounded-[28px] p-5">
             <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-ice">Check-in van vandaag</p>
-              <p className="mt-1 text-[22px] font-semibold leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">Check-in van vandaag</p>
+              <p className="mt-1 font-display text-[24px] leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
               <p className="mt-1 text-sm text-muted">Eén activiteit is genoeg. Inchecken duurt tien seconden.</p>
             </div>
             <Link href="/checkin" className="block">
-              <Button size="lg" className="w-full">
+              <Button variant="secondary" size="lg" className="w-full">
                 Check vandaag in <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

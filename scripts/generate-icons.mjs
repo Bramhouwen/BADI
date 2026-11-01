@@ -1,22 +1,22 @@
-// Generates the PWA icon set from the BADI runner logo on the brand gradient.
+// Generates the PWA icon set: dark BADI runner on the cream brand gradient.
 import sharp from "sharp";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const out = fileURLToPath(new URL("../public/icons/", import.meta.url));
-const runner = fileURLToPath(new URL("../assets/brand/logo-runner.png", import.meta.url));
+const runner = fileURLToPath(new URL("../public/brand/runner-dark.png", import.meta.url));
 await mkdir(out, { recursive: true });
 
 function background(size, radius) {
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1a3b58"/>
-      <stop offset="1" stop-color="#08192b"/>
+      <stop offset="0" stop-color="#fbf3ee"/>
+      <stop offset="1" stop-color="#e9d3c8"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.5" cy="0.3" r="0.65">
-      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#7dd3fc" stop-opacity="0"/>
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="${size}" height="${size}" rx="${radius}" fill="url(#bg)"/>

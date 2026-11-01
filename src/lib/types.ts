@@ -106,6 +106,15 @@ export interface AlcoholException {
   created_at: string;
 }
 
+export interface WaterEntry {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  log_date: string;
+  amount_ml: number;
+  created_at: string;
+}
+
 export type NotificationType = "compliment" | "reaction" | "post" | "recipe";
 
 export interface AppNotification {

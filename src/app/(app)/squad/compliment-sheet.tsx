@@ -75,7 +75,7 @@ export function ComplimentSheet({ open, onClose, receiver }: { open: boolean; on
                   }}
                   className={cn(
                     "rounded-full border px-3.5 py-2 text-sm font-medium transition",
-                    message === c && !custom ? "tile border-transparent" : "border-white/20 bg-white/5 text-text/90 hover:bg-white/15",
+                    message === c && !custom ? "tile border-transparent" : "border-ink/10 bg-white/70 text-text/90 hover:bg-white",
                   )}
                 >
                   {c}

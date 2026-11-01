@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0b1c2e;
-  --bg-2: #12293f;
-  --card: rgba(255, 255, 255, 0.08);
-  --card-2: rgba(255, 255, 255, 0.14);
+  /* Warm, light palette: cream paper, blush accents, espresso ink. */
+  --bg: #f7ede7;
+  --bg-2: #fbf5f1;
+  --paper: #fdf9f6;
+  --card: rgba(255, 255, 255, 0.72);
+  --card-2: rgba(255, 255, 255, 0.92);
+  --ink: #4a2a21;
+  --ink-2: #6b3f33;
+  --text: #2b1a14;
+  --muted: #8c6f66;
+  --border: rgba(74, 42, 33, 0.1);
   --ice: #7dd3fc;
   --ice-bright: #38bdf8;
-  --text: #f0f9ff;
-  --muted: #a9c0d3;
-  --border: rgba(255, 255, 255, 0.16);
-  --success: #4ade80;
-  --warm: #fb923c;
-  --gold: #fbbf24;
-  --danger: #fb7185;
-  --tile: #eaf2f7;
-  --tile-2: #d5e4ed;
-  --ink: #0b1f33;
-  --ink-muted: #4f6b80;
+  --water: #8fb8d6;
+  --water-deep: #5b8fb8;
+  --sage: #8fa98a;
+  --success: #6f9c6a;
+  --warm: #d98b5a;
+  --gold: #d4a53a;
+  --danger: #c9524b;
+  --tile: #ffffff;
+  --tile-2: #f3e6df;
+  --ink-muted: #8c6f66;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --nav-h: 72px;
@@ -26,29 +32,35 @@
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
+  --color-paper: var(--paper);
   --color-card: var(--card);
   --color-card-2: var(--card-2);
-  --color-ice: var(--ice);
-  --color-ice-bright: var(--ice-bright);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-ice: var(--ice);
+  --color-ice-bright: var(--ice-bright);
+  --color-water: var(--water);
+  --color-water-deep: var(--water-deep);
+  --color-sage: var(--sage);
   --color-success: var(--success);
   --color-warm: var(--warm);
   --color-gold: var(--gold);
   --color-danger: var(--danger);
   --color-tile: var(--tile);
   --color-tile-2: var(--tile-2);
-  --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
   --radius-card: 24px;
   --radius-tile: 20px;
-  --shadow-glow: 0 0 0 1px rgba(125, 211, 252, 0.35), 0 10px 40px -10px rgba(56, 189, 248, 0.45);
+  --shadow-glow: 0 0 0 1px rgba(143, 184, 214, 0.35), 0 10px 40px -10px rgba(91, 143, 184, 0.45);
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -59,9 +71,10 @@ body {
   font-family: var(--font-sans);
   overscroll-behavior-y: none;
   background:
-    radial-gradient(90% 55% at 50% -5%, rgba(125, 211, 252, 0.42) 0%, rgba(125, 211, 252, 0) 65%),
-    radial-gradient(70% 40% at 100% 100%, rgba(56, 189, 248, 0.16) 0%, rgba(56, 189, 248, 0) 70%),
-    linear-gradient(180deg, #0a1a2c 0%, #143450 55%, #0e2439 100%);
+    radial-gradient(70% 45% at 15% 0%, rgba(240, 200, 185, 0.55) 0%, rgba(240, 200, 185, 0) 65%),
+    radial-gradient(60% 40% at 95% 20%, rgba(214, 191, 176, 0.5) 0%, rgba(214, 191, 176, 0) 70%),
+    radial-gradient(70% 40% at 50% 100%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, #f9f0ea 0%, #f4e6df 60%, #f7ede7 100%);
   background-attachment: fixed;
   min-height: 100dvh;
 }
@@ -84,28 +97,36 @@ textarea {
 }
 
 ::selection {
-  background: rgba(125, 211, 252, 0.35);
+  background: rgba(143, 184, 214, 0.4);
 }
 
-/* Frosted glass surface on the dark gradient. */
+h1,
+h2,
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Soft translucent card on the cream background. */
 .glass {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 18px 40px -22px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 18px 40px -24px rgba(74, 42, 33, 0.35);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
-/* Light tile with dark text (stats, chips, primary buttons). */
+/* Solid white tile with dark text (stats, chips, nav items). */
 .tile {
-  background: linear-gradient(160deg, #f3f8fb 0%, #d9e7ef 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #fbf4f0 100%);
   color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.95);
   box-shadow:
     inset 0 1px 0 #ffffff,
-    0 14px 30px -18px rgba(0, 0, 0, 0.55);
+    0 14px 30px -20px rgba(74, 42, 33, 0.45);
 }
 .tile .text-muted,
 .tile .text-text\/90 {
@@ -115,14 +136,26 @@ textarea {
 .tile .text-white {
   color: var(--ink);
 }
-.tile .bg-bg-2 {
-  background: rgba(255, 255, 255, 0.7);
+
+/* Dark espresso surface with cream text (primary button, nav bar, hero card). */
+.espresso {
+  background: linear-gradient(160deg, #5a3328 0%, #3e2219 100%);
+  color: var(--paper);
+  box-shadow: 0 16px 34px -18px rgba(62, 34, 25, 0.7);
 }
-.tile .border-border {
-  border-color: rgba(11, 31, 51, 0.12);
+.espresso .text-muted {
+  color: rgba(253, 249, 246, 0.7);
 }
+.espresso .text-text,
+.espresso .text-ink {
+  color: var(--paper);
+}
+.espresso .on-tile {
+  color: var(--ink);
+}
+
 .badge-ink {
-  color: var(--text);
+  color: var(--paper);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -142,7 +175,7 @@ textarea {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.06) 100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.85) 50%, rgba(255, 255, 255, 0.45) 100%);
   background-size: 800px 100%;
   animation: shimmer 1.6s linear infinite;
   border-radius: 16px;
@@ -150,10 +183,10 @@ textarea {
 
 @keyframes glow-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.55);
+    box-shadow: 0 0 0 0 rgba(143, 184, 214, 0.6);
   }
   100% {
-    box-shadow: 0 0 0 28px rgba(125, 211, 252, 0);
+    box-shadow: 0 0 0 28px rgba(143, 184, 214, 0);
   }
 }
 
@@ -161,9 +194,26 @@ textarea {
   animation: glow-pulse 1.1s ease-out 1;
 }
 
+@keyframes wave-x {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.wave {
+  animation: wave-x 6s linear infinite;
+}
+.wave-slow {
+  animation: wave-x 9s linear infinite reverse;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton,
-  .glow-once {
+  .glow-once,
+  .wave,
+  .wave-slow {
     animation: none;
   }
 }

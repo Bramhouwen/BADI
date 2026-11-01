@@ -1,0 +1,151 @@
+"use client";
+
+import Link from "next/link";
+import { useOptimistic, useState, useTransition } from "react";
+import { ChevronRight, Plus, Undo2 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import { WATER_GOAL_ML, WATER_QUICK_ADD } from "@/lib/constants";
+import { addWater, undoLastWater } from "@/app/actions/water";
+import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+import { WaterWave } from "./water-wave";
+import { formatMl } from "@/lib/format";
+
+interface Props {
+  total: number;
+  goal?: number;
+  /** compact = card on Home, full = the dedicated page */
+  variant?: "compact" | "full";
+}
+
+export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: Props) {
+  const [pending, start] = useTransition();
+  const [opt, setOpt] = useOptimistic(total, (_p: number, next: number) => next);
+  const [custom, setCustom] = useState(250);
+  const toast = useToast();
+  const reduce = useReducedMotion();
+  const level = Math.min(1, opt / goal);
+  const remaining = Math.max(0, goal - opt);
+  const pct = Math.round(level * 100);
+
+  function add(ml: number) {
+    start(async () => {
+      setOpt(opt + ml);
+      const r = await addWater(ml);
+      if (!r.ok) toast(r.error, "error");
+      else if (r.data && r.data.total >= goal && opt < goal) toast("Doel gehaald. Goed gehydrateerd! 💧", "success");
+    });
+  }
+
+  function undo() {
+    start(async () => {
+      const r = await undoLastWater();
+      if (!r.ok) toast(r.error, "error");
+      else setOpt(r.data!.total);
+    });
+  }
+
+  if (variant === "compact") {
+    return (
+      <Link href="/water" className="glass flex items-stretch overflow-hidden rounded-[24px]">
+        <WaterWave level={level} className="w-[96px] shrink-0 bg-tile-2/60">
+          <div className="flex h-[112px] items-center justify-center">
+            <span className="font-display text-2xl text-ink">{pct}%</span>
+          </div>
+        </WaterWave>
+        <div className="flex flex-1 flex-col justify-center px-4 py-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">Water vandaag</p>
+          <p className="mt-0.5 font-display text-[24px] leading-none text-text">{formatMl(opt)}</p>
+          <p className="mt-1 text-xs text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} tot ${formatMl(goal)}` : "Doel gehaald voor vandaag"}</p>
+        </div>
+        <div className="flex items-center pr-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm">
+            <ChevronRight className="h-4 w-4" />
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="glass overflow-hidden rounded-[32px]">
+        <WaterWave level={level} className="min-h-[380px] bg-tile-2/50">
+          <div className="flex min-h-[380px] flex-col items-center justify-between px-6 pb-6 pt-8">
+            <div className="text-center">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">Vandaag gedronken</p>
+              <p className="mt-2 font-display text-[52px] leading-none text-text">{formatMl(opt)}</p>
+              <p className="mt-2 text-sm text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} te gaan` : "Doel gehaald, lekker bezig"}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-display text-3xl text-ink/80">{pct}%</span>
+              <motion.button
+                type="button"
+                aria-label={`Voeg ${custom} ml toe`}
+                disabled={pending}
+                whileTap={reduce ? undefined : { scale: 0.92 }}
+                onClick={() => add(custom)}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-10px_rgba(74,42,33,0.5)]"
+              >
+                <Plus className="h-7 w-7" strokeWidth={2.5} />
+              </motion.button>
+              <span className="w-[52px] text-sm font-semibold text-ink/80">{custom} ml</span>
+            </div>
+          </div>
+        </WaterWave>
+      </div>
+
+      <div>
+        <p className="mb-2 px-1 text-[13px] font-medium text-muted">Snel toevoegen</p>
+        <div className="grid grid-cols-2 gap-3">
+          {WATER_QUICK_ADD.map((q) => (
+            <button
+              key={q.ml}
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setCustom(q.ml);
+                add(q.ml);
+              }}
+              className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 text-left transition active:scale-[0.98]", custom === q.ml && "border-water")}
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm" aria-hidden>
+                {q.emoji}
+              </span>
+              <span>
+                <span className="block text-[15px] font-semibold">{q.ml} ml</span>
+                <span className="block text-xs text-muted">{q.label}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="glass space-y-3 rounded-[24px] px-4 py-4">
+        <div className="flex items-center justify-between">
+          <label htmlFor="water-custom" className="text-sm font-medium text-text">
+            Eigen hoeveelheid
+          </label>
+          <span className="text-sm font-semibold text-ink">{custom} ml</span>
+        </div>
+        <input
+          id="water-custom"
+          type="range"
+          min={50}
+          max={1000}
+          step={50}
+          value={custom}
+          onChange={(e) => setCustom(Number(e.target.value))}
+          className="h-1.5 w-full accent-[var(--water-deep)]"
+          aria-label="Eigen hoeveelheid in ml"
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted">Tik op de plusknop in het water om deze hoeveelheid toe te voegen.</p>
+          <button type="button" onClick={undo} disabled={pending || opt === 0} className="flex shrink-0 items-center gap-1.5 text-xs text-muted hover:text-danger disabled:opacity-40">
+            <Undo2 className="h-3.5 w-3.5" /> Ongedaan maken
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

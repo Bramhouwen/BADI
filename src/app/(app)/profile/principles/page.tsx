@@ -16,7 +16,7 @@ export default function PrinciplesPage() {
                 {p.emoji}
               </span>
               <div>
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-ice">PRINCIPE {i + 1}</p>
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-water-deep">PRINCIPE {i + 1}</p>
                 <h2 className="text-base font-semibold">{p.title}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted">{p.body}</p>
               </div>

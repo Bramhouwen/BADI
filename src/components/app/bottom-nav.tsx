@@ -47,12 +47,12 @@ function NavItems({ pathname }: { pathname: string | null }) {
               aria-label={label}
               className={cn(
                 "relative flex h-12 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition-colors",
-                active ? "text-ink" : "text-ink/85 hover:text-ink",
+                active ? "on-tile" : "text-paper/75 hover:text-paper",
               )}
             >
               <motion.span
                 layoutId={reduce ? undefined : undefined}
-                className={cn("absolute inset-0 rounded-full tile", active ? "opacity-100" : "opacity-100")}
+                className={cn("absolute inset-0 rounded-full", active ? "tile" : "")}
                 aria-hidden
               />
               <span className="relative flex items-center gap-1.5">
@@ -82,7 +82,7 @@ export function BottomNav() {
       className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 transition-transform duration-200", keyboardOpen && "translate-y-[140%]")}
       style={{ paddingBottom: "calc(var(--sab) + 10px)" }}
     >
-      <div className="pointer-events-auto w-full max-w-lg rounded-full border border-white/15 bg-ink/85 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+      <div className="espresso pointer-events-auto w-full max-w-lg rounded-full">
         <Suspense fallback={<NavItems pathname={null} />}>
           <ActiveNavItems />
         </Suspense>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Fraunces, Geist } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import { ServiceWorkerRegistrar } from "@/components/app/service-worker";
 import "./globals.css";
@@ -8,6 +8,14 @@ const geist = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
+});
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -31,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#08111F",
+  themeColor: "#f7ede7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -40,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="nl" className={`${geist.variable} h-full antialiased`}>
+    <html lang="nl" className={`${geist.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorkerRegistrar />

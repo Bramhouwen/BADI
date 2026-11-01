@@ -92,11 +92,11 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
           initial={reduce ? false : { scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.1 }}
-          className="glow-once tile mx-auto flex h-20 w-20 items-center justify-center rounded-full text-4xl"
+          className="glow-once mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-water/30 text-4xl"
         >
           <span aria-hidden>❄️</span>
         </motion.div>
-        <h2 className="mt-5 text-xl font-bold">Another day. Another step forward. ❄️</h2>
+        <h2 className="mt-5 font-display text-2xl">Another day. Another step forward. ❄️</h2>
         <p className="mt-1 text-sm text-muted">
           {success.created ? "Je check-in staat. Lekker bezig!" : "Je check-in is bijgewerkt."}
         </p>
@@ -110,7 +110,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
               {success.streak === 1 ? "dag streak" : "dagen streak"}
             </div>
           </div>
-          <div className="h-10 w-px bg-white/20" />
+          <div className="h-10 w-px bg-ink/15" />
           <div>
             <div className="text-4xl font-extrabold tabular-nums">{success.longest}</div>
             <div className="mt-1 text-xs font-medium uppercase tracking-wider text-muted">record</div>
@@ -176,10 +176,10 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
               whileTap={reduce ? undefined : { scale: 0.96 }}
               className={cn(
                 "relative flex min-h-[132px] flex-col items-start justify-between rounded-[24px] p-4 text-left transition-colors",
-                on ? "tile" : "glass hover:bg-white/15",
+                on ? "tile border-sage ring-2 ring-sage/60" : "glass hover:bg-white",
               )}
             >
-              <span className={cn("flex h-11 w-11 items-center justify-center rounded-full text-2xl leading-none", on ? "bg-white shadow-sm" : "bg-white/10")} aria-hidden>
+              <span className={cn("flex h-11 w-11 items-center justify-center rounded-full text-2xl leading-none", on ? "bg-sage/25" : "bg-tile-2")} aria-hidden>
                 {a.emoji}
               </span>
               <span className="mt-3">
@@ -192,7 +192,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
                     initial={reduce ? false : { scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-ink text-text"
+                    className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full espresso"
                   >
                     <Check className="h-4 w-4" strokeWidth={3} />
                   </motion.span>
@@ -216,7 +216,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
           <p className="mt-1 text-right text-xs text-muted">{note.length}/200</p>
         </div>
       ) : (
-        <button type="button" onClick={() => setShowNote(true)} className="text-sm text-ice underline-offset-4 hover:underline">
+        <button type="button" onClick={() => setShowNote(true)} className="text-sm text-water-deep underline-offset-4 hover:underline">
           + Voeg een kort bericht toe (optioneel)
         </button>
       )}
@@ -252,7 +252,7 @@ function Snowflakes() {
       {flakes.map((i) => (
         <motion.span
           key={i}
-          className="absolute text-ice/70"
+          className="absolute text-water-deep/70"
           style={{ left: `${8 + i * 9}%`, fontSize: 10 + (i % 3) * 5 }}
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 260, opacity: [0, 1, 1, 0], x: [0, i % 2 ? 10 : -10, 0] }}

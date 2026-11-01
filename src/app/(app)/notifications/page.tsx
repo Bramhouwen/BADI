@@ -52,7 +52,7 @@ async function Content() {
             const d = describe(n, actor);
             return (
               <li key={n.id}>
-                <Link href={d.href} className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 hover:bg-white/15", !n.read_at && "border-ice/60")}>
+                <Link href={d.href} className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 hover:bg-white", !n.read_at && "border-water-deep")}>
                   <Avatar name={actorProfile?.display_name ?? "?"} src={actorProfile?.avatar_path ? avatars.get(actorProfile.avatar_path) ?? null : null} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm leading-snug">
@@ -61,7 +61,7 @@ async function Content() {
                     </span>
                     <span className="block text-xs text-muted">{relativeTimeNl(n.created_at)}</span>
                   </span>
-                  {!n.read_at ? <span className="h-2 w-2 shrink-0 rounded-full bg-ice" aria-label="Nieuw" /> : null}
+                  {!n.read_at ? <span className="h-2 w-2 shrink-0 rounded-full bg-water-deep" aria-label="Nieuw" /> : null}
                 </Link>
               </li>
             );

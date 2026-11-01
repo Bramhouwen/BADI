@@ -66,8 +66,8 @@ export function InviteManager({ spots, open }: { spots: number; open: { id: stri
             </form>
           )}
           {link ? (
-            <div className="space-y-2 rounded-[20px] border border-ice/50 bg-white/10 p-3">
-              <p className="text-xs font-semibold text-ice">Deel deze link (wordt maar één keer getoond)</p>
+            <div className="space-y-2 rounded-[20px] border border-water-deep bg-white/70 p-3">
+              <p className="text-xs font-semibold text-water-deep">Deel deze link (wordt maar één keer getoond)</p>
               <p className="break-all text-xs text-text/90">{link}</p>
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={copy}>
@@ -86,7 +86,7 @@ export function InviteManager({ spots, open }: { spots: number; open: { id: stri
       {open.length > 0 ? (
         <section>
           <SectionTitle>Openstaande uitnodigingen</SectionTitle>
-          <Card className="divide-y divide-white/10 p-0">
+          <Card className="divide-y divide-ink/10 p-0">
             {open.map((i) => (
               <div key={i.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div className="min-w-0">

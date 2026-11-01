@@ -29,7 +29,7 @@ export function FavoriteButton({ recipeId, favorite, className, large }: { recip
         });
       }}
       className={cn(
-        "flex items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition",
+        "flex items-center justify-center rounded-full bg-ink/50 text-white backdrop-blur transition",
         large ? "h-12 w-12" : "h-9 w-9",
         className,
       )}
@@ -53,15 +53,15 @@ export function RecipeCard({
   favorite: boolean;
 }) {
   return (
-    <Link href={`/kitchen/${recipe.id}`} className="group relative block overflow-hidden rounded-[24px] border border-white/20 bg-white/5">
+    <Link href={`/kitchen/${recipe.id}`} className="group relative block overflow-hidden rounded-[24px] border border-ink/10 bg-white/70">
       <div className="relative aspect-[4/5]">
         {imageUrl ? (
           <Image src={imageUrl} alt={recipe.title} fill sizes="(max-width: 512px) 50vw, 240px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" unoptimized />
         ) : (
           <div className="skeleton absolute inset-0" />
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b1f33]/90 via-[#0b1f33]/40 to-transparent p-3 pt-10">
-          {recipe.category ? <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-ice">{recipe.category}</p> : null}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#2b1a14]/85 via-[#2b1a14]/35 to-transparent p-3 pt-10">
+          {recipe.category ? <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-water-deep">{recipe.category}</p> : null}
           <p className="line-clamp-2 text-sm font-semibold leading-tight text-white">{recipe.title}</p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <Avatar name={author.name} src={author.avatar} size="xs" />

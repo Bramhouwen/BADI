@@ -29,7 +29,7 @@ export function SquadTimeline({ items }: { items: TimelineItem[] }) {
         return (
           <li key={i}>
             {it.href ? (
-              <Link href={it.href} className={cls + " hover:bg-white/15"}>
+              <Link href={it.href} className={cls + " hover:bg-white"}>
                 {inner}
               </Link>
             ) : (

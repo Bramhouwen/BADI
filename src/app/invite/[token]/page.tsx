@@ -23,7 +23,7 @@ async function Content({ params }: { params: Promise<{ token: string }> }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col items-center justify-center px-5 text-center" style={{ paddingTop: "var(--sat)" }}>
-      <Image src="/brand/logo-full.png" alt="BADI" width={200} height={172} priority className="mb-6 h-auto w-[180px]" />
+      <Image src="/brand/logo-full-dark.png" alt="BADI" width={200} height={172} priority className="mb-6 h-auto w-[180px]" />
       {!info || !info.challenge_name ? (
         <>
           <h1 className="text-2xl font-bold">Deze uitnodiging bestaat niet</h1>
@@ -44,7 +44,7 @@ async function Content({ params }: { params: Promise<{ token: string }> }) {
         </>
       ) : (
         <>
-          <p className="text-xs font-semibold tracking-[0.2em] text-ice">UITNODIGING</p>
+          <p className="text-xs font-semibold tracking-[0.2em] text-water-deep">UITNODIGING</p>
           <h1 className="mt-2 text-2xl font-bold">{info.inviter_name} nodigt je uit voor {info.challenge_name}</h1>
           <p className="mt-2 text-sm text-muted">
             Vier vrienden, één winter. Show up for yourself, inspire the others, grow together.
