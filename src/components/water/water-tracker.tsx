@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronRight, Coffee, CupSoda, Droplets, GlassWater, Plus, Undo2 } from "lucide-react";
+import { ChevronRight, Coffee, CupSoda, Droplets, GlassWater, Minus, Plus, Undo2 } from "lucide-react";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { motion, useReducedMotion } from "motion/react";
 import { WATER_GOAL_ML, WATER_QUICK_ADD } from "@/lib/constants";
@@ -80,19 +80,31 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
               <p className="mt-2 font-display text-[52px] leading-none text-text">{formatMl(opt)}</p>
               <p className="mt-2 text-sm text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} te gaan` : "Doel gehaald, lekker bezig"}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full items-center justify-between">
               <span className="font-display text-3xl text-ink/80">{pct}%</span>
-              <motion.button
-                type="button"
-                aria-label={`Voeg ${custom} ml toe`}
-                disabled={pending}
-                whileTap={reduce ? undefined : { scale: 0.92 }}
-                onClick={() => add(custom)}
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-10px_rgba(107,58,46,0.45)]"
-              >
-                <Plus className="h-7 w-7" strokeWidth={1.8} />
-              </motion.button>
-              <span className="w-[52px] text-sm font-semibold text-ink/80">{custom} ml</span>
+              <div className="flex items-center gap-3">
+                <motion.button
+                  type="button"
+                  aria-label="Laatste hoeveelheid verwijderen"
+                  disabled={pending || opt === 0}
+                  whileTap={reduce ? undefined : { scale: 0.92 }}
+                  onClick={undo}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-ink shadow-[0_8px_22px_-10px_rgba(107,58,46,0.4)] disabled:opacity-40"
+                >
+                  <Minus className="h-5 w-5" strokeWidth={1.8} />
+                </motion.button>
+                <motion.button
+                  type="button"
+                  aria-label={`Voeg ${custom} ml toe`}
+                  disabled={pending}
+                  whileTap={reduce ? undefined : { scale: 0.92 }}
+                  onClick={() => add(custom)}
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-10px_rgba(107,58,46,0.45)]"
+                >
+                  <Plus className="h-7 w-7" strokeWidth={1.8} />
+                </motion.button>
+              </div>
+              <span className="w-[64px] text-right text-sm font-semibold text-ink/80">{custom} ml</span>
             </div>
           </div>
         </WaterWave>
@@ -141,9 +153,9 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
           aria-label="Eigen hoeveelheid in ml"
         />
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted">Tik op de plusknop in het water om deze hoeveelheid toe te voegen.</p>
-          <button type="button" onClick={undo} disabled={pending || opt === 0} className="flex shrink-0 items-center gap-1.5 text-xs text-muted hover:text-danger disabled:opacity-40">
-            <Undo2 className="h-3.5 w-3.5" /> Ongedaan maken
+          <p className="text-xs text-muted">Plus voegt deze hoeveelheid toe, min haalt de laatste toevoeging weg.</p>
+          <button type="button" onClick={undo} disabled={pending || opt === 0} className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs text-muted hover:bg-blush hover:text-ink disabled:opacity-40">
+            <Undo2 className="h-3.5 w-3.5" /> Laatste ongedaan maken
           </button>
         </div>
       </div>
