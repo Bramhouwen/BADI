@@ -1,5 +1,5 @@
-export const APP_NAME = "WINTER ARC";
-export const TAGLINE = "Better Together.";
+export const APP_NAME = "BADI";
+export const TAGLINE = "Run Squat.";
 export const TIMEZONE = "Europe/Amsterdam";
 
 export const DEFAULT_CHALLENGE = {

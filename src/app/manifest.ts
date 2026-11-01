@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Winter Arc",
-    short_name: "Winter Arc",
-    description: "Better Together. Vier vrienden, één winter.",
+    name: "BADI",
+    short_name: "BADI",
+    description: "Run. Squat. Better together. Vier vrienden, één winter.",
     start_url: "/",
     scope: "/",
     display: "standalone",

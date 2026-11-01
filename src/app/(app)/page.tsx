@@ -95,7 +95,7 @@ async function Content() {
         <h1 className="text-[28px] font-light leading-[1.2] tracking-tight text-text/90">
           {greeting(now, ctx.challenge.timezone).replace("!", ",")} <span className="font-semibold text-text">{firstName(ctx.profile.display_name)}!</span>
           <br />
-          <span className="font-medium text-text">dit is je Winter Arc van vandaag.</span>
+          <span className="font-medium text-text">dit is je dag in de Winter Arc.</span>
         </h1>
         <p className="mt-2 text-[14px] text-muted">Vandaag is {formatDateNl(today)}</p>
       </div>

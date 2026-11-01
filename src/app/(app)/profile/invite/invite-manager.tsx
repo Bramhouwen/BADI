@@ -29,7 +29,7 @@ export function InviteManager({ spots, open }: { spots: number; open: { id: stri
     if (!link) return;
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Winter Arc", text: "Doe je mee met onze Winter Arc? ❄️", url: link });
+        await navigator.share({ title: "BADI", text: "Doe je mee met onze Winter Arc in BADI? ❄️", url: link });
       } catch {
         /* cancelled */
       }
@@ -42,7 +42,7 @@ export function InviteManager({ spots, open }: { spots: number; open: { id: stri
         <SectionTitle>Nieuwe uitnodiging</SectionTitle>
         <Card className="space-y-4">
           {spots <= 0 ? (
-            <p className="text-sm text-muted">De squad is compleet. Winter Arc is voor precies vier vrienden.</p>
+            <p className="text-sm text-muted">De squad is compleet. BADI is voor precies vier vrienden.</p>
           ) : (
             <form
               className="space-y-3"

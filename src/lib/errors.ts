@@ -2,8 +2,8 @@
 export function friendlyError(error: unknown): string {
   const message = typeof error === "string" ? error : error instanceof Error ? error.message : String((error as { message?: string })?.message ?? "");
   const table: Record<string, string> = {
-    MEMBER_LIMIT_REACHED: "De groep zit vol: Winter Arc is voor precies vier vrienden.",
-    ALREADY_MEMBER: "Je zit al in een Winter Arc groep.",
+    MEMBER_LIMIT_REACHED: "De groep zit vol: BADI is voor precies vier vrienden.",
+    ALREADY_MEMBER: "Je zit al in een BADI-squad.",
     NOT_ADMIN: "Alleen de beheerder kan uitnodigen.",
     NOT_A_MEMBER: "Je bent geen lid van deze groep.",
     NOT_AUTHENTICATED: "Je bent niet ingelogd.",

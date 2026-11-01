@@ -11,14 +11,14 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: { default: "WINTER ARC", template: "%s · WINTER ARC" },
+  title: { default: "BADI", template: "%s · BADI" },
   description: "Vier vrienden, één winter. Show up for yourself, inspire the others, grow together.",
-  applicationName: "Winter Arc",
+  applicationName: "BADI",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Winter Arc",
+    title: "BADI",
   },
   icons: {
     icon: [

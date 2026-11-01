@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { Bell } from "lucide-react";
 import { getContext } from "@/lib/data";
@@ -49,10 +50,8 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-30" style={{ paddingTop: "var(--sat)" }}>
       <div className="mx-auto flex h-[68px] max-w-lg items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-3" aria-label="Winter Arc home">
-          <span className="tile flex h-11 w-11 items-center justify-center rounded-[16px] text-xl" aria-hidden>
-            ❄️
-          </span>
+        <Link href="/" className="flex items-center gap-3" aria-label="BADI home">
+          <Image src="/brand/wordmark.png" alt="BADI" width={96} height={21} priority className="h-[20px] w-auto" />
           {isDemo() ? (
             <span className="rounded-full bg-gold/90 px-2 py-0.5 text-[9px] font-extrabold tracking-wider text-ink" title="Demo-modus: voorbeelddata, geen Supabase">
               DEMO

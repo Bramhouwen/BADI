@@ -36,7 +36,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
   return (
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
-      <PageTitle title="Winter Arc Kitchen 🥑" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
+      <PageTitle title="BADI Kitchen 🥑" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
       <div className="mb-4">
         <ChipTabs
           label="Filter"

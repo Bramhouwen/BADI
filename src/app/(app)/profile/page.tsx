@@ -46,7 +46,7 @@ async function Content() {
       <ProfileForm displayName={ctx.profile.display_name} avatarUrl={avatar} avatarPath={ctx.profile.avatar_path} userId={ctx.userId} />
 
       <section>
-        <SectionTitle>Winter Arc</SectionTitle>
+        <SectionTitle>BADI</SectionTitle>
         <div className="space-y-2.5">
           <Row href="/profile/principles" icon={BookOpen} title="De zeven principes" body="Waar deze winter om draait." />
           {ctx.membership.role === "admin" ? <Row href="/profile/invite" icon={Link2} title="Squad uitnodigen" body="Maak uitnodigingslinks voor je vrienden." /> : null}

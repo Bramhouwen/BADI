@@ -10,7 +10,7 @@ export default function OfflinePage() {
       </div>
       <h1 className="mt-5 text-xl font-bold">Even geen verbinding</h1>
       <p className="mt-2 max-w-xs text-sm text-muted">
-        Winter Arc heeft internet nodig om je squad te zien. Je check-in wacht gewoon op je zodra je weer online bent.
+        BADI heeft internet nodig om je squad te zien. Je check-in wacht gewoon op je zodra je weer online bent.
       </p>
       {/* Full reload on purpose: retries the network instead of the client router cache. */}
       {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}

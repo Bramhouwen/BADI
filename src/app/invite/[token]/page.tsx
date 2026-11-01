@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { getContext } from "@/lib/data";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -22,9 +23,7 @@ async function Content({ params }: { params: Promise<{ token: string }> }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col items-center justify-center px-5 text-center" style={{ paddingTop: "var(--sat)" }}>
-      <div className="tile mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] text-3xl">
-        <span aria-hidden>❄️</span>
-      </div>
+      <Image src="/brand/logo-full.png" alt="BADI" width={200} height={172} priority className="mb-6 h-auto w-[180px]" />
       {!info || !info.challenge_name ? (
         <>
           <h1 className="text-2xl font-bold">Deze uitnodiging bestaat niet</h1>

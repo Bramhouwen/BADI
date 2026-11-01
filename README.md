@@ -1,6 +1,6 @@
-# WINTER ARC ❄️
+# BADI ❄️
 
-Better Together. Een private, installeerbare web-app (PWA) voor precies vier vrienden die van 1 november t/m 31 december 2026 samen gezonde gewoontes opbouwen.
+BADI (Run Squat) is een private, installeerbare web-app (PWA) voor precies vier vrienden die tijdens hun Winter Arc, van 1 november t/m 31 december 2026 samen gezonde gewoontes opbouwen.
 
 Geen ranking, geen verliezer, geen druk. Wel: een check-in van tien seconden, persoonlijke streaks, een gedeelde keuken met recepten, een intieme fotomuur, complimenten en aan het eind een Winter Arc Wrapped.
 
