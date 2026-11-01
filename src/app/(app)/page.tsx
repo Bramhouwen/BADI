@@ -17,7 +17,6 @@ import { computeStreakStats, recentCalendar } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
-import { formatDateNl } from "@/lib/dates";
 import { challengeLengthDays } from "@/lib/dates";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { WeekCard } from "@/components/home/streak-card";
@@ -100,9 +99,6 @@ async function Content() {
       <div className="px-1">
         <p className="font-display text-[20px] text-muted">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
         <h1 className="-mt-0.5 font-display text-[38px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
-        <p className="mt-1.5 text-[13px] text-muted">
-          {phase === "during" ? `Dag ${day} van je Winter Arc · ${formatDateNl(today, { weekday: "long", day: "numeric", month: "long" })}` : formatDateNl(today, { weekday: "long", day: "numeric", month: "long" })}
-        </p>
       </div>
 
       {phase === "during" ? (
