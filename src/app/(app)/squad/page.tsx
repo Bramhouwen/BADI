@@ -47,9 +47,9 @@ async function Content() {
     const latestRecipe = recipes.find((r) => r.user_id === m.user_id) ?? null;
     const latestPost = posts.find((p) => p.user_id === m.user_id) ?? null;
     const candidates = [
-      latestCheckin ? { at: latestCheckin.updated_at, label: `Check-in: ${latestCheckin.activities.length} ${latestCheckin.activities.length === 1 ? "activiteit" : "activiteiten"}` } : null,
-      latestRecipe ? { at: latestRecipe.created_at, label: `Recept: ${latestRecipe.title}` } : null,
-      latestPost ? { at: latestPost.created_at, label: "Foto op de Wall" } : null,
+      latestCheckin ? { at: latestCheckin.updated_at, label: `Ingecheckt met ${latestCheckin.activities.length} ${latestCheckin.activities.length === 1 ? "activiteit" : "activiteiten"}` } : null,
+      latestRecipe ? { at: latestRecipe.created_at, label: `Deelde het recept ${latestRecipe.title}` } : null,
+      latestPost ? { at: latestPost.created_at, label: "Plaatste een foto op de Wall" } : null,
     ].filter((c): c is { at: string; label: string } => Boolean(c));
     const latest = candidates.sort((a, b) => (a.at < b.at ? 1 : -1))[0] ?? null;
     return {
@@ -90,7 +90,7 @@ async function Content() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {members.map((m) => (
           <SquadMemberCard key={m.id} member={m} />
         ))}
