@@ -9,6 +9,7 @@
    - Redirect URLs: `https://<jouw-domein>/auth/callback`
 4. **Authentication > Providers > Email**: Email aan, "Confirm email" aan.
 5. Optioneel maar aan te raden na het compleet maken van de squad: zet **Allow new users to sign up** uit (Authentication > Sign In / Up). Dan kan niemand meer een account aanmaken, ook niet buiten de groep om.
+6. **E-mail**: de ingebouwde mailserver van Supabase is alleen voor testen (paar mails per uur, komt niet altijd aan). Koppel voor magic links en bevestigingsmails een eigen SMTP-dienst onder Project Settings > Authentication > SMTP Settings, bijvoorbeeld Resend (gratis tier). Zonder eigen SMTP: zet "Confirm email" uit en laat vrienden inloggen met een wachtwoord.
 6. Controleer onder **Storage** dat de buckets `wall`, `recipes` en `avatars` bestaan en **private** zijn.
 7. Controleer onder **Database > Replication** (of Realtime) dat de tabellen `wall_posts`, `post_reactions`, `recipe_reactions`, `compliments`, `recipes`, `daily_checkins` en `notifications` in de `supabase_realtime` publicatie zitten. De migratie regelt dit, maar het is goed om te verifiëren.
 
