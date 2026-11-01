@@ -4,6 +4,7 @@ import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
 import { ChipTabs, Page, PageTitle } from "@/components/ui/page";
+import { ChefHat, Heart } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
   return (
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
-      <PageTitle title="BADI Kitchen 🥑" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
+      <PageTitle title="Kitchen" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
       <div className="mb-4">
         <ChipTabs
           label="Filter"
@@ -51,10 +52,10 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
 
       {recipes.length === 0 ? (
         filter === "favorites" ? (
-          <EmptyState emoji="❤️" title="Nog geen favorieten" body="Tik op het hartje bij een recept om het hier te bewaren." />
+          <EmptyState icon={Heart} title="Nog geen favorieten" body="Tik op het hartje bij een recept om het hier te bewaren." />
         ) : (
           <EmptyState
-            emoji="🥞"
+            icon={ChefHat}
             title="De keuken is nog leeg"
             body="Deel het eerste recept. Een foto en een naam zijn genoeg."
             action={

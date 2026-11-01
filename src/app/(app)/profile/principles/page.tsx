@@ -1,6 +1,10 @@
 import { Page, PageTitle } from "@/components/ui/page";
 import { Card } from "@/components/ui/card";
 import { PRINCIPLES } from "@/lib/constants";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { Dumbbell, Droplets, Egg, Footprints, Moon, Salad, Wine, type LucideIcon } from "lucide-react";
+
+const ICONS: LucideIcon[] = [Salad, Dumbbell, Footprints, Egg, Moon, Droplets, Wine];
 
 export const metadata = { title: "De zeven principes" };
 
@@ -12,12 +16,10 @@ export default function PrinciplesPage() {
         {PRINCIPLES.map((p, i) => (
           <li key={p.title}>
             <Card className="flex gap-4">
-              <span className="tile flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl" aria-hidden>
-                {p.emoji}
-              </span>
+              <IconBadge icon={ICONS[i] ?? Salad} size="lg" />
               <div>
-                <p className="text-[11px] font-semibold tracking-[0.18em] text-water-deep">PRINCIPE {i + 1}</p>
-                <h2 className="text-base font-semibold">{p.title}</h2>
+                <p className="text-[11px] font-medium tracking-[0.18em] text-muted">PRINCIPE {i + 1}</p>
+                <h2 className="font-display text-[19px] text-text">{p.title}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted">{p.body}</p>
               </div>
             </Card>

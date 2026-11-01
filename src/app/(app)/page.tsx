@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowRight, Pencil } from "lucide-react";
+import { ArrowRight, Pencil, Snowflake } from "lucide-react";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
@@ -97,15 +98,15 @@ async function Content() {
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="px-1">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">{formatDateNl(today, { weekday: "long", day: "numeric", month: "long" })}</p>
-        <h1 className="mt-1 font-display text-[34px] leading-[1.1] text-text">
-          {greeting(now, ctx.challenge.timezone).replace("!", ",")} <span className="italic">{firstName(ctx.profile.display_name)}</span>
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">{formatDateNl(today, { weekday: "long", day: "numeric", month: "long" })}</p>
+        <h1 className="mt-1 font-display text-[32px] leading-[1.15] text-text">
+          {greeting(now, ctx.challenge.timezone).replace("!", ",")} {firstName(ctx.profile.display_name)}
         </h1>
-        <p className="mt-2 text-[15px] text-muted">Dag {day} van je Winter Arc. Goed dat je er bent.</p>
+        <p className="mt-1.5 text-[14px] text-muted">Dag {day} van je Winter Arc. Goed dat je er bent.</p>
       </div>
 
       <section>
-        <SectionTitle action={<Link href="/profile" className="text-[13px] font-medium text-text/70">Bekijk meer</Link>}>Jouw cijfers</SectionTitle>
+        <SectionTitle action={<Link href="/profile" className="text-[13px] text-muted">Bekijk meer</Link>}>Jouw cijfers</SectionTitle>
         <StatTiles current={myStats.current} longest={myStats.longest} total={myStats.total} challengeLength={challengeLengthDays(ctx.challenge)} />
         <div className="mt-3">
           <WeekCard calendar={calendar} />
@@ -118,31 +119,31 @@ async function Content() {
 
       {phase === "during" ? (
         todayCheckin ? (
-          <Card variant="tile" className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm" aria-hidden>
-              ❄️
-            </div>
+          <Card className="flex items-center gap-4">
+            <IconBadge icon={Snowflake} tone="sage" size="lg" className="rounded-full" />
             <div className="flex-1">
-              <p className="text-[15px] font-semibold leading-snug">Je bent er vandaag weer voor gegaan. Lekker bezig!</p>
-              <p className="mt-0.5 text-xs text-muted">{todayCheckin.note ? `“${todayCheckin.note}”` : `${todayCheckin.activities.length} ${todayCheckin.activities.length === 1 ? "activiteit" : "activiteiten"} gelogd`}</p>
+              <p className="text-[14px] font-medium leading-snug text-text">Je bent er vandaag weer voor gegaan. Lekker bezig!</p>
+              <p className="mt-0.5 text-[12px] text-muted">{todayCheckin.note ? `“${todayCheckin.note}”` : `${todayCheckin.activities.length} ${todayCheckin.activities.length === 1 ? "activiteit" : "activiteiten"} gelogd`}</p>
             </div>
             {canEditToday ? (
-              <Link href="/checkin" aria-label="Check-in aanpassen" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-text">
-                <Pencil className="h-4 w-4" />
+              <Link href="/checkin" aria-label="Check-in aanpassen" className="soft flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                <Pencil className="h-4 w-4" strokeWidth={1.6} />
               </Link>
             ) : null}
           </Card>
         ) : (
-          <Card variant="dark" className="space-y-4 rounded-[28px] p-5">
-            <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">Check-in van vandaag</p>
-              <p className="mt-1 font-display text-[24px] leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
-              <p className="mt-1 text-sm text-muted">Eén activiteit is genoeg. Inchecken duurt tien seconden.</p>
-            </div>
-            <Link href="/checkin" className="block">
-              <Button variant="secondary" size="lg" className="w-full">
-                Check vandaag in <ArrowRight className="h-4 w-4" />
-              </Button>
+          <Card variant="dark" className="relative overflow-hidden rounded-[24px] p-5">
+            <svg className="pointer-events-none absolute -right-6 -top-4 h-40 w-40 text-paper/15" viewBox="0 0 160 160" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
+              <path d="M20 140 C 60 90, 90 70, 140 20" />
+              <path d="M40 130 C 70 100, 95 85, 130 40" />
+              <path d="M30 95 C 60 85, 80 70, 100 35" />
+              <path d="M70 150 C 95 120, 115 105, 150 70" />
+            </svg>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">Check-in van vandaag</p>
+            <p className="mt-2 max-w-[260px] font-display text-[22px] leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
+            <p className="mt-1 text-[13px] text-muted">Eén activiteit is genoeg. Inchecken duurt tien seconden.</p>
+            <Link href="/checkin" className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-paper px-5 text-[14px] font-medium text-ink">
+              Check vandaag in <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
             </Link>
           </Card>
         )
@@ -165,27 +166,27 @@ async function Content() {
 
       {wrapped !== "not_yet" && phase !== "after" ? (
         <Link href="/wrapped" className="block">
-          <Card className="border-gold/40">
-            <p className="text-xs font-semibold tracking-[0.2em] text-gold">WINTER ARC WRAPPED</p>
+          <Card className="ring-1 ring-gold/50">
+            <p className="text-[11px] font-medium tracking-[0.2em] text-muted">WINTER ARC WRAPPED</p>
             <p className="mt-1 font-semibold">{wrapped === "preliminary" ? "De finale is hier. Bekijk alvast jullie voorlopige Wrapped." : "Jullie Wrapped staat klaar."}</p>
           </Card>
         </Link>
       ) : null}
 
       <section>
-        <SectionTitle action={<Link href="/squad" className="text-[13px] font-medium text-text/70">Bekijk squad</Link>}>Jouw squad</SectionTitle>
+        <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Bekijk squad</Link>}>Jouw squad</SectionTitle>
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe }))} today={today} />
       </section>
 
       <section>
-        <SectionTitle action={<Link href="/wall" className="text-[13px] font-medium text-text/70">Bekijk meer</Link>}>Laatste inspiratie</SectionTitle>
+        <SectionTitle action={<Link href="/wall" className="text-[13px] text-muted">Bekijk meer</Link>}>Laatste inspiratie</SectionTitle>
         <InspirationPreview items={inspiration} />
       </section>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-[13px] text-muted">
         {phase === "during"
           ? finale === 0
-            ? "Vandaag is de Winter Arc finale ❄️"
+            ? "Vandaag is de Winter Arc finale"
             : `Nog ${finale} ${finale === 1 ? "dag" : "dagen"} tot de Winter Arc finale`
           : phase === "before"
             ? `De Winter Arc start op ${ctx.challenge.start_date.split("-").reverse().join("-")}`

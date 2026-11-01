@@ -6,7 +6,7 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 }
 
 export const inputClass =
-  "w-full rounded-full border border-ink/10 bg-white/80 px-5 py-3.5 text-[16px] text-text placeholder:text-muted/70 shadow-sm outline-none transition focus:border-ink/30 focus:bg-white focus:ring-2 focus:ring-ink/10";
+  "w-full rounded-full border border-ink/10 bg-white px-5 py-3 text-[16px] text-text placeholder:text-muted/70 outline-none transition focus:border-ink/30 focus:ring-2 focus:ring-ink/10";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

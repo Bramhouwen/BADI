@@ -9,6 +9,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Gift } from "lucide-react";
 import { WrappedView } from "./wrapped-view";
 import type { Compliment, DailyCheckin, Recipe, WallPost } from "@/lib/types";
 import { isDemo } from "@/lib/demo";
@@ -26,9 +27,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ preview?: str
     const d = daysUntilFinale(ctx.challenge, now);
     return (
       <Page>
-        <PageTitle title="Winter Arc Wrapped ✨" back="/profile" />
+        <PageTitle title="Winter Arc Wrapped" back="/profile" />
         <EmptyState
-          emoji="🎁"
+          icon={Gift}
           title={`Nog ${d} ${d === 1 ? "dag" : "dagen"} tot de finale`}
           body={`Op ${formatDateNl(ctx.challenge.end_date)} verschijnt hier jullie voorlopige Wrapped. De definitieve versie volgt zodra de laatste check-in is afgerond.`}
           action={

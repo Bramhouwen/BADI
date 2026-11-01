@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-lg px-4 pb-6 pt-1", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-lg px-5 pb-6 pt-1", className)}>{children}</div>;
 }
 
 export function PageTitle({ title, subtitle, back, action }: { title: ReactNode; subtitle?: ReactNode; back?: string; action?: ReactNode }) {
@@ -15,10 +15,10 @@ export function PageTitle({ title, subtitle, back, action }: { title: ReactNode;
           {back ? (
             <Link
               href={back}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text shadow-sm backdrop-blur hover:bg-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush"
               aria-label="Terug"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.6} />
             </Link>
           ) : (
             <span />
@@ -26,8 +26,8 @@ export function PageTitle({ title, subtitle, back, action }: { title: ReactNode;
           {action}
         </div>
       ) : null}
-      <h1 className="font-display text-[30px] leading-tight">{title}</h1>
-      {subtitle ? <p className="mt-1 text-[15px] text-muted">{subtitle}</p> : null}
+      <h1 className="font-display text-[28px] leading-tight">{title}</h1>
+      {subtitle ? <p className="mt-1 text-[14px] text-muted">{subtitle}</p> : null}
     </div>
   );
 }
@@ -47,12 +47,12 @@ export function ChipTabs<T extends string>({
   label: string;
 }) {
   return (
-    <div className="glass flex rounded-full p-1" role="tablist" aria-label={label}>
+    <div className="soft flex rounded-full p-1" role="tablist" aria-label={label}>
       {options.map((o) => {
         const active = o.key === value;
         const cls = cn(
-          "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2.5 text-center text-[14px] font-semibold transition",
-          active ? "espresso" : "text-text/80 hover:text-text",
+          "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-center text-[13px] font-medium transition",
+          active ? "bg-white text-ink shadow-sm" : "text-ink/70 hover:text-ink",
         );
         return hrefFor ? (
           <Link key={o.key} role="tab" aria-selected={active} href={hrefFor(o.key)} className={cls}>

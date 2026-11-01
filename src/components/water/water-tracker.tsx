@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronRight, Plus, Undo2 } from "lucide-react";
+import { ChevronRight, Coffee, CupSoda, Droplets, GlassWater, Plus, Undo2 } from "lucide-react";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { motion, useReducedMotion } from "motion/react";
 import { WATER_GOAL_ML, WATER_QUICK_ADD } from "@/lib/constants";
 import { addWater, undoLastWater } from "@/app/actions/water";
@@ -17,6 +18,8 @@ interface Props {
   /** compact = card on Home, full = the dedicated page */
   variant?: "compact" | "full";
 }
+
+const QUICK_ICONS = { glass: GlassWater, bottle: Droplets, cup: Coffee, big: CupSoda } as const;
 
 export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: Props) {
   const [pending, start] = useTransition();
@@ -47,20 +50,20 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
 
   if (variant === "compact") {
     return (
-      <Link href="/water" className="glass flex items-stretch overflow-hidden rounded-[24px]">
-        <WaterWave level={level} className="w-[96px] shrink-0 bg-tile-2/60">
+      <Link href="/water" className="glass flex items-stretch overflow-hidden rounded-[22px]">
+        <WaterWave level={level} className="w-[96px] shrink-0 bg-blush">
           <div className="flex h-[112px] items-center justify-center">
             <span className="font-display text-2xl text-ink">{pct}%</span>
           </div>
         </WaterWave>
         <div className="flex flex-1 flex-col justify-center px-4 py-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">Water vandaag</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Water vandaag</p>
           <p className="mt-0.5 font-display text-[24px] leading-none text-text">{formatMl(opt)}</p>
-          <p className="mt-1 text-xs text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} tot ${formatMl(goal)}` : "Doel gehaald voor vandaag"}</p>
+          <p className="mt-1 text-[12px] text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} tot ${formatMl(goal)}` : "Doel gehaald voor vandaag"}</p>
         </div>
         <div className="flex items-center pr-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm">
-            <ChevronRight className="h-4 w-4" />
+          <span className="soft flex h-9 w-9 items-center justify-center rounded-full">
+            <ChevronRight className="h-4 w-4" strokeWidth={1.6} />
           </span>
         </div>
       </Link>
@@ -69,11 +72,11 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
 
   return (
     <div className="space-y-5">
-      <div className="glass overflow-hidden rounded-[32px]">
-        <WaterWave level={level} className="min-h-[380px] bg-tile-2/50">
+      <div className="glass overflow-hidden rounded-[28px]">
+        <WaterWave level={level} className="min-h-[380px] bg-blush/60">
           <div className="flex min-h-[380px] flex-col items-center justify-between px-6 pb-6 pt-8">
             <div className="text-center">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">Vandaag gedronken</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">Vandaag gedronken</p>
               <p className="mt-2 font-display text-[52px] leading-none text-text">{formatMl(opt)}</p>
               <p className="mt-2 text-sm text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} te gaan` : "Doel gehaald, lekker bezig"}</p>
             </div>
@@ -85,9 +88,9 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
                 disabled={pending}
                 whileTap={reduce ? undefined : { scale: 0.92 }}
                 onClick={() => add(custom)}
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-10px_rgba(74,42,33,0.5)]"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-10px_rgba(107,58,46,0.45)]"
               >
-                <Plus className="h-7 w-7" strokeWidth={2.5} />
+                <Plus className="h-7 w-7" strokeWidth={1.8} />
               </motion.button>
               <span className="w-[52px] text-sm font-semibold text-ink/80">{custom} ml</span>
             </div>
@@ -107,21 +110,19 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
                 setCustom(q.ml);
                 add(q.ml);
               }}
-              className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 text-left transition active:scale-[0.98]", custom === q.ml && "border-water")}
+              className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 text-left transition active:scale-[0.98]", custom === q.ml && "ring-2 ring-sage")}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm" aria-hidden>
-                {q.emoji}
-              </span>
+              <IconBadge icon={QUICK_ICONS[q.icon]} size="sm" tone={custom === q.ml ? "sage" : "soft"} className="rounded-full" />
               <span>
-                <span className="block text-[15px] font-semibold">{q.ml} ml</span>
-                <span className="block text-xs text-muted">{q.label}</span>
+                <span className="block text-[14px] font-medium text-text">{q.ml} ml</span>
+                <span className="block text-[12px] text-muted">{q.label}</span>
               </span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="glass space-y-3 rounded-[24px] px-4 py-4">
+      <div className="glass space-y-3 rounded-[22px] px-4 py-4">
         <div className="flex items-center justify-between">
           <label htmlFor="water-custom" className="text-sm font-medium text-text">
             Eigen hoeveelheid

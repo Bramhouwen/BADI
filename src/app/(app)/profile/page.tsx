@@ -8,6 +8,7 @@ import { formatDateNl, wrappedStatus } from "@/lib/dates";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { ProfileForm } from "./profile-form";
 import { AlcoholExceptions } from "./alcohol-exceptions";
 import type { AlcoholException } from "@/lib/types";
@@ -16,15 +17,13 @@ export const metadata = { title: "Profiel" };
 
 function Row({ href, icon: Icon, title, body }: { href: string; icon: typeof BookOpen; title: string; body: string }) {
   return (
-    <Link href={href} className="glass flex items-center gap-3 rounded-full py-2.5 pl-2.5 pr-4 hover:bg-white">
-      <span className="tile flex h-11 w-11 items-center justify-center rounded-full">
-        <Icon className="h-5 w-5" />
-      </span>
+    <Link href={href} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-4 hover:bg-blush/40">
+      <IconBadge icon={Icon} size="md" />
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold">{title}</span>
+        <span className="block text-[14px] font-medium text-text">{title}</span>
         <span className="block truncate text-xs text-muted">{body}</span>
       </span>
-      <ChevronRight className="h-5 w-5 text-text/70" />
+      <ChevronRight className="h-[18px] w-[18px] text-muted" strokeWidth={1.6} />
     </Link>
   );
 }
@@ -65,7 +64,7 @@ async function Content() {
       </section>
 
       <form action="/auth/signout" method="post">
-        <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-full border border-ink/10 py-3.5 text-sm font-medium text-text hover:bg-white/70">
+        <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-full border border-ink/10 bg-white py-3 text-sm font-medium text-ink hover:bg-blush">
           <LogOut className="h-4 w-4" /> Uitloggen
         </button>
       </form>

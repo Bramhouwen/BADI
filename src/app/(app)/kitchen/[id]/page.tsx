@@ -43,12 +43,12 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
       <div className="relative mx-4 mt-1 aspect-[4/4] overflow-hidden rounded-[28px] border border-ink/10 bg-white/70">
         {image ? <Image src={image} alt={recipe.title} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : null}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-          <Link href="/kitchen" className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/50 text-white backdrop-blur" aria-label="Terug naar Kitchen">
+          <Link href="/kitchen" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur" aria-label="Terug naar Kitchen">
             ←
           </Link>
           <div className="flex gap-2">
             {isOwner ? (
-              <Link href={`/kitchen/${recipe.id}/edit`} className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-ink/50 text-white backdrop-blur" aria-label="Recept bewerken">
+              <Link href={`/kitchen/${recipe.id}/edit`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur" aria-label="Recept bewerken">
                 <Pencil className="h-4 w-4" />
               </Link>
             ) : null}
@@ -69,8 +69,8 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-xs text-muted">{formatDateTimeNl(recipe.created_at, ctx.challenge.timezone)}</p>
           </div>
           {recipe.protein_grams != null ? (
-            <span className="tile rounded-full px-3 py-1.5 text-xs font-semibold">
-              🍳 ±{recipe.protein_grams} g eiwit
+            <span className="soft rounded-full px-3 py-1.5 text-xs font-medium">
+              ±{recipe.protein_grams} g eiwit
             </span>
           ) : null}
         </div>

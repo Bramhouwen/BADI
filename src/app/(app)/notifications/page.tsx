@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { MarkNotificationsRead } from "./mark-read";
 import { firstName, cn } from "@/lib/utils";
+import { Bell } from "lucide-react";
 import type { AppNotification } from "@/lib/types";
 
 export const metadata = { title: "Meldingen" };
@@ -43,7 +44,7 @@ async function Content() {
       {hasUnread ? <MarkNotificationsRead /> : null}
       <PageTitle title="Meldingen" subtitle="Alleen de leuke dingen. Nooit wie een dag miste." back="/" />
       {notifications.length === 0 ? (
-        <EmptyState emoji="🔔" title="Nog geen meldingen" body="Complimenten, reacties op je foto's en nieuwe posts van je squad komen hier binnen." />
+        <EmptyState icon={Bell} title="Nog geen meldingen" body="Complimenten, reacties op je foto's en nieuwe posts van je squad komen hier binnen." />
       ) : (
         <ul className="space-y-2">
           {notifications.map((n) => {
@@ -52,16 +53,13 @@ async function Content() {
             const d = describe(n, actor);
             return (
               <li key={n.id}>
-                <Link href={d.href} className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 hover:bg-white", !n.read_at && "border-water-deep")}>
+                <Link href={d.href} className={cn("glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-4 hover:bg-blush/40", !n.read_at && "ring-1 ring-sage")}>
                   <Avatar name={actorProfile?.display_name ?? "?"} src={actorProfile?.avatar_path ? avatars.get(actorProfile.avatar_path) ?? null : null} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm leading-snug">
-                      <span aria-hidden>{d.emoji} </span>
-                      {d.text}
-                    </span>
+                    <span className="block text-sm leading-snug">{d.text}</span>
                     <span className="block text-xs text-muted">{relativeTimeNl(n.created_at)}</span>
                   </span>
-                  {!n.read_at ? <span className="h-2 w-2 shrink-0 rounded-full bg-water-deep" aria-label="Nieuw" /> : null}
+                  {!n.read_at ? <span className="h-2 w-2 shrink-0 rounded-full bg-sage" aria-label="Nieuw" /> : null}
                 </Link>
               </li>
             );

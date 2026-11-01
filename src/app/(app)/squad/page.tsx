@@ -80,12 +80,12 @@ async function Content() {
     <Page className="space-y-6">
       <RealtimeRefresher channel={`squad:${ctx.challenge.id}`} tables={["daily_checkins", "compliments", "wall_posts", "recipes"]} />
       <PageTitle
-        title="The Squad 👥"
+        title="The Squad"
         subtitle="We doen dit samen. Geen ranking, wel elkaar."
         action={
-          <Link href="/squad/compliments" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text backdrop-blur hover:bg-white" aria-label="Ontvangen complimenten">
-            <Inbox className="h-5 w-5" />
-            {(unreadCount ?? 0) > 0 ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-water-deep" aria-hidden /> : null}
+          <Link href="/squad/compliments" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="Ontvangen complimenten">
+            <Inbox className="h-[18px] w-[18px]" strokeWidth={1.6} />
+            {(unreadCount ?? 0) > 0 ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-sage ring-2 ring-white" aria-hidden /> : null}
           </Link>
         }
       />

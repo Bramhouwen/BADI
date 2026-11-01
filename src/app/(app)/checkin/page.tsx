@@ -10,6 +10,7 @@ import { CheckinForm } from "./checkin-form";
 import type { DailyCheckin } from "@/lib/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Snowflake, Sparkles } from "lucide-react";
 
 export const metadata = { title: "Check-in" };
 
@@ -38,7 +39,7 @@ async function Content() {
       <Page>
         <PageTitle title="Today I Showed Up." subtitle="Wat heb je vandaag voor jezelf gedaan?" />
         <EmptyState
-          emoji="❄️"
+          icon={Snowflake}
           title={`De Winter Arc start over ${d} ${d === 1 ? "dag" : "dagen"}`}
           body="Vanaf de eerste dag kun je hier in een paar seconden inchecken. Tot die tijd: rust lekker uit."
         />
@@ -51,7 +52,7 @@ async function Content() {
       <Page>
         <PageTitle title="Today I Showed Up." subtitle="De Winter Arc is afgerond." />
         <EmptyState
-          emoji="✨"
+          icon={Sparkles}
           title="We showed up. We grew together."
           body={`Je hebt ${stats.total} ${stats.total === 1 ? "dag" : "dagen"} ingecheckt. Bekijk je Winter Arc Wrapped.`}
           action={

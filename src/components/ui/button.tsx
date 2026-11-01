@@ -10,16 +10,16 @@ type Size = "sm" | "md" | "lg" | "icon";
 const variants: Record<Variant, string> = {
   primary: "espresso font-semibold hover:brightness-110 active:scale-[0.98]",
   dark: "espresso font-semibold hover:brightness-110 active:scale-[0.98]",
-  secondary: "tile font-semibold hover:brightness-[0.98] active:scale-[0.98]",
-  outline: "border border-ink/15 text-text hover:bg-white/60 active:scale-[0.98]",
-  ghost: "text-muted hover:text-text hover:bg-white/60 active:scale-[0.98]",
+  secondary: "bg-white text-ink font-medium border border-ink/10 shadow-sm hover:bg-blush active:scale-[0.98]",
+  outline: "border border-ink/15 text-ink hover:bg-blush active:scale-[0.98]",
+  ghost: "text-muted hover:text-ink hover:bg-blush active:scale-[0.98]",
   danger: "bg-danger/15 text-danger hover:bg-danger/25 active:scale-[0.98]",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-10 px-4 text-sm rounded-full",
-  md: "h-12 px-5 text-[15px] rounded-full",
-  lg: "h-14 px-6 text-base rounded-full",
+  sm: "h-10 px-4 text-[13px] rounded-full",
+  md: "h-12 px-5 text-[14px] rounded-full",
+  lg: "h-[52px] px-6 text-[15px] rounded-full",
   icon: "h-11 w-11 rounded-full",
 };
 
@@ -56,7 +56,7 @@ export function CircleButton({ className, ...props }: React.ButtonHTMLAttributes
   return (
     <button
       className={cn(
-        "flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white/70 text-text shadow-sm backdrop-blur transition hover:bg-white active:scale-95",
+        "flex h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-white text-ink shadow-sm transition hover:bg-blush active:scale-95",
         className,
       )}
       {...props}

@@ -1,3 +1,4 @@
+import { Flame } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { firstName } from "@/lib/utils";
 import { diffDays } from "@/lib/dates";
@@ -23,17 +24,19 @@ function statusLabel(m: SquadPreviewMember, today: string): string {
 
 export function SquadPreview({ members, today }: { members: SquadPreviewMember[]; today: string }) {
   return (
-    <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+    <ul className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
       {members.map((m) => (
-        <li key={m.id} className="glass w-[140px] shrink-0 rounded-[24px] p-3.5">
-          <Avatar name={m.name} src={m.avatar} size="md" ring={m.checkedInToday} className="h-14 w-14" />
-          <p className="mt-3 truncate text-[15px] font-semibold">
+        <li key={m.id} className="glass w-[136px] shrink-0 rounded-[22px] p-3.5">
+          <Avatar name={m.name} src={m.avatar} size="md" ring={m.checkedInToday} className="h-12 w-12" />
+          <p className="mt-3 truncate text-[14px] font-medium text-text">
             {firstName(m.name)}
             {m.isMe ? <span className="font-normal text-muted"> (jij)</span> : null}
           </p>
-          <p className="text-[13px] font-medium text-warm">🔥 {m.streak} {m.streak === 1 ? "dag" : "dagen"}</p>
+          <p className="mt-0.5 flex items-center gap-1 text-[12px] text-ink">
+            <Flame size={13} strokeWidth={1.6} className="text-warm" /> {m.streak} {m.streak === 1 ? "dag" : "dagen"}
+          </p>
           <p className="mt-1 truncate text-[11px] text-muted">{statusLabel(m, today)}</p>
-          {isMilestone(m.streak) ? <p className="mt-1 text-[11px] font-semibold text-gold">🏅 {m.streak} op rij</p> : null}
+          {isMilestone(m.streak) ? <p className="mt-1 text-[11px] font-medium text-sage">Mijlpaal: {m.streak} op rij</p> : null}
         </li>
       ))}
     </ul>

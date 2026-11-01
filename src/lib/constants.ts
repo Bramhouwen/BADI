@@ -15,11 +15,11 @@ export const MAX_ALCOHOL_EXCEPTIONS = 2;
 /** Daily hydration guideline (the challenge mentions 2,5 tot 3 liter). */
 export const WATER_GOAL_ML = 2500;
 export const WATER_MAX_ENTRY_ML = 3000;
-export const WATER_QUICK_ADD: { ml: number; label: string; emoji: string }[] = [
-  { ml: 250, label: "Glas", emoji: "🥛" },
-  { ml: 500, label: "Fles", emoji: "💧" },
-  { ml: 200, label: "Kop thee", emoji: "🍵" },
-  { ml: 750, label: "Grote fles", emoji: "🚰" },
+export const WATER_QUICK_ADD: { ml: number; label: string; icon: "glass" | "bottle" | "cup" | "big" }[] = [
+  { ml: 250, label: "Glas", icon: "glass" },
+  { ml: 500, label: "Fles", icon: "bottle" },
+  { ml: 200, label: "Kop thee", icon: "cup" },
+  { ml: 750, label: "Grote fles", icon: "big" },
 ];
 
 export type ActivityKey =

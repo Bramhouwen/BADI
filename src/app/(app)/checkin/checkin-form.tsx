@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Trash2 } from "lucide-react";
 import { ACTIVITIES, type ActivityKey } from "@/lib/constants";
+import { ACTIVITY_ICONS } from "@/lib/activity-icons";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { Snowflake } from "lucide-react";
 import { formatDateNl } from "@/lib/dates";
 import { isMilestone, type StreakStats } from "@/lib/streaks";
 import type { DailyCheckin } from "@/lib/types";
@@ -92,27 +95,24 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
           initial={reduce ? false : { scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.1 }}
-          className="glow-once mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-water/30 text-4xl"
+          className="glow-once soft mx-auto flex h-20 w-20 items-center justify-center rounded-full"
         >
-          <span aria-hidden>❄️</span>
+          <Snowflake size={32} strokeWidth={1.4} />
         </motion.div>
-        <h2 className="mt-5 font-display text-2xl">Another day. Another step forward. ❄️</h2>
+        <h2 className="mt-5 font-display text-2xl">Another day. Another step forward.</h2>
         <p className="mt-1 text-sm text-muted">
           {success.created ? "Je check-in staat. Lekker bezig!" : "Je check-in is bijgewerkt."}
         </p>
         <div className="mt-6 flex items-center justify-center gap-6">
           <div>
-            <div className="text-4xl font-extrabold tabular-nums text-warm">
-              <span aria-hidden>🔥 </span>
-              {success.streak}
-            </div>
+            <div className="font-display text-4xl tabular-nums text-text">{success.streak}</div>
             <div className="mt-1 text-xs font-medium uppercase tracking-wider text-muted">
               {success.streak === 1 ? "dag streak" : "dagen streak"}
             </div>
           </div>
           <div className="h-10 w-px bg-ink/15" />
           <div>
-            <div className="text-4xl font-extrabold tabular-nums">{success.longest}</div>
+            <div className="font-display text-4xl tabular-nums text-text">{success.longest}</div>
             <div className="mt-1 text-xs font-medium uppercase tracking-wider text-muted">record</div>
           </div>
         </div>
@@ -121,9 +121,9 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
             initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-5 rounded-full bg-gold px-4 py-2 text-sm font-semibold text-ink"
+            className="soft mt-5 rounded-full px-4 py-2 text-sm font-medium"
           >
-            🏅 Mijlpaal: {success.streak} dagen op rij. Dat is consistentie.
+            Mijlpaal: {success.streak} dagen op rij. Dat is consistentie.
           </motion.p>
         ) : null}
         <div className="mt-6 flex flex-col gap-2">
@@ -152,7 +152,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
             label: (
               <>
                 {d === today ? "Vandaag" : "Gisteren"}
-                {existing[d] ? <Check className="h-3.5 w-3.5" aria-label="al ingecheckt" /> : null}
+                {existing[d] ? <Check className="h-3.5 w-3.5" strokeWidth={2} aria-label="al ingecheckt" /> : null}
               </>
             ),
           }))}
@@ -175,16 +175,14 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
               onClick={() => toggle(a.key)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
               className={cn(
-                "relative flex min-h-[132px] flex-col items-start justify-between rounded-[24px] p-4 text-left transition-colors",
-                on ? "tile border-sage ring-2 ring-sage/60" : "glass hover:bg-white",
+                "relative flex min-h-[124px] flex-col items-start justify-between rounded-[22px] p-4 text-left transition-colors",
+                on ? "glass ring-2 ring-sage" : "glass hover:bg-blush/40",
               )}
             >
-              <span className={cn("flex h-11 w-11 items-center justify-center rounded-full text-2xl leading-none", on ? "bg-sage/25" : "bg-tile-2")} aria-hidden>
-                {a.emoji}
-              </span>
+              <IconBadge icon={ACTIVITY_ICONS[a.key]} tone={on ? "sage" : "soft"} />
               <span className="mt-3">
-                <span className="block text-[15px] font-semibold leading-tight">{a.label}</span>
-                <span className="mt-0.5 block text-xs text-muted">{a.hint}</span>
+                <span className="block text-[14px] font-medium leading-tight text-text">{a.label}</span>
+                <span className="mt-0.5 block text-[12px] text-muted">{a.hint}</span>
               </span>
               <AnimatePresence>
                 {on ? (
@@ -192,9 +190,9 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
                     initial={reduce ? false : { scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full espresso"
+                    className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sage text-white"
                   >
-                    <Check className="h-4 w-4" strokeWidth={3} />
+                    <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
                   </motion.span>
                 ) : null}
               </AnimatePresence>

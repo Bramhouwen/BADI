@@ -6,6 +6,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/app/fab";
+import { Camera } from "lucide-react";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { PostCard } from "./post-card";
 import { loadPosts } from "./wall-data";
@@ -20,10 +21,10 @@ async function Content() {
     <Page>
       <RealtimeRefresher channel={`wall:${ctx.challenge.id}`} tables={["wall_posts", "post_reactions"]} />
       <PostedToast />
-      <PageTitle title="The Wall 📸" subtitle="Jullie momenten. Alleen zichtbaar voor de squad." />
+      <PageTitle title="The Wall" subtitle="Jullie momenten. Alleen zichtbaar voor de squad." />
       {posts.length === 0 ? (
         <EmptyState
-          emoji="📸"
+          icon={Camera}
           title="Nog geen momenten"
           body="Een gymfoto, een wandeling, een gezonde maaltijd of gewoon een mooi uitzicht. Alles telt."
           action={

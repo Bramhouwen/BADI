@@ -29,13 +29,13 @@ export function FavoriteButton({ recipeId, favorite, className, large }: { recip
         });
       }}
       className={cn(
-        "flex items-center justify-center rounded-full bg-ink/50 text-white backdrop-blur transition",
+        "flex items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur transition",
         large ? "h-12 w-12" : "h-9 w-9",
         className,
       )}
     >
       <motion.span animate={opt && !reduce ? { scale: [1, 1.3, 1] } : { scale: 1 }} transition={{ duration: 0.3 }}>
-        <Heart className={cn(large ? "h-6 w-6" : "h-4.5 w-4.5", opt && "fill-[#fb7185] text-[#fb7185]")} />
+        <Heart strokeWidth={1.6} className={cn(large ? "h-6 w-6" : "h-4.5 w-4.5", opt && "fill-[#d98b8a] text-[#d98b8a]")} />
       </motion.span>
     </motion.button>
   );

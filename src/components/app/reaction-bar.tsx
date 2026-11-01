@@ -52,7 +52,7 @@ export function ReactionBar({
             }
             className={cn(
               "flex h-9 items-center gap-1 rounded-full border px-2.5 text-sm transition-colors",
-              active ? "espresso border-transparent" : "border-ink/10 bg-white/70 hover:bg-white",
+              active ? "espresso border-transparent" : "border-ink/10 bg-white hover:bg-blush",
             )}
           >
             <motion.span animate={active && !reduce ? { scale: [1, 1.35, 1] } : { scale: 1 }} transition={{ duration: 0.35 }} aria-hidden>

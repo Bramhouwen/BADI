@@ -10,6 +10,7 @@ import { relativeTimeNl } from "@/lib/dates";
 import { MarkRead } from "./mark-read";
 import type { Compliment } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { HandHeart } from "lucide-react";
 
 export const metadata = { title: "Complimenten" };
 
@@ -29,13 +30,13 @@ async function Content() {
       {hasUnread ? <MarkRead /> : null}
       <PageTitle title="Ontvangen complimenten" subtitle="Lieve woorden van je squad, om nog eens terug te lezen." back="/squad" />
       {compliments.length === 0 ? (
-        <EmptyState emoji="💌" title="Nog geen complimenten" body="Geef er zelf eentje weg. Dat komt bijna altijd terug." />
+        <EmptyState icon={HandHeart} title="Nog geen complimenten" body="Geef er zelf eentje weg. Dat komt bijna altijd terug." />
       ) : (
         <ul className="space-y-2">
           {compliments.map((c) => {
             const sender = squad.find((m) => m.user_id === c.sender_id)?.profile;
             return (
-              <li key={c.id} className={cn("glass flex items-start gap-3 rounded-[24px] px-3.5 py-3", !c.read_at && "border-water-deep")}>
+              <li key={c.id} className={cn("glass flex items-start gap-3 rounded-[20px] px-3.5 py-3", !c.read_at && "ring-1 ring-sage")}>
                 <Avatar name={sender?.display_name ?? "Lid"} src={sender?.avatar_path ? avatars.get(sender.avatar_path) ?? null : null} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] leading-snug">{c.message}</p>
@@ -43,7 +44,7 @@ async function Content() {
                     {sender?.display_name ?? "Lid"} · {relativeTimeNl(c.created_at)}
                   </p>
                 </div>
-                {!c.read_at ? <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-water-deep" aria-label="Nieuw" /> : null}
+                {!c.read_at ? <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-sage" aria-label="Nieuw" /> : null}
               </li>
             );
           })}
