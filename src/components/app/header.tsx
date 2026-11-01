@@ -25,12 +25,7 @@ async function HeaderStatus() {
 
   return (
     <div className="flex items-center gap-2">
-      {phase === "during" ? (
-        <span className="flex h-10 items-center whitespace-nowrap rounded-full soft px-3.5 text-[12px] font-medium tabular-nums">
-          Dag {day}
-          <span className="ml-0.5 text-muted">/{total}</span>
-        </span>
-      ) : null}
+      {phase === "during" ? <span className="sr-only">Dag {day} van {total}</span> : null}
       <Link
         href="/notifications"
         className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush"
@@ -51,7 +46,8 @@ export function AppHeader() {
     <header className="sticky top-0 z-30" style={{ paddingTop: "var(--sat)" }}>
       <div className="mx-auto flex h-[64px] max-w-lg items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-3" aria-label="BADI home">
-          <Image src="/brand/wordmark-dark.png" alt="BADI" width={86} height={18} priority className="h-[17px] w-auto" />
+          <Image src="/brand/runner-dark.png" alt="BADI, run squat" width={40} height={35} priority className="h-[30px] w-auto" />
+          <Image src="/brand/wordmark-tagline-dark.png" alt="" width={96} height={33} priority className="h-[30px] w-auto" />
           {isDemo() ? (
             <span className="soft rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider" title="Demo-modus: voorbeelddata, geen Supabase">
               DEMO

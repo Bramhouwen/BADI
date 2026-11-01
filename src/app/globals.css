@@ -2,26 +2,28 @@
 
 :root {
   /* Airy, warm palette: near-white paper, blush surfaces, espresso ink, sage accent. */
-  --bg: #faf5f2;
-  --bg-2: #fdfaf8;
-  --paper: #fbf1ee;
-  --blush: #f6e9e4;
-  --blush-2: #efdcd4;
+  --bg: #f6ece4;
+  --bg-2: #fbf5f0;
+  --paper: #fbf3ec;
+  --blush: #efdfd4;
+  --blush-2: #e6cdbd;
+  --sand: #e9d6c7;
+  --sage-card: #d3d8c2;
   --card: #ffffff;
   --card-2: #ffffff;
-  --ink: #6b3a2e;
+  --ink: #6e4034;
   --ink-2: #8a5447;
-  --text: #3a2521;
-  --muted: #9a7f77;
-  --border: rgba(107, 58, 46, 0.1);
+  --text: #3b2a24;
+  --muted: #9b7f74;
+  --border: rgba(110, 64, 52, 0.1);
   --ice: #a9c3d4;
   --ice-bright: #8fb0c6;
   --water: #b9cfdd;
   --water-deep: #7fa3bd;
-  --sage: #86a07c;
-  --success: #7a9a70;
-  --warm: #d9a48a;
-  --gold: #d8b77c;
+  --sage: #8c9e7a;
+  --success: #7f9a72;
+  --warm: #cf9a7c;
+  --gold: #d2b27a;
   --danger: #c76a62;
   --tile: #ffffff;
   --tile-2: #f6e9e4;
@@ -55,6 +57,8 @@
   --color-tile-2: var(--tile-2);
   --color-blush: var(--blush);
   --color-blush-2: var(--blush-2);
+  --color-sand: var(--sand);
+  --color-sage-card: var(--sage-card);
   --color-ink-muted: var(--ink-muted);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
@@ -75,10 +79,9 @@ body {
   font-family: var(--font-sans);
   overscroll-behavior-y: none;
   background:
-    radial-gradient(55% 35% at 12% 8%, rgba(236, 196, 184, 0.45) 0%, rgba(236, 196, 184, 0) 70%),
-    radial-gradient(45% 30% at 92% 28%, rgba(222, 196, 176, 0.4) 0%, rgba(222, 196, 176, 0) 70%),
-    radial-gradient(60% 35% at 50% 100%, rgba(236, 206, 196, 0.3) 0%, rgba(236, 206, 196, 0) 70%),
-    #faf5f2;
+    radial-gradient(60% 35% at 15% 0%, rgba(232, 200, 184, 0.5) 0%, rgba(232, 200, 184, 0) 70%),
+    radial-gradient(50% 30% at 95% 25%, rgba(214, 184, 160, 0.45) 0%, rgba(214, 184, 160, 0) 70%),
+    linear-gradient(180deg, #f8efe8 0%, #f3e6db 100%);
   background-attachment: fixed;
   min-height: 100dvh;
 }
@@ -114,9 +117,9 @@ h2,
 
 /* Plain white card with a hairline border and a soft, warm shadow. */
 .glass {
-  background: #ffffff;
-  border: 1px solid rgba(107, 58, 46, 0.08);
-  box-shadow: 0 10px 30px -22px rgba(107, 58, 46, 0.35);
+  background: #fffaf6;
+  border: 1px solid rgba(110, 64, 52, 0.08);
+  box-shadow: 0 10px 30px -22px rgba(110, 64, 52, 0.35);
 }
 
 /* White tile (active chips, stat tiles). */
@@ -143,7 +146,7 @@ h2,
 
 /* Espresso surface with cream text (primary button, nav bar, hero card). */
 .espresso {
-  background: #6b3a2e;
+  background: #6e4034;
   color: var(--paper);
   box-shadow: 0 14px 30px -18px rgba(107, 58, 46, 0.6);
 }

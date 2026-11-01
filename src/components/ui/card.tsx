@@ -1,12 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "glass" | "tile" | "dark";
+type Variant = "glass" | "tile" | "dark" | "blush" | "sage";
 
 const variants: Record<Variant, string> = {
   glass: "glass text-text",
   tile: "tile",
   dark: "espresso",
+  blush: "bg-sand text-text shadow-[0_10px_30px_-22px_rgba(110,64,52,0.35)]",
+  sage: "bg-sage-card text-text shadow-[0_10px_30px_-22px_rgba(110,64,52,0.35)]",
 };
 
 export function Card({

@@ -14,7 +14,7 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   if (isDemo()) {
     // Demo mode: always "logged in"; the login page redirects home.
-    if (request.nextUrl.pathname === "/login") {
+    if (request.nextUrl.pathname === "/login" && request.nextUrl.searchParams.get("preview") !== "1") {
       const homeUrl = request.nextUrl.clone();
       homeUrl.pathname = "/";
       homeUrl.search = "";

@@ -51,7 +51,7 @@ export function ChipTabs<T extends string>({
       {options.map((o) => {
         const active = o.key === value;
         const cls = cn(
-          "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-center text-[13px] font-medium transition",
+          "flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 py-2 text-center text-[13px] font-medium transition",
           active ? "bg-white text-ink shadow-sm" : "text-ink/70 hover:text-ink",
         );
         return hrefFor ? (

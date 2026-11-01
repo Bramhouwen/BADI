@@ -39,7 +39,7 @@ export function LoginForm() {
 
   if (sent) {
     return (
-      <div className="glass rounded-[28px] p-6 text-center">
+      <div className="glass rounded-[24px] p-6 text-center">
         <MailCheck className="mx-auto h-8 w-8 text-water-deep" />
         <h2 className="mt-3 text-lg font-semibold">Check je mail</h2>
         <p className="mt-1 text-sm text-muted">
@@ -55,7 +55,7 @@ export function LoginForm() {
   }
 
   return (
-    <div>
+    <div className="glass rounded-[28px] p-5">
       <div className="mb-5">
         <ChipTabs
           label="Inlogmethode"

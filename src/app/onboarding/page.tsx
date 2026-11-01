@@ -14,10 +14,10 @@ async function Content() {
   const ctx = await getContext();
   if (ctx) redirect("/");
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col px-5 pb-10" style={{ paddingTop: "calc(var(--sat) + 40px)" }}>
+    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col px-5 pb-10" style={{ paddingTop: "calc(var(--sat) + 32px)" }}>
       <div className="mb-8 text-center">
-        <Image src="/brand/logo-full-dark.png" alt="BADI" width={200} height={172} priority className="mx-auto mb-5 h-auto w-[180px]" />
-        <h1 className="text-2xl font-bold">Welkom bij BADI</h1>
+        <Image src="/brand/logo-full-dark.png" alt="BADI" width={150} height={125} priority className="mx-auto mb-5 h-auto w-[130px]" />
+        <h1 className="font-display text-[30px]">Welkom bij BADI</h1>
         <p className="mt-2 text-sm text-muted">
           Je bent ingelogd, maar zit nog niet in een squad. Start een nieuwe Winter Arc of gebruik de uitnodigingslink van je vrienden.
         </p>
