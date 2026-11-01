@@ -1,31 +1,69 @@
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-lg px-4 pb-6 pt-2", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-lg px-4 pb-6 pt-1", className)}>{children}</div>;
 }
 
 export function PageTitle({ title, subtitle, back, action }: { title: ReactNode; subtitle?: ReactNode; back?: string; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-2">
-        {back ? (
-          <Link
-            href={back}
-            className="-ml-2 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-card hover:text-text"
-            aria-label="Terug"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Link>
-        ) : null}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle ? <p className="mt-0.5 text-sm text-muted">{subtitle}</p> : null}
+    <div className="mb-5">
+      {back || action ? (
+        <div className="mb-3 flex items-center justify-between">
+          {back ? (
+            <Link
+              href={back}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur hover:bg-white/15"
+              aria-label="Terug"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          ) : (
+            <span />
+          )}
+          {action}
         </div>
-      </div>
-      {action}
+      ) : null}
+      <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{title}</h1>
+      {subtitle ? <p className="mt-1 text-[15px] text-muted">{subtitle}</p> : null}
+    </div>
+  );
+}
+
+/** Segmented pill tabs ("Alles" / "Mijn favorieten"). */
+export function ChipTabs<T extends string>({
+  value,
+  options,
+  onChange,
+  hrefFor,
+  label,
+}: {
+  value: T;
+  options: { key: T; label: ReactNode }[];
+  onChange?: (v: T) => void;
+  hrefFor?: (v: T) => string;
+  label: string;
+}) {
+  return (
+    <div className="glass flex rounded-full p-1" role="tablist" aria-label={label}>
+      {options.map((o) => {
+        const active = o.key === value;
+        const cls = cn(
+          "flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2.5 text-center text-[14px] font-semibold transition",
+          active ? "tile" : "text-text/80 hover:text-text",
+        );
+        return hrefFor ? (
+          <Link key={o.key} role="tab" aria-selected={active} href={hrefFor(o.key)} className={cls}>
+            {o.label}
+          </Link>
+        ) : (
+          <button key={o.key} type="button" role="tab" aria-selected={active} onClick={() => onChange?.(o.key)} className={cls}>
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

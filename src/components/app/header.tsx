@@ -7,17 +7,14 @@ import { signedUrl } from "@/lib/storage";
 import { challengeDay, challengeLengthDays, challengePhase } from "@/lib/dates";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isDemo } from "@/lib/demo";
 
 async function HeaderStatus() {
   const ctx = await getContext();
   if (!ctx) return null;
   const supabase = await createClient();
   const [{ count }, avatar] = await Promise.all([
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", ctx.userId)
-      .is("read_at", null),
+    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).is("read_at", null),
     signedUrl("avatars", ctx.profile.avatar_path),
   ]);
   const phase = challengePhase(ctx.challenge);
@@ -28,24 +25,21 @@ async function HeaderStatus() {
   return (
     <div className="flex items-center gap-2">
       {phase === "during" ? (
-        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold tabular-nums text-muted">
-          Dag {day}/{total}
+        <span className="flex h-11 items-center whitespace-nowrap rounded-full border border-white/25 bg-white/5 px-3.5 text-[12px] font-semibold tabular-nums text-text backdrop-blur">
+          Dag {day}
+          <span className="ml-0.5 text-text/50">/{total}</span>
         </span>
       ) : null}
       <Link
         href="/notifications"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-card hover:text-text"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur hover:bg-white/15"
         aria-label={unread > 0 ? `${unread} nieuwe meldingen` : "Meldingen"}
       >
         <Bell className="h-5 w-5" />
-        {unread > 0 ? (
-          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ice px-1 text-[10px] font-bold text-bg">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        ) : null}
+        {unread > 0 ? <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#ff5a5f] ring-2 ring-[#13304a]" aria-hidden /> : null}
       </Link>
-      <Link href="/profile" aria-label="Profiel" className="rounded-full">
-        <Avatar name={ctx.profile.display_name} src={avatar} size="sm" />
+      <Link href="/profile" aria-label="Profiel" className="rounded-full ring-2 ring-white/30">
+        <Avatar name={ctx.profile.display_name} src={avatar} size="md" className="h-11 w-11" />
       </Link>
     </div>
   );
@@ -53,15 +47,19 @@ async function HeaderStatus() {
 
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-bg/80 backdrop-blur-xl" style={{ paddingTop: "var(--sat)" }}>
-      <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
-        <Link href="/" className="flex flex-col leading-none">
-          <span className="text-[15px] font-extrabold tracking-[0.08em]">
-            WINTER ARC <span aria-hidden>❄️</span>
+    <header className="sticky top-0 z-30" style={{ paddingTop: "var(--sat)" }}>
+      <div className="mx-auto flex h-[68px] max-w-lg items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-3" aria-label="Winter Arc home">
+          <span className="tile flex h-11 w-11 items-center justify-center rounded-[16px] text-xl" aria-hidden>
+            ❄️
           </span>
-          <span className="mt-0.5 text-[10px] font-semibold tracking-[0.22em] text-ice">BETTER TOGETHER</span>
+          {isDemo() ? (
+            <span className="rounded-full bg-gold/90 px-2 py-0.5 text-[9px] font-extrabold tracking-wider text-ink" title="Demo-modus: voorbeelddata, geen Supabase">
+              DEMO
+            </span>
+          ) : null}
         </Link>
-        <Suspense fallback={<Skeleton className="h-9 w-24 rounded-full" />}>
+        <Suspense fallback={<Skeleton className="h-11 w-28 rounded-full" />}>
           <HeaderStatus />
         </Suspense>
       </div>

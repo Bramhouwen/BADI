@@ -52,7 +52,7 @@ async function Content() {
             const d = describe(n, actor);
             return (
               <li key={n.id}>
-                <Link href={d.href} className={cn("flex items-center gap-3 rounded-2xl border bg-card px-3 py-2.5 hover:bg-card-2", n.read_at ? "border-border/60" : "border-ice/50")}>
+                <Link href={d.href} className={cn("glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4 hover:bg-white/15", !n.read_at && "border-ice/60")}>
                   <Avatar name={actorProfile?.display_name ?? "?"} src={actorProfile?.avatar_path ? avatars.get(actorProfile.avatar_path) ?? null : null} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm leading-snug">

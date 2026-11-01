@@ -23,7 +23,7 @@ export interface SquadCardMember {
 export function SquadMemberCard({ member }: { member: SquadCardMember }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col rounded-[20px] border border-border/70 bg-card p-4">
+    <div className="glass flex flex-col rounded-[24px] p-4">
       <div className="flex items-center gap-3">
         <Avatar name={member.name} src={member.avatar} size="lg" ring={member.checkedInToday} />
         <div className="min-w-0 flex-1">
@@ -46,13 +46,13 @@ export function SquadMemberCard({ member }: { member: SquadCardMember }) {
       </p>
       {!member.isMe ? (
         <>
-          <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setOpen(true)}>
-            <HandHeart className="h-4 w-4 text-ice" /> Geef compliment
+          <Button variant="primary" size="sm" className="mt-3 w-full" onClick={() => setOpen(true)}>
+            <HandHeart className="h-4 w-4" /> Geef compliment
           </Button>
           <ComplimentSheet open={open} onClose={() => setOpen(false)} receiver={{ id: member.id, name: firstName(member.name) }} />
         </>
       ) : (
-        <p className="mt-3 rounded-xl bg-bg-2 py-2 text-center text-xs text-muted">Dit ben jij ❄️</p>
+        <p className="mt-3 rounded-full bg-white/10 py-2.5 text-center text-xs text-muted">Dit ben jij ❄️</p>
       )}
     </div>
   );

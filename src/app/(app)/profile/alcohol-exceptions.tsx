@@ -22,7 +22,7 @@ export function AlcoholExceptions({ exceptions, min, max }: { exceptions: Alcoho
       {exceptions.length > 0 ? (
         <ul className="space-y-2">
           {exceptions.map((e) => (
-            <li key={e.id} className="flex items-center justify-between rounded-xl bg-bg-2 px-3 py-2 text-sm">
+            <li key={e.id} className="flex items-center justify-between rounded-full bg-white/10 py-1.5 pl-4 pr-1.5 text-sm">
               <span>🍷 {formatDateNl(e.exception_date)}</span>
               <form action={(fd) => start(async () => { const r = await removeAlcoholException(fd); if (!r.ok) setError(r.error); })}>
                 <input type="hidden" name="id" value={e.id} />

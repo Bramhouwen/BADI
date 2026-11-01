@@ -6,7 +6,7 @@ import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorText, Input, Label } from "@/components/ui/field";
 import { sendMagicLink, signInWithPassword, signUpWithPassword } from "@/app/actions/auth";
-import { cn } from "@/lib/utils";
+import { ChipTabs } from "@/components/ui/page";
 
 type Mode = "magic" | "password" | "signup";
 
@@ -39,7 +39,7 @@ export function LoginForm() {
 
   if (sent) {
     return (
-      <div className="rounded-[20px] border border-border bg-card p-6 text-center">
+      <div className="glass rounded-[28px] p-6 text-center">
         <MailCheck className="mx-auto h-8 w-8 text-ice" />
         <h2 className="mt-3 text-lg font-semibold">Check je mail</h2>
         <p className="mt-1 text-sm text-muted">
@@ -56,31 +56,20 @@ export function LoginForm() {
 
   return (
     <div>
-      <div className="mb-5 flex rounded-2xl bg-card p-1" role="tablist" aria-label="Inlogmethode">
-        {(
-          [
-            ["magic", "Magic link"],
-            ["password", "Wachtwoord"],
-            ["signup", "Account"],
-          ] as [Mode, string][]
-        ).map(([m, label]) => (
-          <button
-            key={m}
-            role="tab"
-            aria-selected={mode === m}
-            type="button"
-            onClick={() => {
-              setMode(m);
-              setError(null);
-            }}
-            className={cn(
-              "flex-1 rounded-xl py-2 text-sm font-medium transition",
-              mode === m ? "bg-card-2 text-text shadow" : "text-muted",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mb-5">
+        <ChipTabs
+          label="Inlogmethode"
+          value={mode}
+          onChange={(m) => {
+            setMode(m);
+            setError(null);
+          }}
+          options={[
+            { key: "magic", label: "Magic link" },
+            { key: "password", label: "Wachtwoord" },
+            { key: "signup", label: "Account" },
+          ]}
+        />
       </div>
 
       <form action={submit} className="space-y-4">

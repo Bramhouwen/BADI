@@ -16,7 +16,7 @@ export function OnboardingForms({ challengeLabel }: { challengeLabel: string }) 
     <div className="space-y-4">
       <Card>
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card-2 text-ice">
+          <div className="tile flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
             <Link2 className="h-5 w-5" />
           </div>
           <div className="flex-1">
@@ -47,7 +47,7 @@ export function OnboardingForms({ challengeLabel }: { challengeLabel: string }) 
 
       <Card>
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card-2 text-ice">
+          <div className="tile flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="flex-1">

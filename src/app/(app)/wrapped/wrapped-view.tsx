@@ -19,7 +19,7 @@ type Personal = PersonalWrapped & { avatarUrl: string | null };
 function Stat({ value, label, tone }: { value: number | string; label: string; tone?: "ice" | "gold" | "warm" }) {
   const color = tone === "gold" ? "text-gold" : tone === "warm" ? "text-warm" : "text-ice";
   return (
-    <div className="rounded-[18px] border border-border/60 bg-card p-4">
+    <div className="glass rounded-[24px] p-4">
       <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${color}`}>{value}</div>
       <div className="mt-1 text-xs font-medium text-muted">{label}</div>
     </div>
@@ -101,7 +101,7 @@ export function WrappedView({
         </motion.section>
 
         {me ? (
-          <motion.section {...fade(2)} className="rounded-[24px] border border-ice/40 bg-card p-5 shadow-[var(--shadow-glow)]">
+          <motion.section {...fade(2)} className="tile rounded-[28px] p-5">
             <div className="flex items-center gap-3">
               <Avatar name={me.member.display_name} src={me.avatarUrl} size="lg" ring />
               <div>
@@ -134,7 +134,7 @@ export function WrappedView({
                 <span className="text-muted">Uitgedeeld:</span> {me.complimentsSent} {me.complimentsSent === 1 ? "compliment" : "complimenten"}
               </li>
             </ul>
-            <Button variant="secondary" className="mt-5 w-full" onClick={exportRecap} loading={exporting}>
+            <Button variant="dark" className="mt-5 w-full" onClick={exportRecap} loading={exporting}>
               <Download className="h-4 w-4" /> Bewaar mijn recap als afbeelding
             </Button>
           </motion.section>
@@ -144,7 +144,7 @@ export function WrappedView({
           <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">De squad</h2>
           <ul className="space-y-2">
             {personal.map((p) => (
-              <li key={p.member.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-3 py-3">
+              <li key={p.member.id} className="glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4">
                 <Avatar name={p.member.display_name} src={p.avatarUrl} size="md" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{firstName(p.member.display_name)}</p>
@@ -162,7 +162,7 @@ export function WrappedView({
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Memories</h2>
             <div className="grid grid-cols-3 gap-2">
               {memories.map((m) => (
-                <Link key={m.id} href={`/wall/${m.id}`} className="relative aspect-square overflow-hidden rounded-xl bg-card">
+                <Link key={m.id} href={`/wall/${m.id}`} className="relative aspect-square overflow-hidden rounded-[18px] bg-white/5">
                   {m.url ? <Image src={m.url} alt={m.caption ?? "Herinnering"} fill sizes="33vw" className="object-cover" unoptimized /> : null}
                 </Link>
               ))}
@@ -170,7 +170,7 @@ export function WrappedView({
           </motion.section>
         ) : null}
 
-        <motion.footer {...fade(5)} className="rounded-[24px] bg-gradient-to-b from-card to-bg-2 px-6 py-10 text-center">
+        <motion.footer {...fade(5)} className="glass rounded-[28px] px-6 py-10 text-center">
           <p className="text-2xl font-extrabold leading-snug tracking-tight">
             WE SHOWED UP.
             <br />

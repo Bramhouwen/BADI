@@ -7,15 +7,20 @@ import { computeWrapped } from "@/lib/wrapped";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { WrappedView } from "./wrapped-view";
 import type { Compliment, DailyCheckin, Recipe, WallPost } from "@/lib/types";
+import { isDemo } from "@/lib/demo";
 
 export const metadata = { title: "Wrapped" };
 
-async function Content() {
+async function Content({ searchParams }: { searchParams: Promise<{ preview?: string | string[] }> }) {
+  const sp = await searchParams;
   const ctx = await requireContext();
   const now = new Date();
-  const status = wrappedStatus(ctx.challenge, now);
+  // Demo mode only: /wrapped?preview=1 shows the Wrapped layout before the finale.
+  const status = isDemo() && sp.preview === "1" ? "preliminary" : wrappedStatus(ctx.challenge, now);
 
   if (status === "not_yet") {
     const d = daysUntilFinale(ctx.challenge, now);
@@ -26,6 +31,13 @@ async function Content() {
           emoji="🎁"
           title={`Nog ${d} ${d === 1 ? "dag" : "dagen"} tot de finale`}
           body={`Op ${formatDateNl(ctx.challenge.end_date)} verschijnt hier jullie voorlopige Wrapped. De definitieve versie volgt zodra de laatste check-in is afgerond.`}
+          action={
+            isDemo() ? (
+              <Link href="/wrapped?preview=1">
+                <Button variant="secondary">Demo: bekijk de Wrapped alvast</Button>
+              </Link>
+            ) : undefined
+          }
         />
       </Page>
     );
@@ -79,10 +91,10 @@ async function Content() {
   );
 }
 
-export default function WrappedPage() {
+export default function WrappedPage({ searchParams }: PageProps<"/wrapped">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <Content />
+      <Content searchParams={searchParams} />
     </Suspense>
   );
 }

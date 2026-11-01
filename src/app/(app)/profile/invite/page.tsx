@@ -28,7 +28,7 @@ async function Content() {
       <PageTitle title="Squad uitnodigen" subtitle={`${squad.length} van ${MAX_MEMBERS} plekken bezet.`} back="/profile" />
       <section>
         <SectionTitle>Leden</SectionTitle>
-        <Card className="divide-y divide-border/60 p-0">
+        <Card className="divide-y divide-white/10 p-0">
           {squad.map((m) => (
             <div key={m.user_id} className="flex items-center justify-between px-4 py-3 text-sm">
               <span className="font-medium">{m.profile.display_name}</span>

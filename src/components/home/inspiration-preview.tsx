@@ -18,13 +18,13 @@ export function InspirationPreview({ items }: { items: InspirationItem[] }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {items.map((it) => (
-        <Link key={`${it.kind}-${it.id}`} href={it.href} className="group relative aspect-[4/5] overflow-hidden rounded-[18px] border border-border/70 bg-card">
+        <Link key={`${it.kind}-${it.id}`} href={it.href} className="group relative aspect-[4/5] overflow-hidden rounded-[24px] border border-white/20 bg-white/5">
           {it.src ? (
             <Image src={it.src} alt={it.title} fill sizes="(max-width: 512px) 50vw, 240px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" unoptimized />
           ) : null}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ice">{it.kind === "recipe" ? "Kitchen" : "Wall"}</p>
-            <p className="line-clamp-1 text-sm font-semibold text-white">{it.title}</p>
+          <span className="tile absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">{it.kind === "recipe" ? "Kitchen" : "Wall"}</span>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b1f33]/90 via-[#0b1f33]/40 to-transparent p-3 pt-10">
+            <p className="line-clamp-1 text-[15px] font-semibold text-white">{it.title}</p>
             <p className="text-xs text-white/70">{it.author}</p>
           </div>
         </Link>

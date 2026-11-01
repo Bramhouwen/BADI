@@ -52,13 +52,13 @@ export function ReactionBar({
             }
             className={cn(
               "flex h-9 items-center gap-1 rounded-full border px-2.5 text-sm transition-colors",
-              active ? "border-ice/70 bg-ice/15" : "border-border bg-bg-2 hover:bg-card-2",
+              active ? "tile border-transparent" : "border-white/20 bg-white/5 hover:bg-white/15",
             )}
           >
             <motion.span animate={active && !reduce ? { scale: [1, 1.35, 1] } : { scale: 1 }} transition={{ duration: 0.35 }} aria-hidden>
               {r.emoji}
             </motion.span>
-            {n > 0 ? <span className={cn("text-xs tabular-nums", active ? "text-ice" : "text-muted")}>{n}</span> : null}
+            {n > 0 ? <span className={cn("text-xs font-semibold tabular-nums", active ? "text-ink" : "text-muted")}>{n}</span> : null}
           </motion.button>
         );
       })}

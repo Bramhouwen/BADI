@@ -81,7 +81,7 @@ export function ImagePicker({ bucket, pathPrefix, name = "image_path", initialUr
       <input type="hidden" name={name} value={path ?? ""} />
       <input ref={inputRef} id={id} type="file" accept="image/*" className="sr-only" onChange={(e) => handleFile(e.target.files?.[0])} />
       {preview ? (
-        <div className={cn("relative overflow-hidden border border-border bg-card", round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[20px]", ratio))}>
+        <div className={cn("relative overflow-hidden border border-white/20 bg-white/5", round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[24px]", ratio))}>
           <Image src={preview} alt="Gekozen foto" fill className="object-cover" unoptimized />
           <button
             type="button"
@@ -97,8 +97,8 @@ export function ImagePicker({ bucket, pathPrefix, name = "image_path", initialUr
         <label
           htmlFor={id}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-border bg-card text-muted transition hover:border-ice/60 hover:text-text",
-            round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[20px]", ratio),
+            "glass flex cursor-pointer flex-col items-center justify-center gap-2 border-dashed text-text/80 transition hover:border-ice/60 hover:text-text",
+            round ? "mx-auto h-28 w-28 rounded-full" : cn("rounded-[24px]", ratio),
           )}
         >
           {busy ? (

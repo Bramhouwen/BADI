@@ -35,7 +35,7 @@ async function Content() {
           {compliments.map((c) => {
             const sender = squad.find((m) => m.user_id === c.sender_id)?.profile;
             return (
-              <li key={c.id} className={cn("flex items-start gap-3 rounded-2xl border bg-card px-3.5 py-3", c.read_at ? "border-border/60" : "border-ice/50")}>
+              <li key={c.id} className={cn("glass flex items-start gap-3 rounded-[24px] px-3.5 py-3", !c.read_at && "border-ice/60")}>
                 <Avatar name={sender?.display_name ?? "Lid"} src={sender?.avatar_path ? avatars.get(sender.avatar_path) ?? null : null} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] leading-snug">{c.message}</p>

@@ -50,7 +50,7 @@ export function Sheet({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              "relative w-full max-w-lg rounded-t-[28px] border border-border bg-bg-2 px-4 pt-3 shadow-2xl sm:rounded-[28px]",
+              "relative w-full max-w-lg rounded-t-[32px] border border-white/15 bg-[#12293f]/95 px-4 pt-3 shadow-2xl backdrop-blur-2xl sm:rounded-[32px]",
               "max-h-[88dvh] overflow-y-auto overscroll-contain",
               className,
             )}
@@ -60,13 +60,13 @@ export function Sheet({
             exit={reduce ? { opacity: 0 } : { y: "100%" }}
             transition={{ type: "spring", stiffness: 420, damping: 40 }}
           >
-            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-border" aria-hidden />
+            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/25" aria-hidden />
             <div className="mb-3 flex items-center justify-between">
               {title ? <h2 className="text-lg font-semibold">{title}</h2> : <span />}
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-muted hover:text-text"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-text hover:bg-white/15"
                 aria-label="Sluiten"
               >
                 <X className="h-5 w-5" />

@@ -36,28 +36,29 @@ function useKeyboardOpen() {
 function NavItems({ pathname }: { pathname: string | null }) {
   const reduce = useReducedMotion();
   return (
-    <ul className="mx-auto flex h-[var(--nav-h)] max-w-lg items-stretch">
+    <ul className="flex items-center gap-1.5 p-1.5">
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname !== null && (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
         return (
-          <li key={href} className="flex-1">
+          <li key={href} className={cn(active ? "flex-[1.9]" : "flex-1")}>
             <Link
               href={href}
               aria-current={active ? "page" : undefined}
+              aria-label={label}
               className={cn(
-                "relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-                active ? "text-ice" : "text-muted hover:text-text",
+                "relative flex h-12 items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold transition-colors",
+                active ? "text-ink" : "text-ink/85 hover:text-ink",
               )}
             >
-              {active ? (
-                <motion.span
-                  layoutId={reduce ? undefined : "nav-indicator"}
-                  className="absolute top-0 h-[3px] w-8 rounded-full bg-ice"
-                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                />
-              ) : null}
-              <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 2} aria-hidden />
-              <span>{label}</span>
+              <motion.span
+                layoutId={reduce ? undefined : undefined}
+                className={cn("absolute inset-0 rounded-full tile", active ? "opacity-100" : "opacity-100")}
+                aria-hidden
+              />
+              <span className="relative flex items-center gap-1.5">
+                <Icon className="h-[20px] w-[20px]" strokeWidth={active ? 2.4 : 2} aria-hidden />
+                {active ? <span>{label}</span> : null}
+              </span>
             </Link>
           </li>
         );
@@ -78,15 +79,14 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Hoofdnavigatie"
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-bg/85 backdrop-blur-xl transition-transform duration-200",
-        keyboardOpen && "translate-y-full",
-      )}
-      style={{ paddingBottom: "var(--sab)" }}
+      className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 transition-transform duration-200", keyboardOpen && "translate-y-[140%]")}
+      style={{ paddingBottom: "calc(var(--sab) + 10px)" }}
     >
-      <Suspense fallback={<NavItems pathname={null} />}>
-        <ActiveNavItems />
-      </Suspense>
+      <div className="pointer-events-auto w-full max-w-lg rounded-full border border-white/15 bg-ink/85 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        <Suspense fallback={<NavItems pathname={null} />}>
+          <ActiveNavItems />
+        </Suspense>
+      </div>
     </nav>
   );
 }

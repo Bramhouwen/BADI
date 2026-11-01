@@ -5,7 +5,7 @@ export const metadata = { title: "Offline" };
 export default function OfflinePage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-card text-ice">
+      <div className="tile flex h-16 w-16 items-center justify-center rounded-full">
         <WifiOff className="h-7 w-7" />
       </div>
       <h1 className="mt-5 text-xl font-bold">Even geen verbinding</h1>

@@ -16,7 +16,7 @@ export function SquadTimeline({ items }: { items: TimelineItem[] }) {
       {items.map((it, i) => {
         const inner = (
           <>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-2 text-lg" aria-hidden>
+            <span className="tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg" aria-hidden>
               {it.emoji}
             </span>
             <span className="min-w-0 flex-1">
@@ -25,11 +25,11 @@ export function SquadTimeline({ items }: { items: TimelineItem[] }) {
             </span>
           </>
         );
-        const cls = "flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-3 py-2.5";
+        const cls = "glass flex items-center gap-3 rounded-full py-2 pl-2 pr-4";
         return (
           <li key={i}>
             {it.href ? (
-              <Link href={it.href} className={cls + " hover:bg-card-2"}>
+              <Link href={it.href} className={cls + " hover:bg-white/15"}>
                 {inner}
               </Link>
             ) : (

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
-import { Page, PageTitle } from "@/components/ui/page";
+import { ChipTabs, Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { Fab } from "@/components/app/fab";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { RecipeCard } from "./recipe-card";
 import type { Recipe } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Kitchen" };
 
@@ -38,23 +37,16 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
       <PageTitle title="Winter Arc Kitchen 🥑" subtitle="Gezonde maaltijden om elkaar mee te inspireren." />
-      <div className="mb-4 flex rounded-2xl bg-card p-1" role="tablist" aria-label="Filter">
-        {(
-          [
-            ["all", "Alles"],
-            ["favorites", "Mijn favorieten"],
-          ] as const
-        ).map(([key, label]) => (
-          <Link
-            key={key}
-            role="tab"
-            aria-selected={filter === key}
-            href={key === "all" ? "/kitchen" : "/kitchen?filter=favorites"}
-            className={cn("flex-1 rounded-xl py-2 text-center text-sm font-medium transition", filter === key ? "bg-card-2 text-text shadow" : "text-muted")}
-          >
-            {label}
-          </Link>
-        ))}
+      <div className="mb-4">
+        <ChipTabs
+          label="Filter"
+          value={filter}
+          hrefFor={(k) => (k === "all" ? "/kitchen" : "/kitchen?filter=favorites")}
+          options={[
+            { key: "all", label: "Alles" },
+            { key: "favorites", label: "Mijn favorieten" },
+          ]}
+        />
       </div>
 
       {recipes.length === 0 ? (

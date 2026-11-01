@@ -2,12 +2,22 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { supabaseEnv } from "./env";
+import { isDemo } from "@/lib/demo";
+import { createDemoClient } from "@/lib/demo/mock-client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Per-request Supabase client for Server Components, Server Actions and Route Handlers. */
-export async function createClient() {
-  // Read the request first: during prerendering this postpones to request time
-  // before any environment check runs.
+export async function createClient(): Promise<SupabaseClient> {
+  if (isDemo()) {
+    // Demo data lives in memory and changes per request: render at request time.
+    await connection();
+    return createDemoClient() as unknown as SupabaseClient;
+  }
+  // Always render at request time: sessions are per request and supabase-js
+  // reads the clock while refreshing tokens.
+  await connection();
   const cookieStore = await cookies();
   const { url, key } = supabaseEnv();
 

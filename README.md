@@ -64,6 +64,7 @@ Vereisten: Node 22+, npm, een Supabase-project (gratis tier is genoeg).
 2. Maak een Supabase-project op https://supabase.com en voer de migratie uit:
    - Open **SQL Editor** in het Supabase dashboard.
    - Plak de inhoud van `supabase/migrations/0001_winter_arc_schema.sql` en voer uit.
+   - Voer daarna ook `supabase/migrations/0002_fix_pgcrypto_search_path.sql` uit (nodig op Supabase, waar pgcrypto in het schema `extensions` staat).
    - Heb je de Supabase CLI: `supabase link --project-ref <ref>` en daarna `supabase db push`.
 
    De migratie maakt alle tabellen, triggers (edit-venster, maximaal vier leden, rate limiting), RLS-policies, de private storage buckets (`wall`, `recipes`, `avatars`) met policies en de RPC's voor uitnodigingen.
@@ -91,6 +92,16 @@ Vereisten: Node 22+, npm, een Supabase-project (gratis tier is genoeg).
    ```
 
    Open http://localhost:3000.
+
+## Demo-modus (zonder Supabase)
+
+Wil je de app eerst alleen bekijken? Zet in `.env.local`:
+
+```
+NEXT_PUBLIC_WINTER_ARC_DEMO=1
+```
+
+De app draait dan op een in-memory backend met voorbeelddata: vier leden, check-ins, recepten, foto's, complimenten en meldingen. Je bent automatisch ingelogd als "Bram" (beheerder). Alles wat je doet (inchecken, reageren, een recept toevoegen) werkt, maar verdwijnt zodra de dev server herstart. Foto-uploads tonen een placeholder. Zet de variabele op `0` of verwijder hem zodra je Supabase hebt gekoppeld. De demo-code staat in `src/lib/demo/` en wordt buiten demo-modus niet gebruikt.
 
 ## Eerste gebruik: de squad opzetten
 

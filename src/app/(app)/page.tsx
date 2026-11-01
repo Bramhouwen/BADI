@@ -18,9 +18,11 @@ import { computeStreakStats, recentCalendar } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
+import { formatDateNl } from "@/lib/dates";
+import { challengeLengthDays } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { StreakCard } from "@/components/home/streak-card";
+import { StatTiles, WeekCard } from "@/components/home/streak-card";
 import { SquadPreview } from "@/components/home/squad-preview";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
@@ -89,33 +91,46 @@ async function Content() {
       <WelcomeToast />
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
-      <div>
-        <p className="text-sm text-muted">{greeting(now, ctx.challenge.timezone)}</p>
-        <h1 className="text-2xl font-bold tracking-tight">{firstName(ctx.profile.display_name)}, goed dat je er bent.</h1>
+      <div className="px-1">
+        <h1 className="text-[28px] font-light leading-[1.2] tracking-tight text-text/90">
+          {greeting(now, ctx.challenge.timezone).replace("!", ",")} <span className="font-semibold text-text">{firstName(ctx.profile.display_name)}!</span>
+          <br />
+          <span className="font-medium text-text">dit is je Winter Arc van vandaag.</span>
+        </h1>
+        <p className="mt-2 text-[14px] text-muted">Vandaag is {formatDateNl(today)}</p>
       </div>
 
-      <StreakCard current={myStats.current} longest={myStats.longest} total={myStats.total} calendar={calendar} />
+      <section>
+        <SectionTitle action={<Link href="/profile" className="text-[13px] font-medium text-text/70">Bekijk meer</Link>}>Jouw cijfers</SectionTitle>
+        <StatTiles current={myStats.current} longest={myStats.longest} total={myStats.total} challengeLength={challengeLengthDays(ctx.challenge)} />
+        <div className="mt-3">
+          <WeekCard calendar={calendar} />
+        </div>
+      </section>
 
       {phase === "during" ? (
         todayCheckin ? (
-          <Card className="flex items-center gap-4 border-success/30 bg-[#12281f]">
-            <div className="text-3xl" aria-hidden>
+          <Card variant="tile" className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm" aria-hidden>
               ❄️
             </div>
             <div className="flex-1">
-              <p className="font-semibold">Je bent er vandaag weer voor gegaan. Lekker bezig!</p>
+              <p className="text-[15px] font-semibold leading-snug">Je bent er vandaag weer voor gegaan. Lekker bezig!</p>
               <p className="mt-0.5 text-xs text-muted">{todayCheckin.note ? `“${todayCheckin.note}”` : `${todayCheckin.activities.length} ${todayCheckin.activities.length === 1 ? "activiteit" : "activiteiten"} gelogd`}</p>
             </div>
             {canEditToday ? (
-              <Link href="/checkin" aria-label="Check-in aanpassen" className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-muted hover:text-text">
+              <Link href="/checkin" aria-label="Check-in aanpassen" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-text">
                 <Pencil className="h-4 w-4" />
               </Link>
             ) : null}
           </Card>
         ) : (
-          <Card elevated className="space-y-3">
-            <p className="text-lg font-semibold leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
-            <p className="text-sm text-muted">Eén activiteit is genoeg. Inchecken duurt tien seconden.</p>
+          <Card className="space-y-4 p-5">
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-ice">Check-in van vandaag</p>
+              <p className="mt-1 text-[22px] font-semibold leading-snug">Wat heb jij vandaag voor jezelf gedaan?</p>
+              <p className="mt-1 text-sm text-muted">Eén activiteit is genoeg. Inchecken duurt tien seconden.</p>
+            </div>
             <Link href="/checkin" className="block">
               <Button size="lg" className="w-full">
                 Check vandaag in <ArrowRight className="h-4 w-4" />
@@ -124,12 +139,12 @@ async function Content() {
           </Card>
         )
       ) : phase === "before" ? (
-        <Card elevated>
+        <Card variant="tile">
           <p className="font-semibold">De Winter Arc start over {daysUntilStart(ctx.challenge, now)} dagen.</p>
           <p className="mt-1 text-sm text-muted">Nodig je squad vast uit en bekijk de zeven principes.</p>
         </Card>
       ) : (
-        <Card elevated className="flex items-center justify-between gap-3">
+        <Card variant="tile" className="flex items-center justify-between gap-3">
           <div>
             <p className="font-semibold">Jullie Winter Arc is afgerond.</p>
             <p className="mt-1 text-sm text-muted">Bekijk samen de Wrapped.</p>
@@ -142,7 +157,7 @@ async function Content() {
 
       {wrapped !== "not_yet" && phase !== "after" ? (
         <Link href="/wrapped" className="block">
-          <Card className="border-gold/40 bg-gradient-to-br from-card to-[#2b2a1f]">
+          <Card className="border-gold/40">
             <p className="text-xs font-semibold tracking-[0.2em] text-gold">WINTER ARC WRAPPED</p>
             <p className="mt-1 font-semibold">{wrapped === "preliminary" ? "De finale is hier. Bekijk alvast jullie voorlopige Wrapped." : "Jullie Wrapped staat klaar."}</p>
           </Card>
@@ -150,12 +165,12 @@ async function Content() {
       ) : null}
 
       <section>
-        <SectionTitle action={<Link href="/squad" className="text-xs font-medium text-ice">Bekijk squad</Link>}>Jouw squad</SectionTitle>
+        <SectionTitle action={<Link href="/squad" className="text-[13px] font-medium text-text/70">Bekijk squad</Link>}>Jouw squad</SectionTitle>
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe }))} today={today} />
       </section>
 
       <section>
-        <SectionTitle>Laatste inspiratie</SectionTitle>
+        <SectionTitle action={<Link href="/wall" className="text-[13px] font-medium text-text/70">Bekijk meer</Link>}>Laatste inspiratie</SectionTitle>
         <InspirationPreview items={inspiration} />
       </section>
 

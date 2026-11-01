@@ -83,7 +83,7 @@ async function Content() {
         title="The Squad 👥"
         subtitle="We doen dit samen. Geen ranking, wel elkaar."
         action={
-          <Link href="/squad/compliments" className="relative flex h-11 w-11 items-center justify-center rounded-full bg-card text-muted hover:text-text" aria-label="Ontvangen complimenten">
+          <Link href="/squad/compliments" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-text backdrop-blur hover:bg-white/15" aria-label="Ontvangen complimenten">
             <Inbox className="h-5 w-5" />
             {(unreadCount ?? 0) > 0 ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-ice" aria-hidden /> : null}
           </Link>
@@ -97,7 +97,7 @@ async function Content() {
       </div>
 
       {squad.length < 4 ? (
-        <p className="rounded-2xl border border-dashed border-border px-4 py-3 text-center text-sm text-muted">
+        <p className="rounded-full border border-dashed border-white/30 px-4 py-3 text-center text-sm text-muted">
           Nog {4 - squad.length} {4 - squad.length === 1 ? "plek" : "plekken"} vrij.{" "}
           {ctx.membership.role === "admin" ? (
             <Link href="/profile/invite" className="font-medium text-ice">

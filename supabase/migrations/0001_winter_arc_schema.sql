@@ -514,7 +514,7 @@ create or replace function public.create_invitation(p_invited_email text default
 returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_uid uuid := auth.uid();
@@ -542,7 +542,7 @@ create or replace function public.accept_invitation(p_token text)
 returns uuid
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_uid uuid := auth.uid();
@@ -584,7 +584,7 @@ create or replace function public.preview_invitation(p_token text)
 returns table (challenge_name text, inviter_name text, valid boolean, reason text)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_inv public.invitations%rowtype;

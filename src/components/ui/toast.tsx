@@ -40,7 +40,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   ? "border-success/40 bg-[#102a1f]/95 text-success"
                   : t.tone === "error"
                     ? "border-danger/40 bg-[#2a1414]/95 text-danger"
-                    : "border-border bg-card/95 text-text")
+                      : "border-white/20 bg-[#12293f]/95 text-text")
               }
             >
               {t.message}

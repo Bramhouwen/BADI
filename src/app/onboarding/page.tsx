@@ -15,7 +15,7 @@ async function Content() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col px-5 pb-10" style={{ paddingTop: "calc(var(--sat) + 40px)" }}>
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] bg-card text-2xl">
+        <div className="tile mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] text-2xl">
           <span aria-hidden>❄️</span>
         </div>
         <h1 className="text-2xl font-bold">Welkom bij Winter Arc</h1>

@@ -12,7 +12,7 @@ export default function PrinciplesPage() {
         {PRINCIPLES.map((p, i) => (
           <li key={p.title}>
             <Card className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-bg-2 text-2xl" aria-hidden>
+              <span className="tile flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl" aria-hidden>
                 {p.emoji}
               </span>
               <div>

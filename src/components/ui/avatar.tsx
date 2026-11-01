@@ -27,8 +27,8 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-full bg-card-2 font-semibold text-ice flex items-center justify-center",
-        ring && "ring-2 ring-ice/70 ring-offset-2 ring-offset-bg",
+        "relative shrink-0 overflow-hidden rounded-full tile font-bold flex items-center justify-center",
+        ring && "ring-[3px] ring-ice",
         sizes[size],
         className,
       )}

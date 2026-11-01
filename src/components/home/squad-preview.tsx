@@ -23,15 +23,15 @@ function statusLabel(m: SquadPreviewMember, today: string): string {
 
 export function SquadPreview({ members, today }: { members: SquadPreviewMember[]; today: string }) {
   return (
-    <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+    <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
       {members.map((m) => (
-        <li key={m.id} className="w-[132px] shrink-0 rounded-[18px] border border-border/70 bg-card p-3">
-          <Avatar name={m.name} src={m.avatar} size="md" ring={m.checkedInToday} />
-          <p className="mt-2 truncate text-sm font-semibold">
+        <li key={m.id} className="glass w-[140px] shrink-0 rounded-[24px] p-3.5">
+          <Avatar name={m.name} src={m.avatar} size="md" ring={m.checkedInToday} className="h-14 w-14" />
+          <p className="mt-3 truncate text-[15px] font-semibold">
             {firstName(m.name)}
-            {m.isMe ? <span className="text-muted"> (jij)</span> : null}
+            {m.isMe ? <span className="font-normal text-muted"> (jij)</span> : null}
           </p>
-          <p className="text-xs text-warm">🔥 {m.streak} {m.streak === 1 ? "dag" : "dagen"}</p>
+          <p className="text-[13px] font-medium text-warm">🔥 {m.streak} {m.streak === 1 ? "dag" : "dagen"}</p>
           <p className="mt-1 truncate text-[11px] text-muted">{statusLabel(m, today)}</p>
           {isMilestone(m.streak) ? <p className="mt-1 text-[11px] font-semibold text-gold">🏅 {m.streak} op rij</p> : null}
         </li>

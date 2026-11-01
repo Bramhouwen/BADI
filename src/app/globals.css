@@ -1,22 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #08111f;
-  --bg-2: #111f32;
-  --card: #172b42;
-  --card-2: #203850;
+  --bg: #0b1c2e;
+  --bg-2: #12293f;
+  --card: rgba(255, 255, 255, 0.08);
+  --card-2: rgba(255, 255, 255, 0.14);
   --ice: #7dd3fc;
   --ice-bright: #38bdf8;
   --text: #f0f9ff;
-  --muted: #94afc8;
-  --border: #294158;
+  --muted: #a9c0d3;
+  --border: rgba(255, 255, 255, 0.16);
   --success: #4ade80;
   --warm: #fb923c;
   --gold: #fbbf24;
-  --danger: #f87171;
+  --danger: #fb7185;
+  --tile: #eaf2f7;
+  --tile-2: #d5e4ed;
+  --ink: #0b1f33;
+  --ink-muted: #4f6b80;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --nav-h: 64px;
+  --nav-h: 72px;
 }
 
 @theme inline {
@@ -33,9 +37,13 @@
   --color-warm: var(--warm);
   --color-gold: var(--gold);
   --color-danger: var(--danger);
+  --color-tile: var(--tile);
+  --color-tile-2: var(--tile-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --radius-card: 20px;
-  --radius-tile: 16px;
+  --radius-card: 24px;
+  --radius-tile: 20px;
   --shadow-glow: 0 0 0 1px rgba(125, 211, 252, 0.35), 0 10px 40px -10px rgba(56, 189, 248, 0.45);
 }
 
@@ -47,11 +55,15 @@ html {
 }
 
 body {
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   overscroll-behavior-y: none;
-  font-feature-settings: "ss01", "cv11";
+  background:
+    radial-gradient(90% 55% at 50% -5%, rgba(125, 211, 252, 0.42) 0%, rgba(125, 211, 252, 0) 65%),
+    radial-gradient(70% 40% at 100% 100%, rgba(56, 189, 248, 0.16) 0%, rgba(56, 189, 248, 0) 70%),
+    linear-gradient(180deg, #0a1a2c 0%, #143450 55%, #0e2439 100%);
+  background-attachment: fixed;
+  min-height: 100dvh;
 }
 
 * {
@@ -75,6 +87,44 @@ textarea {
   background: rgba(125, 211, 252, 0.35);
 }
 
+/* Frosted glass surface on the dark gradient. */
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 18px 40px -22px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+/* Light tile with dark text (stats, chips, primary buttons). */
+.tile {
+  background: linear-gradient(160deg, #f3f8fb 0%, #d9e7ef 100%);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 14px 30px -18px rgba(0, 0, 0, 0.55);
+}
+.tile .text-muted,
+.tile .text-text\/90 {
+  color: var(--ink-muted);
+}
+.tile .text-text,
+.tile .text-white {
+  color: var(--ink);
+}
+.tile .bg-bg-2 {
+  background: rgba(255, 255, 255, 0.7);
+}
+.tile .border-border {
+  border-color: rgba(11, 31, 51, 0.12);
+}
+.badge-ink {
+  color: var(--text);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -92,10 +142,10 @@ textarea {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--card) 0%, var(--card-2) 50%, var(--card) 100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.06) 100%);
   background-size: 800px 100%;
   animation: shimmer 1.6s linear infinite;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 @keyframes glow-pulse {

@@ -28,8 +28,8 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
   const [pending, start] = useTransition();
 
   return (
-    <article className="overflow-hidden rounded-[22px] border border-border/70 bg-card">
-      <header className="flex items-center gap-3 px-4 py-3">
+    <article className="glass overflow-hidden rounded-[28px]">
+      <header className="flex items-center gap-3 px-4 py-3.5">
         <Avatar name={post.author.name} src={post.author.avatar} size="sm" />
         <div className="flex-1 leading-tight">
           <p className="text-sm font-semibold">{post.author.name}</p>
@@ -37,7 +37,7 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
         </div>
         {post.isOwner ? (
           <div className="flex gap-1">
-            <button type="button" onClick={() => setEditing((e) => !e)} className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-card-2 hover:text-text" aria-label="Bijschrift bewerken">
+            <button type="button" onClick={() => setEditing((e) => !e)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-text hover:bg-white/15" aria-label="Bijschrift bewerken">
               <Pencil className="h-4 w-4" />
             </button>
             <button
@@ -50,7 +50,7 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
                   if (r && !r.ok) toast(r.error, "error");
                 });
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-card-2 hover:text-danger"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-text hover:bg-white/15 hover:text-danger"
               aria-label="Post verwijderen"
             >
               <Trash2 className="h-4 w-4" />
@@ -60,11 +60,11 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
       </header>
 
       {linkToDetail ? (
-        <Link href={`/wall/${post.id}`} className="relative block aspect-[4/5] bg-bg-2">
+        <Link href={`/wall/${post.id}`} className="relative mx-2 block aspect-[4/5] overflow-hidden rounded-[22px] bg-white/5">
           {post.imageUrl ? <Image src={post.imageUrl} alt={post.caption ?? `Foto van ${post.author.name}`} fill sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : <div className="skeleton absolute inset-0 rounded-none" />}
         </Link>
       ) : (
-        <div className="relative aspect-[4/5] bg-bg-2">
+        <div className="relative mx-2 aspect-[4/5] overflow-hidden rounded-[22px] bg-white/5">
           {post.imageUrl ? <Image src={post.imageUrl} alt={post.caption ?? `Foto van ${post.author.name}`} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : null}
         </div>
       )}
