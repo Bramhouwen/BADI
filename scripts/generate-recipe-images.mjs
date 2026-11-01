@@ -14,7 +14,7 @@ const items = [
   ["kwark-walnoot", "Kwark met walnoot", "TUSSENDOORTJE", ["#f1e4da", "#cdb5a3"]],
 ];
 
-for (const [name, title, cat, [c1, c2]] of items) {
+for (const [name, , , [c1, c2]] of items) {
   const w = 1000;
   const h = 1250;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
@@ -26,8 +26,9 @@ for (const [name, title, cat, [c1, c2]] of items) {
   <rect width="${w}" height="${h}" fill="url(#r)"/>
   <circle cx="${w * 0.5}" cy="${h * 0.42}" r="${w * 0.3}" fill="#ffffff" fill-opacity="0.35"/>
   <circle cx="${w * 0.5}" cy="${h * 0.42}" r="${w * 0.22}" fill="#ffffff" fill-opacity="0.45"/>
-  <text x="50%" y="${h * 0.78}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="64" fill="#6e4034">${title}</text>
-  <text x="50%" y="${h * 0.84}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="8" fill="#8a5447">${cat}</text>
+  <ellipse cx="${w * 0.5}" cy="${h * 0.44}" rx="${w * 0.17}" ry="${w * 0.13}" fill="${c2}" fill-opacity="0.35"/>
+  <circle cx="${w * 0.42}" cy="${h * 0.41}" r="${w * 0.06}" fill="#ffffff" fill-opacity="0.55"/>
+  <circle cx="${w * 0.56}" cy="${h * 0.46}" r="${w * 0.045}" fill="#ffffff" fill-opacity="0.4"/>
 </svg>`;
   await sharp(Buffer.from(svg)).jpeg({ quality: 82, mozjpeg: true }).toFile(out + name + ".jpg");
 }
