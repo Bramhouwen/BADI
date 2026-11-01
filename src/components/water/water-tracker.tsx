@@ -50,15 +50,15 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
 
   if (variant === "compact") {
     return (
-      <Link href="/water" className="glass flex items-stretch overflow-hidden rounded-[22px]">
+      <Link href="/water" className="glass flex items-stretch overflow-hidden rounded-[20px]">
         <WaterWave level={level} className="w-[96px] shrink-0 bg-blush">
-          <div className="flex h-[112px] items-center justify-center">
-            <span className="font-display text-2xl text-ink">{pct}%</span>
+          <div className="flex h-[96px] items-center justify-center">
+            <span className="font-display text-[22px] text-ink">{pct}%</span>
           </div>
         </WaterWave>
         <div className="flex flex-1 flex-col justify-center px-4 py-3">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Water vandaag</p>
-          <p className="mt-0.5 font-display text-[24px] leading-none text-text">{formatMl(opt)}</p>
+          <p className="mt-0.5 font-display text-[22px] leading-none text-text">{formatMl(opt)}</p>
           <p className="mt-1 text-[12px] text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} tot ${formatMl(goal)}` : "Doel gehaald voor vandaag"}</p>
         </div>
         <div className="flex items-center pr-3">

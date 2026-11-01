@@ -34,7 +34,7 @@ function useKeyboardOpen() {
 
 function NavItems({ pathname }: { pathname: string | null }) {
   return (
-    <ul className="flex items-stretch px-2 py-2">
+    <ul className="flex items-stretch px-1.5 py-1">
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname !== null && (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
         return (
@@ -43,11 +43,11 @@ function NavItems({ pathname }: { pathname: string | null }) {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex h-14 flex-col items-center justify-center gap-1 rounded-full text-[11px] font-medium transition-colors",
+                "flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium tracking-wide transition-colors",
                 active ? "text-paper" : "text-paper/55 hover:text-paper/85",
               )}
             >
-              <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 1.9 : 1.5} aria-hidden />
+              <Icon className="h-[20px] w-[20px]" strokeWidth={active ? 1.8 : 1.5} aria-hidden />
               <span>{label}</span>
             </Link>
           </li>
@@ -70,9 +70,9 @@ export function BottomNav() {
     <nav
       aria-label="Hoofdnavigatie"
       className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 transition-transform duration-200", keyboardOpen && "translate-y-[140%]")}
-      style={{ paddingBottom: "calc(var(--sab) + 10px)" }}
+      style={{ paddingBottom: "calc(var(--sab) + 8px)" }}
     >
-      <div className="espresso pointer-events-auto w-full max-w-lg rounded-[28px]">
+      <div className="espresso pointer-events-auto w-full max-w-lg rounded-[24px]">
         <Suspense fallback={<NavItems pathname={null} />}>
           <ActiveNavItems />
         </Suspense>

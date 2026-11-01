@@ -141,7 +141,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {dates.length > 1 ? (
         <ChipTabs
           label="Datum"
@@ -159,12 +159,12 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
         />
       ) : null}
 
-      <p className="text-sm text-muted">
+      <p className="px-0.5 text-[12.5px] leading-snug text-muted">
         {date === today ? "Vandaag" : "Gisteren"}, {formatDateNl(date)}.{" "}
         {current ? "Je kunt je check-in nog aanpassen." : "Eén activiteit is genoeg."}
       </p>
 
-      <div className="grid grid-cols-2 gap-3" role="group" aria-label="Activiteiten">
+      <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Activiteiten">
         {ACTIVITIES.map((a) => {
           const on = selected.has(a.key);
           return (
@@ -175,14 +175,16 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
               onClick={() => toggle(a.key)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
               className={cn(
-                "relative flex min-h-[124px] flex-col items-start justify-between rounded-[22px] p-4 text-left transition-colors",
-                on ? "glass ring-2 ring-sage" : "glass hover:bg-blush/40",
+                "relative flex min-h-[112px] flex-col items-start justify-between rounded-[18px] border p-3.5 text-left transition-colors",
+                on
+                  ? "border-sage/60 bg-gradient-to-br from-[#e9eedc] to-[#dfe5cf] shadow-[0_8px_22px_-18px_rgba(110,64,52,0.5)]"
+                  : "glass hover:bg-blush/40",
               )}
             >
-              <IconBadge icon={ACTIVITY_ICONS[a.key]} tone={on ? "sage" : "soft"} />
-              <span className="mt-3">
-                <span className="block text-[14px] font-medium leading-tight text-text">{a.label}</span>
-                <span className="mt-0.5 block text-[12px] text-muted">{a.hint}</span>
+              <IconBadge icon={ACTIVITY_ICONS[a.key]} size="sm" tone={on ? "sage" : "soft"} className={cn(on && "bg-white/70")} />
+              <span className="mt-2.5">
+                <span className="block text-[13.5px] font-medium leading-tight text-text">{a.label}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-muted">{a.hint}</span>
               </span>
               <AnimatePresence>
                 {on ? (
@@ -190,9 +192,9 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
                     initial={reduce ? false : { scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0, opacity: 0 }}
-                    className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sage text-white"
+                    className="absolute right-3 top-3 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-sage text-white shadow-sm"
                   >
-                    <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+                    <Check className="h-3 w-3" strokeWidth={2.4} />
                   </motion.span>
                 ) : null}
               </AnimatePresence>
@@ -214,7 +216,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
           <p className="mt-1 text-right text-xs text-muted">{note.length}/200</p>
         </div>
       ) : (
-        <button type="button" onClick={() => setShowNote(true)} className="text-sm text-water-deep underline-offset-4 hover:underline">
+        <button type="button" onClick={() => setShowNote(true)} className="px-0.5 text-[13px] text-ink underline-offset-4 hover:underline">
           + Voeg een kort bericht toe (optioneel)
         </button>
       )}

@@ -92,13 +92,13 @@ async function Content() {
   const canEditToday = isEditableDate(ctx.challenge, today, now);
 
   return (
-    <Page className="space-y-5">
+    <Page className="space-y-4"><div className="h-1" />
       <WelcomeToast />
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="px-1">
-        <p className="font-display text-[20px] text-muted">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
-        <h1 className="-mt-0.5 font-display text-[38px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
+        <p className="font-display text-[19px] leading-none text-text/80">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
+        <h1 className="mt-1 font-display text-[36px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
       </div>
 
       {phase === "during" ? (

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-lg px-5 pb-6 pt-1", className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full max-w-lg px-5 pb-6 pt-0.5", className)}>{children}</div>;
 }
 
 export function PageTitle({ title, subtitle, back, action }: { title: ReactNode; subtitle?: ReactNode; back?: string; action?: ReactNode }) {
@@ -26,8 +26,8 @@ export function PageTitle({ title, subtitle, back, action }: { title: ReactNode;
           {action}
         </div>
       ) : null}
-      <h1 className="font-display text-[28px] leading-tight">{title}</h1>
-      {subtitle ? <p className="mt-1 text-[14px] text-muted">{subtitle}</p> : null}
+      <h1 className="font-display text-[27px] leading-[1.15]">{title}</h1>
+      {subtitle ? <p className="mt-1 text-[13px] leading-snug text-muted">{subtitle}</p> : null}
     </div>
   );
 }

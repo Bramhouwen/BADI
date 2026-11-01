@@ -5,7 +5,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-dvh flex-col">
       <AppHeader />
-      <main className="flex-1" style={{ paddingBottom: "calc(var(--nav-h) + var(--sab) + 16px)" }}>
+      <main className="flex-1" style={{ paddingBottom: "calc(var(--nav-h) + var(--sab) + 20px)" }}>
         {children}
       </main>
       <BottomNav />

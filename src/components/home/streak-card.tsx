@@ -55,9 +55,9 @@ export function StatTiles({ current, longest, total, challengeLength }: { curren
 
 export function WeekCard({ calendar }: { calendar: CalendarDay[] }) {
   return (
-    <section className="glass rounded-[22px] px-4 py-4" aria-label="Laatste zeven dagen">
+    <section className="glass rounded-[20px] px-4 py-3.5" aria-label="Laatste zeven dagen">
       <div className="mb-3 flex items-center justify-between px-1">
-        <h2 className="font-display text-[18px] text-text">Deze week</h2>
+        <h2 className="font-display text-[17px] text-text">Deze week</h2>
         <Badge tone="ink">{calendar.filter((d) => d.done).length} van 7 dagen</Badge>
       </div>
       <ol className="flex justify-between">
@@ -66,7 +66,7 @@ export function WeekCard({ calendar }: { calendar: CalendarDay[] }) {
             <span className={cn("text-[10px] font-medium uppercase tracking-wide", d.isToday ? "text-ink" : "text-muted")}>{weekdayShortNl(d.date)}</span>
             <span
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-medium tabular-nums",
+                "flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-medium tabular-nums",
                 d.done ? "bg-sage text-white" : d.isToday ? "border border-sage text-ink" : "bg-blush text-muted",
                 !d.inChallenge && "opacity-40",
               )}

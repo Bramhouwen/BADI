@@ -23,8 +23,8 @@ export function Card({
 
 export function SectionTitle({ children, action, className }: { children: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("mb-3 flex items-end justify-between px-1", className)}>
-      <h2 className="font-display text-[20px] text-text">{children}</h2>
+    <div className={cn("mb-2.5 flex items-end justify-between px-0.5", className)}>
+      <h2 className="font-display text-[19px] text-text">{children}</h2>
       {action}
     </div>
   );
