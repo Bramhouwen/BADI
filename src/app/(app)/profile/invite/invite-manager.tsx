@@ -46,7 +46,9 @@ export function InviteManager({ spots, open }: { spots: number; open: { id: stri
           ) : (
             <form
               className="space-y-3"
-              action={(fd) => {
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
                 setError(null);
                 start(async () => {
                   const r = await createInvitation(fd);

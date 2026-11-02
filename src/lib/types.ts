@@ -58,7 +58,7 @@ export interface Recipe {
   instructions: string | null;
   category: string | null;
   protein_grams: number | null;
-  image_path: string;
+  image_path: string | null;
   created_at: string;
   updated_at: string;
 }

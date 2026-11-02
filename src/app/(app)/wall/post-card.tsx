@@ -73,7 +73,9 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
         {editing ? (
           <form
             className="space-y-2"
-            action={(fd) =>
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
               start(async () => {
                 const r = await updateCaption(post.id, fd);
                 if (!r.ok) toast(r.error, "error");
@@ -81,8 +83,8 @@ export function PostCard({ post, linkToDetail = true }: { post: PostCardData; li
                   toast("Bijschrift opgeslagen", "success");
                   setEditing(false);
                 }
-              })
-            }
+              });
+            }}
           >
             <Textarea name="caption" defaultValue={post.caption ?? ""} maxLength={500} className="min-h-[64px]" aria-label="Bijschrift" />
             <div className="flex gap-2">

@@ -82,13 +82,13 @@ async function Content() {
   const recipes = (recipeRows ?? []) as Pick<Recipe, "id" | "user_id" | "image_path" | "title" | "created_at">[];
   const [wallUrls, recipeUrls, avatarUrls] = await Promise.all([
     signedUrlMap("wall", posts.map((p) => p.image_path)),
-    signedUrlMap("recipes", recipes.map((r) => r.image_path)),
+    signedUrlMap("recipes", recipes.map((r) => r.image_path).filter((p): p is string => Boolean(p))),
     signedUrlMap("avatars", squad.map((m) => m.profile.avatar_path).filter((p): p is string => Boolean(p))),
   ]);
   const nameOf = (id: string) => firstName(squad.find((m) => m.user_id === id)?.profile.display_name ?? "Iemand");
   const inspiration = [
     ...posts.map((p) => ({ kind: "post" as const, id: p.id, href: `/wall/${p.id}`, src: wallUrls.get(p.image_path) ?? null, title: p.caption || "Nieuw op de Wall", author: nameOf(p.user_id), created_at: p.created_at })),
-    ...recipes.map((r) => ({ kind: "recipe" as const, id: r.id, href: `/kitchen/${r.id}`, src: recipeUrls.get(r.image_path) ?? null, title: r.title, author: nameOf(r.user_id), created_at: r.created_at })),
+    ...recipes.map((r) => ({ kind: "recipe" as const, id: r.id, href: `/kitchen/${r.id}`, src: r.image_path ? recipeUrls.get(r.image_path) ?? null : null, title: r.title, author: nameOf(r.user_id), created_at: r.created_at })),
   ]
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
     .slice(0, 2);

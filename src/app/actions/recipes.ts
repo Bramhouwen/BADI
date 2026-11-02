@@ -9,9 +9,10 @@ import { friendlyError } from "@/lib/errors";
 import { isOwnedMediaPath, isStaticMediaPath } from "@/lib/storage";
 import { REACTION_KEYS, RECIPE_CATEGORIES, type ReactionKey } from "@/lib/constants";
 import type { ActionResult } from "@/lib/types";
+import { firstName } from "@/lib/utils";
 
 const recipeSchema = z.object({
-  title: z.string().trim().min(1, "Geef je recept een naam.").max(80, "Maximaal 80 tekens."),
+  title: z.string().trim().max(80, "Maximaal 80 tekens.").optional().default(""),
   description: z.string().trim().max(500, "Maximaal 500 tekens.").optional().default(""),
   ingredients: z.string().trim().max(2000, "Maximaal 2000 tekens.").optional().default(""),
   instructions: z.string().trim().max(4000, "Maximaal 4000 tekens.").optional().default(""),
@@ -29,30 +30,34 @@ const recipeSchema = z.object({
     .default("")
     .transform((v) => (v === "" ? null : Number(v)))
     .refine((v) => v === null || (Number.isInteger(v) && v >= 0 && v <= 300), "Eiwit in hele grammen, maximaal 300."),
-  image_path: z.string().min(1, "Een foto is verplicht."),
+  image_path: z.string().optional().default(""),
 });
 
-function toRow(data: z.infer<typeof recipeSchema>) {
+function toRow(data: z.infer<typeof recipeSchema>, fallbackTitle: string) {
   return {
-    title: data.title,
+    title: data.title || fallbackTitle,
     description: data.description || null,
     ingredients: data.ingredients || null,
     instructions: data.instructions || null,
     category: data.category || null,
     protein_grams: data.protein_grams,
-    image_path: data.image_path,
+    image_path: data.image_path || null,
   };
+}
+
+function fallbackTitle(displayName: string): string {
+  return `Recept van ${firstName(displayName)}`.slice(0, 80);
 }
 
 export async function createRecipe(formData: FormData): Promise<ActionResult> {
   const parsed = recipeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const ctx = await requireContext();
-  if (!isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
+  if (parsed.data.image_path && !isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("recipes")
-    .insert({ ...toRow(parsed.data), challenge_id: ctx.challenge.id, user_id: ctx.userId })
+    .insert({ ...toRow(parsed.data, fallbackTitle(ctx.profile.display_name)), challenge_id: ctx.challenge.id, user_id: ctx.userId })
     .select("id")
     .single();
   if (error) return { ok: false, error: friendlyError(error) };
@@ -66,9 +71,9 @@ export async function updateRecipe(id: string, formData: FormData): Promise<Acti
   const parsed = recipeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const ctx = await requireContext();
-  if (!isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
+  if (parsed.data.image_path && !isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
   const supabase = await createClient();
-  const { error } = await supabase.from("recipes").update(toRow(parsed.data)).eq("id", id).eq("user_id", ctx.userId);
+  const { error } = await supabase.from("recipes").update(toRow(parsed.data, fallbackTitle(ctx.profile.display_name))).eq("id", id).eq("user_id", ctx.userId);
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/kitchen");
   revalidatePath(`/kitchen/${id}`);

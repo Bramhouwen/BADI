@@ -11,7 +11,7 @@ async function Content() {
   const ctx = await requireContext();
   return (
     <Page>
-      <PageTitle title="Nieuw recept" subtitle="Alleen een foto en een naam zijn verplicht." back="/kitchen" />
+      <PageTitle title="Nieuw recept" subtitle="Niets is verplicht. Een naam of foto is genoeg." back="/kitchen" />
       <RecipeForm action={createRecipe} pathPrefix={`${ctx.challenge.id}/${ctx.userId}`} submitLabel="Recept delen" />
     </Page>
   );

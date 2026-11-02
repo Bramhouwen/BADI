@@ -24,7 +24,9 @@ export function OnboardingForms({ challengeLabel }: { challengeLabel: string }) 
             <p className="mt-0.5 text-sm text-muted">Plak de link of code die je van de beheerder kreeg.</p>
             <form
               className="mt-3 space-y-3"
-              action={(fd) => {
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
                 setError(null);
                 setWhich("join");
                 start(async () => {
@@ -57,7 +59,8 @@ export function OnboardingForms({ challengeLabel }: { challengeLabel: string }) 
             </p>
             <form
               className="mt-3"
-              action={() => {
+              onSubmit={(e) => {
+                e.preventDefault();
                 setError(null);
                 setWhich("create");
                 start(async () => {

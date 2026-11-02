@@ -37,7 +37,9 @@ export function AlcoholExceptions({ exceptions, min, max }: { exceptions: Alcoho
       {!full ? (
         <form
           className="flex gap-2"
-          action={(fd) => {
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
             setError(null);
             start(async () => {
               const r = await addAlcoholException(fd);

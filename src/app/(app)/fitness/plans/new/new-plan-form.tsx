@@ -11,7 +11,9 @@ export function NewPlanForm() {
   return (
     <form
       className="space-y-4"
-      action={(fd) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         setError(null);
         start(async () => {
           const r = await createPlan(fd);

@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, ChefHat } from "lucide-react";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
@@ -40,8 +41,14 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="mx-auto w-full max-w-lg pb-6">
-      <div className="relative mx-4 mt-1 aspect-[4/4] overflow-hidden rounded-[28px] border border-ink/10 bg-white/70">
-        {image ? <Image src={image} alt={recipe.title} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized /> : null}
+      <div className={cn("relative mx-4 mt-1 overflow-hidden rounded-[28px] border border-ink/10 bg-white/70", image ? "aspect-[4/4]" : "aspect-[16/9] bg-gradient-to-br from-[#e9d6c7] to-[#d9bfae]")}>
+        {image ? (
+          <Image src={image} alt={recipe.title} fill priority sizes="(max-width: 512px) 100vw, 512px" className="object-cover" unoptimized />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ChefHat className="h-12 w-12 text-ink/50" strokeWidth={1.2} aria-hidden />
+          </div>
+        )}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
           <Link href="/kitchen" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm backdrop-blur" aria-label="Terug naar Kitchen">
             ←

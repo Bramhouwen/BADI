@@ -13,7 +13,9 @@ export function NewPostForm({ pathPrefix }: { pathPrefix: string }) {
   return (
     <form
       className="space-y-5"
-      action={(fd) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         setError(null);
         start(async () => {
           const r = await createPost(fd);

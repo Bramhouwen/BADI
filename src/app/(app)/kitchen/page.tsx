@@ -34,7 +34,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
   const all = (recipeRows ?? []) as Recipe[];
   const recipes = filter === "favorites" ? all.filter((r) => favorites.has(r.id)) : filter === "all" ? all : all.filter((r) => r.category === filter);
   const [images, avatars] = await Promise.all([
-    signedUrlMap("recipes", recipes.map((r) => r.image_path)),
+    signedUrlMap("recipes", recipes.map((r) => r.image_path).filter((p): p is string => Boolean(p))),
     signedUrlMap("avatars", squad.map((m) => m.profile.avatar_path).filter((p): p is string => Boolean(p))),
   ]);
   const memberOf = (id: string) => squad.find((m) => m.user_id === id)?.profile;
@@ -94,7 +94,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
               <li key={r.id}>
                 <RecipeCard
                   recipe={{ id: r.id, title: r.title, category: r.category }}
-                  imageUrl={images.get(r.image_path) ?? null}
+                  imageUrl={r.image_path ? images.get(r.image_path) ?? null : null}
                   author={{ name: author?.display_name ?? "Lid", avatar: author?.avatar_path ? avatars.get(author.avatar_path) ?? null : null }}
                   favorite={favorites.has(r.id)}
                 />

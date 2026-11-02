@@ -27,7 +27,10 @@ export function RecipeForm({
   return (
     <form
       className="space-y-5"
-      action={(fd) => {
+      onSubmit={(e) => {
+        // Submitting by hand keeps the typed text in place when the server reports an error.
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         setError(null);
         start(async () => {
           const r = await action(fd);
@@ -35,11 +38,12 @@ export function RecipeForm({
         });
       }}
     >
-      <ImagePicker bucket="recipes" pathPrefix={pathPrefix} initialUrl={imageUrl} initialPath={recipe?.image_path} aspect="wide" label="Foto van je gerecht" />
+      <ImagePicker bucket="recipes" pathPrefix={pathPrefix} initialUrl={imageUrl} initialPath={recipe?.image_path} aspect="wide" label="Foto van je gerecht (optioneel)" />
 
       <div>
         <Label htmlFor="title">Naam van het recept</Label>
-        <Input id="title" name="title" defaultValue={recipe?.title} placeholder="Protein Pancakes 🥞" maxLength={80} required />
+        <Input id="title" name="title" defaultValue={recipe?.title} placeholder="Protein Pancakes 🥞" maxLength={80} />
+        <Hint>Zonder naam krijgt het recept je voornaam als titel.</Hint>
       </div>
 
       <div>

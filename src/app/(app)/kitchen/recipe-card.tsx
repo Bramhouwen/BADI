@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useOptimistic, useTransition } from "react";
-import { Heart } from "lucide-react";
+import { Heart, ChefHat } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Avatar } from "@/components/ui/avatar";
 import { toggleFavorite } from "@/app/actions/recipes";
@@ -58,7 +58,9 @@ export function RecipeCard({
         {imageUrl ? (
           <Image src={imageUrl} alt={recipe.title} fill sizes="(max-width: 512px) 50vw, 240px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" unoptimized />
         ) : (
-          <div className="skeleton absolute inset-0" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#e9d6c7] to-[#d9bfae]">
+            <ChefHat className="h-10 w-10 text-ink/50" strokeWidth={1.3} aria-hidden />
+          </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#2b1a14]/85 via-[#2b1a14]/35 to-transparent p-3 pt-10">
           {recipe.category ? <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-water-deep">{recipe.category}</p> : null}

@@ -11,7 +11,9 @@ export function AcceptInviteButton({ token }: { token: string }) {
   return (
     <form
       className="mt-6 w-full space-y-3"
-      action={(fd) => {
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
         setError(null);
         start(async () => {
           const r = await acceptInvitation(fd);
