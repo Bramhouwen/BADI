@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireContext } from "@/lib/data";
-import { formatDateNl, formatDateTimeNl } from "@/lib/dates";
+import { formatDateNl, formatDateTimeNl, isEditableDate, todayKey } from "@/lib/dates";
+import { activityByKey } from "@/lib/constants";
 import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, formatSpeed, formatVolume, muscleLabel, paceSecPerKm, sessionVolumeKg, speedKmh } from "@/lib/fitness";
 import { loadSessionDetail } from "@/lib/fitness/data";
 import { Page, PageTitle } from "@/components/ui/page";
@@ -44,7 +45,9 @@ async function Content({ params, searchParams }: { params: Promise<{ id: string 
         <Card variant="dark" className="rounded-[22px] p-5">
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-paper/70">Training voltooid</p>
           <p className="mt-1.5 text-[12.5px] text-paper/80">
-            {meta.checkin.includes("strength") ? "Krachttraining en Bewogen zijn vandaag ondersteund in je check-in." : "Bewogen is vandaag ondersteund in je check-in."}{" "}
+            {isEditableDate(ctx.challenge, s.workout_date)
+              ? `Telt mee in je check-in van ${s.workout_date === todayKey(new Date(), ctx.challenge.timezone) ? "vandaag" : "gisteren"}: ${meta.checkin.map((k) => activityByKey(k)?.label ?? k).join(" en ")}.`
+              : "Deze datum ligt buiten de check-in van vandaag en gisteren."}{" "}
             <Link href="/checkin" className="underline underline-offset-2">
               Bekijk check-in
             </Link>

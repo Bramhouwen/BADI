@@ -114,6 +114,8 @@ export interface StrengthDraft {
   workout_date: string;
   notes: string;
   exercises: DraftExercise[];
+  /** Only sent when the duration is typed in (logging afterwards or editing); a live timer passes it on finish. */
+  duration_seconds?: number | null;
 }
 
 const draftSchema = z.object({
@@ -137,10 +139,14 @@ const draftSchema = z.object({
       }),
     )
     .max(40),
+  duration_seconds: z.number().int().min(0).max(86400).nullable().optional(),
 });
 
-/** Creates a draft strength session, optionally pre-filled from a template or an earlier session. */
-export async function startStrengthSession(opts: { templateId?: string; repeatOf?: string } = {}): Promise<ActionResult> {
+/**
+ * Creates a draft strength session, optionally pre-filled from a template or an earlier session.
+ * `afterwards` logs a finished workout: no live timer (started_at stays empty) and the duration is typed in.
+ */
+export async function startStrengthSession(opts: { templateId?: string; repeatOf?: string; afterwards?: boolean } = {}): Promise<ActionResult> {
   const ctx = await requireContext();
   const supabase = await createClient();
   const today = todayKey(new Date(), ctx.challenge.timezone);
@@ -179,7 +185,7 @@ export async function startStrengthSession(opts: { templateId?: string; repeatOf
 
   const { data: session, error } = await supabase
     .from("workout_sessions")
-    .insert({ user_id: ctx.userId, challenge_id: ctx.challenge.id, template_id: templateId, activity_type: "strength", title, workout_date: today, started_at: new Date().toISOString(), status: "draft" })
+    .insert({ user_id: ctx.userId, challenge_id: ctx.challenge.id, template_id: templateId, activity_type: "strength", title, workout_date: today, started_at: opts.afterwards ? null : new Date().toISOString(), status: "draft" })
     .select("id")
     .single();
   if (error) return { ok: false, error: friendlyError(error) };
@@ -217,7 +223,12 @@ export async function saveStrengthDraft(id: string, draft: StrengthDraft): Promi
   if (!own) return { ok: false, error: "Deze training is niet van jou." };
   const { error } = await supabase
     .from("workout_sessions")
-    .update({ title: parsed.data.title, workout_date: parsed.data.workout_date, notes: parsed.data.notes || null })
+    .update({
+      title: parsed.data.title,
+      workout_date: parsed.data.workout_date,
+      notes: parsed.data.notes || null,
+      ...(parsed.data.duration_seconds !== undefined ? { duration_seconds: parsed.data.duration_seconds || null } : {}),
+    })
     .eq("id", id)
     .eq("user_id", ctx.userId);
   if (error) return { ok: false, error: friendlyError(error) };
@@ -505,13 +516,13 @@ export async function moveTemplateExercise(templateId: string, id: string, direc
 }
 
 /** Starts a workout from a template: strength opens the logger, cardio opens the pre-filled form. */
-export async function startFromTemplate(templateId: string): Promise<ActionResult> {
+export async function startFromTemplate(templateId: string, afterwards = false): Promise<ActionResult> {
   if (!uuid.safeParse(templateId).success) return { ok: false, error: "Onbekende workout." };
   const ctx = await requireContext();
   const supabase = await createClient();
   const { data: t } = await supabase.from("workout_templates").select("id, name, activity_type").eq("id", templateId).maybeSingle();
   if (!t) return { ok: false, error: "Workout niet gevonden." };
   void ctx;
-  if (t.activity_type === "strength") return startStrengthSession({ templateId });
-  redirect(`/fitness/start/${t.activity_type}?title=${encodeURIComponent(t.name as string)}`);
+  if (t.activity_type === "strength") return startStrengthSession({ templateId, afterwards });
+  redirect(`/fitness/start/${t.activity_type}?title=${encodeURIComponent(t.name as string)}${afterwards ? "&achteraf=1" : ""}`);
 }

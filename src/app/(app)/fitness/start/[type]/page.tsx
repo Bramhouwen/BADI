@@ -10,7 +10,7 @@ import { CardioForm, type CardioInitial } from "@/components/fitness/cardio-form
 
 export const metadata = { title: "Training vastleggen" };
 
-async function Content({ params, searchParams }: { params: Promise<{ type: string }>; searchParams: Promise<{ from?: string | string[]; title?: string | string[] }> }) {
+async function Content({ params, searchParams }: { params: Promise<{ type: string }>; searchParams: Promise<{ from?: string | string[]; title?: string | string[]; achteraf?: string | string[] }> }) {
   const { type } = await params;
   const sp = await searchParams;
   if (!(ACTIVITY_TYPE_KEYS as string[]).includes(type)) notFound();
@@ -18,6 +18,7 @@ async function Content({ params, searchParams }: { params: Promise<{ type: strin
   const ctx = await requireContext();
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const meta = activityMeta(type);
+  const after = sp.achteraf === "1";
 
   let initial: CardioInitial | undefined;
   const from = typeof sp.from === "string" ? sp.from : null;
@@ -29,8 +30,8 @@ async function Content({ params, searchParams }: { params: Promise<{ type: strin
 
   return (
     <Page>
-      <PageTitle title={meta.label} subtitle="Vul je training in en sla hem op." back="/fitness/start" />
-      <CardioForm type={type as ActivityType} today={today} initial={initial} />
+      <PageTitle title={meta.label} subtitle={after ? "Vul in wat je hebt gedaan en sla het op." : "Start de timer of vul je training in."} back="/fitness/start" />
+      <CardioForm type={type as ActivityType} today={today} initial={initial} after={after} />
     </Page>
   );
 }

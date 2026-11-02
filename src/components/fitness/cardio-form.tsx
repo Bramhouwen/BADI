@@ -26,7 +26,8 @@ function split(seconds: number) {
   return { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60), s: seconds % 60 };
 }
 
-export function CardioForm({ type, today, initial, sessionId }: { type: ActivityType; today: string; initial?: CardioInitial; sessionId?: string }) {
+/** `after` logs a finished workout: no timer, just the fields. */
+export function CardioForm({ type, today, initial, sessionId, after = false }: { type: ActivityType; today: string; initial?: CardioInitial; sessionId?: string; after?: boolean }) {
   const meta = activityMeta(type);
   const init = split(initial?.duration_seconds ?? 0);
   const [hours, setHours] = useState(init.h);
@@ -119,7 +120,7 @@ export function CardioForm({ type, today, initial, sessionId }: { type: Activity
         </div>
       </div>
 
-      {!sessionId ? (
+      {!sessionId && !after ? (
         <Card className="flex items-center justify-between gap-3 p-3.5">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Timer</p>

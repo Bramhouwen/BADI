@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { requireContext } from "@/lib/data";
 import { ACTIVITY_TYPES } from "@/lib/fitness";
 import { loadPlans } from "@/lib/fitness/data";
@@ -9,7 +8,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
-import { StartStrengthButton } from "@/components/fitness/session-actions";
+import { StartChoice } from "@/components/fitness/session-actions";
 import { startFromTemplate, startStrengthSession } from "@/app/actions/fitness";
 
 export const metadata = { title: "Training starten" };
@@ -21,36 +20,26 @@ async function Content() {
 
   return (
     <Page className="space-y-5">
-      <PageTitle title="Training starten" subtitle="Kies wat je gaat doen." />
+      <PageTitle title="Training starten" subtitle="Nu starten of achteraf invullen." />
       <FitnessNav active="/fitness/start" />
 
       <ul className="space-y-2">
-        {ACTIVITY_TYPES.map((a) =>
-          a.kind === "strength" ? (
-            <li key={a.key} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-3">
-              <IconBadge icon={a.icon} size="md" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-medium text-text">{a.label}</span>
-                <span className="block text-[11.5px] text-muted">{a.hint}</span>
-              </span>
-              <div className="w-[96px]">
-                <StartStrengthButton action={startStrengthSession.bind(null, {})} label="Start" />
-              </div>
-            </li>
-          ) : (
-            <li key={a.key}>
-              <Link href={`/fitness/start/${a.key}`} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-3 hover:bg-blush/40">
-                <IconBadge icon={a.icon} size="md" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-medium text-text">{a.label}</span>
-                  <span className="block text-[11.5px] text-muted">{a.hint}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted" strokeWidth={1.6} />
-              </Link>
-            </li>
-          ),
-        )}
+        {ACTIVITY_TYPES.map((a) => (
+          <li key={a.key} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-3">
+            <IconBadge icon={a.icon} size="md" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-medium text-text">{a.label}</span>
+              <span className="block truncate text-[11.5px] text-muted">{a.hint}</span>
+            </span>
+            {a.kind === "strength" ? (
+              <StartChoice start={startStrengthSession.bind(null, {})} after={startStrengthSession.bind(null, { afterwards: true })} />
+            ) : (
+              <StartChoice start={`/fitness/start/${a.key}`} after={`/fitness/start/${a.key}?achteraf=1`} />
+            )}
+          </li>
+        ))}
       </ul>
+      <p className="-mt-2 px-0.5 text-[11.5px] leading-snug text-muted">Start loopt mee met een timer. Achteraf vul je duur, oefeningen en sets in na je training.</p>
 
       {templates.length > 0 ? (
         <section>
@@ -62,9 +51,7 @@ async function Content() {
                   <span className="block truncate text-[14px] font-medium text-text">{t.name}</span>
                   <span className="block text-[11.5px] text-muted">{t.planName}</span>
                 </span>
-                <div className="w-[96px]">
-                  <StartStrengthButton action={startFromTemplate.bind(null, t.id)} label="Start" variant="secondary" />
-                </div>
+                <StartChoice start={startFromTemplate.bind(null, t.id, false)} after={startFromTemplate.bind(null, t.id, true)} />
               </li>
             ))}
           </ul>

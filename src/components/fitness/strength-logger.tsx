@@ -9,7 +9,7 @@ import { ErrorText, Input, Label, Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { formatDuration, formatKg, formatVolume, muscleLabel, sessionVolumeKg, timerElapsed, type TimerState } from "@/lib/fitness";
 import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/data";
-import { finishStrengthSession, saveStrengthDraft, type DraftExercise, type StrengthDraft } from "@/app/actions/fitness";
+import { finishStrengthSession, saveStrengthDraft, type DraftExercise, type DraftSet, type StrengthDraft } from "@/app/actions/fitness";
 import { ExercisePicker } from "./exercise-picker";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
@@ -31,7 +31,17 @@ function toLocal(session: SessionDetail): LocalExercise[] {
   }));
 }
 
-export function StrengthLogger({ session, exercises, last, today, mode }: { session: SessionDetail; exercises: ExerciseRow[]; last: LastPerformance; today: string; mode: "draft" | "edit" }) {
+/** Logging afterwards: a set counts as done as soon as it has a weight or a number of reps. */
+function filled(s: DraftSet): boolean {
+  return s.weight_kg !== null || s.repetitions !== null;
+}
+
+/**
+ * draft: live workout with a running timer and per-set ticks.
+ * after: logging a finished workout; duration is typed in and filled sets count as done.
+ * edit: changing a saved workout; duration is typed in.
+ */
+export function StrengthLogger({ session, exercises, last, today, mode }: { session: SessionDetail; exercises: ExerciseRow[]; last: LastPerformance; today: string; mode: "draft" | "after" | "edit" }) {
   const [title, setTitle] = useState(session.title);
   const [date, setDate] = useState(session.workout_date);
   const [notes, setNotes] = useState(session.notes ?? "");
@@ -64,15 +74,26 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     return () => clearInterval(id);
   }, [mode]);
   const mounted = useMounted();
-  const elapsed = mode === "draft" ? timerElapsed(timer) : (session.duration_seconds ?? 0);
+  const live = mode === "draft";
+  const after = mode === "after";
+  const [hours, setHours] = useState(() => Math.floor((session.duration_seconds ?? 0) / 3600));
+  const [minutes, setMinutes] = useState(() => Math.floor(((session.duration_seconds ?? 0) % 3600) / 60));
+  const typedSeconds = hours * 3600 + minutes * 60;
+  const elapsed = live ? timerElapsed(timer) : typedSeconds;
   // The live clock only exists in the browser; the server and hydration pass show 0 so the HTML matches.
   const shownElapsed = mode === "draft" && !mounted ? 0 : elapsed;
 
-  const draft = (): StrengthDraft => ({ title, workout_date: date, notes, exercises: items.map(({ exercise_id, notes, sets }) => ({ exercise_id, notes, sets })) });
+  const draft = (): StrengthDraft => ({
+    title,
+    workout_date: date,
+    notes,
+    exercises: items.map(({ exercise_id, notes, sets }) => ({ exercise_id, notes, sets: after ? sets.map((x) => ({ ...x, completed: filled(x) })) : sets })),
+    ...(live ? {} : { duration_seconds: typedSeconds }),
+  });
 
   // Autosave the draft a moment after the last change so navigation never loses work.
   useEffect(() => {
-    if (!dirty.current || mode !== "draft") return;
+    if (!dirty.current || mode === "edit") return;
     const t = setTimeout(() => {
       start(async () => {
         const r = await saveStrengthDraft(session.id, draft());
@@ -81,7 +102,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, date, notes, items]);
+  }, [title, date, notes, items, hours, minutes]);
 
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => {
@@ -120,13 +141,18 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     mark();
   }
 
-  const volume = useMemo(() => sessionVolumeKg(items.flatMap((e) => e.sets)), [items]);
-  const completedSets = items.reduce((n, e) => n + e.sets.filter((s) => s.completed).length, 0);
+  const doneSets = useMemo(() => items.flatMap((e) => (after ? e.sets.map((x) => ({ ...x, completed: filled(x) })) : e.sets)), [items, after]);
+  const volume = useMemo(() => sessionVolumeKg(doneSets), [doneSets]);
+  const completedSets = doneSets.filter((s) => s.completed).length;
 
   function finish() {
     setError(null);
-    if (items.length === 0) return setError("Voeg minimaal één oefening toe.");
-    if (completedSets === 0) return setError("Markeer minimaal één set als voltooid.");
+    if (after) {
+      if (typedSeconds === 0 && completedSets === 0) return setError("Vul je duur of minimaal één set in.");
+    } else {
+      if (items.length === 0) return setError("Voeg minimaal één oefening toe.");
+      if (completedSets === 0) return setError("Markeer minimaal één set als voltooid.");
+    }
     start(async () => {
       const r = await finishStrengthSession(session.id, draft(), elapsed);
       if (r && !r.ok) setError(r.error);
@@ -142,7 +168,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
   function saveEdit() {
     setError(null);
     start(async () => {
-      const r = await finishStrengthSession(session.id, draft(), session.duration_seconds ?? 0);
+      const r = await finishStrengthSession(session.id, draft(), typedSeconds);
       if (r && !r.ok) setError(r.error);
       else toast("Training opgeslagen", "success");
     });
@@ -151,10 +177,22 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
   return (
     <div className="space-y-4">
       <Card className="flex items-center justify-between gap-3 p-3.5">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{mode === "draft" ? "Bezig" : "Duur"}</p>
-          <p className="font-display text-[28px] leading-none tabular-nums text-text">{formatDuration(shownElapsed) === "–" ? "0s" : formatDuration(shownElapsed)}</p>
-        </div>
+        {live ? (
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Bezig</p>
+            <p className="font-display text-[28px] leading-none tabular-nums text-text">{formatDuration(shownElapsed) === "–" ? "0s" : formatDuration(shownElapsed)}</p>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Duur</p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <Input type="number" inputMode="numeric" min={0} max={23} value={hours || ""} placeholder="0" aria-label="Uren" className="h-10 w-14 rounded-[12px] px-2 py-0 text-center" onChange={(e) => { setHours(Math.max(0, Math.min(23, Math.round(Number(e.target.value)) || 0))); mark(); }} />
+              <span className="text-[12px] text-muted">uur</span>
+              <Input type="number" inputMode="numeric" min={0} max={59} value={minutes || ""} placeholder="0" aria-label="Minuten" className="h-10 w-14 rounded-[12px] px-2 py-0 text-center" onChange={(e) => { setMinutes(Math.max(0, Math.min(59, Math.round(Number(e.target.value)) || 0))); mark(); }} />
+              <span className="text-[12px] text-muted">min</span>
+            </div>
+          </div>
+        )}
         <div className="text-right text-[12px] text-muted">
           <p>
             <span className="font-medium text-text">{completedSets}</span> sets voltooid
@@ -200,15 +238,15 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-[32px_1fr_1fr_40px] items-center gap-2 px-1 text-[10.5px] font-medium uppercase tracking-wide text-muted">
+              <div className={cn("mt-3 grid items-center gap-2 px-1 text-[10.5px] font-medium uppercase tracking-wide text-muted", after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]")}>
                 <span>Set</span>
                 <span>kg</span>
                 <span>Herh.</span>
-                <span className="text-center">Klaar</span>
+                {after ? null : <span className="text-center">Klaar</span>}
               </div>
               <div className="mt-1 space-y-1.5">
                 {ex.sets.map((s, n) => (
-                  <div key={n} className={cn("grid grid-cols-[32px_1fr_1fr_40px] items-center gap-2 rounded-[14px] px-1 py-1", s.completed && "bg-sage/15")}>
+                  <div key={n} className={cn("grid items-center gap-2 rounded-[14px] px-1 py-1", after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]", !after && s.completed && "bg-sage/15")}>
                     <span className="text-center text-[13px] font-medium text-muted">{n + 1}</span>
                     <Input
                       type="text"
@@ -236,6 +274,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                         update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, repetitions: num === null || Number.isNaN(num) ? null : num } : x)) });
                       }}
                     />
+                    {after ? null : (
                     <div className="flex items-center justify-center gap-1">
                       <motion.button
                         type="button"
@@ -248,6 +287,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                         <Check className="h-4 w-4" strokeWidth={2.2} />
                       </motion.button>
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -278,10 +318,10 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
       </div>
 
       <ErrorText>{error}</ErrorText>
-      {mode === "draft" ? (
+      {mode !== "edit" ? (
         <>
           <Button size="lg" className="w-full" onClick={finish} loading={pending}>
-            Training afronden
+            {after ? "Training opslaan" : "Training afronden"}
           </Button>
           <p className="text-center text-[11px] text-muted">{savedAt ? "Concept automatisch opgeslagen." : isDirty ? "Wijzigingen worden opgeslagen…" : "Je concept wordt automatisch bewaard."}</p>
         </>

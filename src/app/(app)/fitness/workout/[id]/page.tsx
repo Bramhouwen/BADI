@@ -17,10 +17,12 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   if (session.activity_type !== "strength") redirect(`/fitness/history/${id}`);
   const [exercises, last] = await Promise.all([loadExercises(ctx), loadLastPerformance(ctx)]);
   const today = todayKey(new Date(), ctx.challenge.timezone);
-  const mode = session.status === "draft" ? "draft" : "edit";
+  // A draft without a start moment was created to log a finished workout afterwards.
+  const mode = session.status !== "draft" ? "edit" : session.started_at ? "draft" : "after";
+  const heading = { draft: ["Krachttraining", "Voeg oefeningen toe en vink sets af."], after: ["Training invullen", "Vul in hoe lang je hebt getraind en wat je hebt gedaan."], edit: ["Training bewerken", "Pas duur, sets, gewichten of herhalingen aan."] }[mode];
   return (
     <Page>
-      <PageTitle title={mode === "draft" ? "Krachttraining" : "Training bewerken"} subtitle={mode === "draft" ? "Voeg oefeningen toe en vink sets af." : "Pas sets, gewichten of herhalingen aan."} back={mode === "draft" ? "/fitness" : `/fitness/history/${id}`} />
+      <PageTitle title={heading[0]} subtitle={heading[1]} back={mode === "edit" ? `/fitness/history/${id}` : "/fitness"} />
       <StrengthLogger session={session} exercises={exercises} last={last} today={today} mode={mode} />
     </Page>
   );
