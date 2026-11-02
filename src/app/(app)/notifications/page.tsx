@@ -42,7 +42,7 @@ async function Content() {
   return (
     <Page>
       {hasUnread ? <MarkNotificationsRead /> : null}
-      <PageTitle title="Meldingen" subtitle="Alleen de leuke dingen. Nooit wie een dag miste." back="/" />
+      <PageTitle title="Meldingen" subtitle="Meldingen van je squad." back="/" />
       {notifications.length === 0 ? (
         <EmptyState icon={Bell} title="Nog geen meldingen" body="Complimenten, reacties op je foto's en nieuwe posts van je squad komen hier binnen." />
       ) : (

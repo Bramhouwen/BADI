@@ -34,7 +34,7 @@ async function Content() {
 
   return (
     <Page className="space-y-5">
-      <PageTitle title="Jouw training" subtitle="Elke beweging brengt je verder." />
+      <PageTitle title="Fitness" />
       <FitnessNav active="/fitness" />
 
       <section className="relative overflow-hidden rounded-[22px] bg-[#6a3b2f] text-paper shadow-[0_16px_34px_-20px_rgba(95,53,41,0.65)]" aria-label="Deze week">
@@ -46,10 +46,15 @@ async function Content() {
         <div className="relative flex min-h-[172px] flex-col justify-between p-5">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-paper/70">Fitness tracker</p>
-            <h2 className="mt-2 max-w-[66%] font-display text-[26px] italic leading-[1.1] text-paper">Sterker, stap voor stap.</h2>
-            <p className="mt-1.5 text-[12.5px] text-paper/85">
-              {week.workouts === 0 ? "Nog geen training deze week" : `${week.workouts} ${week.workouts === 1 ? "training" : "trainingen"} deze week`}
-            </p>
+            <h2 className="mt-2 max-w-[66%] font-display text-[26px] italic leading-[1.1] text-paper">
+              {week.workouts === 0 ? "Nog geen training deze week." : `${week.workouts} ${week.workouts === 1 ? "training" : "trainingen"} deze week.`}
+            </h2>
+            {week.workouts > 0 ? (
+              <p className="mt-1.5 text-[12.5px] text-paper/85">
+                {formatMinutes(week.seconds)}
+                {week.meters > 0 ? ` · ${formatDistance(week.meters)}` : ""}
+              </p>
+            ) : null}
           </div>
           <Link href="/fitness/start" className="on-tile mt-4 inline-flex h-11 w-fit items-center gap-2 rounded-full bg-paper px-5 text-[13.5px] font-medium">
             Start een training <ArrowRight className="h-4 w-4" strokeWidth={1.8} />

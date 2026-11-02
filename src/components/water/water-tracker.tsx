@@ -78,7 +78,7 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
             <div className="text-center">
               <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">Vandaag gedronken</p>
               <p className="mt-2 font-display text-[52px] leading-none text-text">{formatMl(opt)}</p>
-              <p className="mt-2 text-sm text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} te gaan` : "Doel gehaald, lekker bezig"}</p>
+              <p className="mt-2 text-sm text-muted">{remaining > 0 ? `Nog ${formatMl(remaining)} te gaan` : "Doel gehaald"}</p>
             </div>
             <div className="flex w-full items-center justify-between">
               <span className="font-display text-3xl text-ink/80">{pct}%</span>

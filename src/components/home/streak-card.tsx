@@ -17,7 +17,7 @@ function StatTile({
   label: string;
   value: number;
   unit: string;
-  badge: string;
+  badge?: string;
   ring: number;
   ringColor: string;
   icon: LucideIcon;
@@ -31,7 +31,7 @@ function StatTile({
         </p>
       </div>
       <div className="mt-5 flex items-end justify-between">
-        <Badge tone="ink">{badge}</Badge>
+        {badge ? <Badge tone="ink">{badge}</Badge> : <span />}
         <Ring value={ring} size={54} stroke={4} color={ringColor} track="rgba(107,58,46,0.08)">
           <span className="soft flex h-9 w-9 items-center justify-center rounded-full">
             <Icon size={16} strokeWidth={1.6} />
@@ -43,11 +43,10 @@ function StatTile({
 }
 
 export function StatTiles({ current, longest, total, challengeLength }: { current: number; longest: number; total: number; challengeLength: number }) {
-  const streakBadge = current === 0 ? "Vandaag telt" : current >= 7 ? "Sterk" : "Lekker bezig";
   return (
     <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-2" aria-label="Jouw cijfers">
-      <StatTile label="Huidige streak" value={current} unit={current === 1 ? "dag" : "dagen"} badge={streakBadge} ring={longest > 0 ? current / Math.max(longest, 7) : 0} ringColor="var(--warm)" icon={Flame} />
-      <StatTile label="Persoonlijk record" value={longest} unit={longest === 1 ? "dag" : "dagen"} badge={longest >= 14 ? "Top" : "Record"} ring={Math.min(1, longest / 30)} ringColor="var(--gold)" icon={Award} />
+      <StatTile label="Huidige streak" value={current} unit={current === 1 ? "dag" : "dagen"} ring={longest > 0 ? current / Math.max(longest, 7) : 0} ringColor="var(--warm)" icon={Flame} />
+      <StatTile label="Persoonlijk record" value={longest} unit={longest === 1 ? "dag" : "dagen"} ring={Math.min(1, longest / 30)} ringColor="var(--gold)" icon={Award} />
       <StatTile label="Dagen voltooid" value={total} unit={`van ${challengeLength}`} badge={`${Math.round((total / Math.max(challengeLength, 1)) * 100)}%`} ring={total / Math.max(challengeLength, 1)} ringColor="var(--sage)" icon={Snowflake} />
     </div>
   );

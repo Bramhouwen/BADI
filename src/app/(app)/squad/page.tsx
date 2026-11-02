@@ -81,7 +81,7 @@ async function Content() {
       <RealtimeRefresher channel={`squad:${ctx.challenge.id}`} tables={["daily_checkins", "compliments", "wall_posts", "recipes"]} />
       <PageTitle
         title="The Squad"
-        subtitle="We doen dit samen. Geen ranking, wel elkaar."
+        subtitle="Jullie squad, zonder ranking."
         action={
           <div className="flex items-center gap-2">
           <Link href="/wall" className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="The Wall">

@@ -11,7 +11,7 @@ export const metadata = { title: "De zeven principes" };
 export default function PrinciplesPage() {
   return (
     <Page className="space-y-4">
-      <PageTitle title="De zeven principes" subtitle="Richtlijnen, geen regels. Balans boven perfectie." back="/profile" />
+      <PageTitle title="De zeven principes" subtitle="Richtlijnen voor de challenge." back="/profile" />
       <ol className="space-y-3">
         {PRINCIPLES.map((p, i) => (
           <li key={p.title}>

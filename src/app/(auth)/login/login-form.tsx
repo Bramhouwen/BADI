@@ -44,7 +44,7 @@ export function LoginForm() {
         <h2 className="mt-3 text-lg font-semibold">Check je mail</h2>
         <p className="mt-1 text-sm text-muted">
           {sent === "magic"
-            ? "We hebben je een inloglink gestuurd. Open hem op je telefoon en je bent binnen."
+            ? "We hebben je een inloglink gestuurd. Open de link op je telefoon om in te loggen."
             : "Bevestig je e-mailadres via de link in je inbox. Daarna kun je inloggen."}
         </p>
         <Button variant="ghost" className="mt-4" onClick={() => setSent(null)}>

@@ -28,7 +28,7 @@ async function Content() {
   return (
     <Page>
       {hasUnread ? <MarkRead /> : null}
-      <PageTitle title="Ontvangen complimenten" subtitle="Lieve woorden van je squad, om nog eens terug te lezen." back="/squad" />
+      <PageTitle title="Ontvangen complimenten" subtitle="Alles wat je squad je stuurde." back="/squad" />
       {compliments.length === 0 ? (
         <EmptyState icon={HandHeart} title="Nog geen complimenten" body="Geef er zelf eentje weg. Dat komt bijna altijd terug." />
       ) : (

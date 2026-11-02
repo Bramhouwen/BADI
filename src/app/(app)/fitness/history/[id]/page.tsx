@@ -43,7 +43,6 @@ async function Content({ params, searchParams }: { params: Promise<{ id: string 
       {done ? (
         <Card variant="dark" className="rounded-[22px] p-5">
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-paper/70">Training voltooid</p>
-          <p className="mt-1.5 font-display text-[24px] italic leading-tight">Weer een stap sterker.</p>
           <p className="mt-1.5 text-[12.5px] text-paper/80">
             {meta.checkin.includes("strength") ? "Krachttraining en Bewogen zijn vandaag ondersteund in je check-in." : "Bewogen is vandaag ondersteund in je check-in."}{" "}
             <Link href="/checkin" className="underline underline-offset-2">

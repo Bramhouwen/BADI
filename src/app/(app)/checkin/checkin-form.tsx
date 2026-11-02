@@ -99,9 +99,9 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
         >
           <Snowflake size={32} strokeWidth={1.4} />
         </motion.div>
-        <h2 className="mt-5 font-display text-2xl">Another day. Another step forward.</h2>
+        <h2 className="mt-5 font-display text-2xl">Check-in opgeslagen</h2>
         <p className="mt-1 text-sm text-muted">
-          {success.created ? "Je check-in staat. Lekker bezig!" : "Je check-in is bijgewerkt."}
+          {success.created ? "Je check-in staat." : "Je check-in is bijgewerkt."}
         </p>
         <div className="mt-6 flex items-center justify-center gap-6">
           <div>
@@ -123,7 +123,7 @@ export function CheckinForm({ dates, today, existing, stats }: Props) {
             transition={{ delay: 0.5 }}
             className="soft mt-5 rounded-full px-4 py-2 text-sm font-medium"
           >
-            Mijlpaal: {success.streak} dagen op rij. Dat is consistentie.
+            Mijlpaal: {success.streak} dagen op rij.
           </motion.p>
         ) : null}
         <div className="mt-6 flex flex-col gap-2">

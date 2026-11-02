@@ -23,7 +23,7 @@ export function HeroCard({ checkedIn, activities, note, canEdit }: Props) {
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-paper/70">{checkedIn ? "Vandaag ingecheckt" : "Check-in van vandaag"}</p>
           <h2 className="mt-2 max-w-[68%] font-display text-[26px] italic leading-[1.1] text-paper">
-            {checkedIn ? "Je bent er weer voor gegaan." : "Today I showed up."}
+            Today I showed up.
           </h2>
         </div>
         <div className="mt-4 flex items-end justify-between gap-3">
@@ -37,10 +37,14 @@ export function HeroCard({ checkedIn, activities, note, canEdit }: Props) {
                 <Timer size={14} strokeWidth={1.8} /> 10 sec
               </span>
             )}
-            <span className="h-3 w-px bg-paper/35" aria-hidden />
-            <span className="flex items-center gap-1.5 truncate">
-              <ListChecks size={14} strokeWidth={1.8} /> {checkedIn ? (note ? `“${note}”` : "Lekker bezig") : "Eén is genoeg"}
-            </span>
+            {!checkedIn || note ? (
+              <>
+                <span className="h-3 w-px bg-paper/35" aria-hidden />
+                <span className="flex items-center gap-1.5 truncate">
+                  <ListChecks size={14} strokeWidth={1.8} /> {checkedIn ? `“${note}”` : "Eén activiteit telt"}
+                </span>
+              </>
+            ) : null}
           </div>
           {checkedIn ? (
             canEdit ? (

@@ -21,12 +21,12 @@ async function Content() {
     <Page>
       <RealtimeRefresher channel={`wall:${ctx.challenge.id}`} tables={["wall_posts", "post_reactions"]} />
       <PostedToast />
-      <PageTitle title="The Wall" subtitle="Jullie momenten. Alleen zichtbaar voor de squad." />
+      <PageTitle title="The Wall" subtitle="Alleen zichtbaar voor de squad." />
       {posts.length === 0 ? (
         <EmptyState
           icon={Camera}
           title="Nog geen momenten"
-          body="Een gymfoto, een wandeling, een gezonde maaltijd of gewoon een mooi uitzicht. Alles telt."
+          body="Plaats een foto, een bijschrift is optioneel."
           action={
             <Link href="/wall/new">
               <Button>Eerste foto plaatsen</Button>

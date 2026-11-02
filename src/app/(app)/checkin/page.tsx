@@ -37,7 +37,7 @@ async function Content() {
     const d = daysUntilStart(ctx.challenge, now);
     return (
       <Page>
-        <PageTitle title="Today I Showed Up." subtitle="Wat heb je vandaag voor jezelf gedaan?" />
+        <PageTitle title="Today I Showed Up." subtitle="Vink aan wat je vandaag hebt gedaan." />
         <EmptyState
           icon={Snowflake}
           title={`De Winter Arc start over ${d} ${d === 1 ? "dag" : "dagen"}`}
@@ -71,7 +71,7 @@ async function Content() {
 
   return (
     <Page>
-      <PageTitle title="Today I Showed Up." subtitle="Wat heb je vandaag voor jezelf gedaan?" />
+      <PageTitle title="Today I Showed Up." subtitle="Vink aan wat je vandaag hebt gedaan." />
       <CheckinForm dates={dates} today={today} existing={existing} stats={stats} />
     </Page>
   );
