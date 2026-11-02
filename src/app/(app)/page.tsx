@@ -23,6 +23,9 @@ import { WeekCard } from "@/components/home/streak-card";
 import { HeroCard } from "@/components/home/hero-card";
 import { FeatureCards, SquadRow } from "@/components/home/feature-cards";
 import { ProgressCard } from "@/components/home/progress-card";
+import { FitnessCard } from "@/components/home/fitness-card";
+import { loadSessions } from "@/lib/fitness/data";
+import { weekStats } from "@/lib/fitness";
 import { SquadPreview } from "@/components/home/squad-preview";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
@@ -40,13 +43,16 @@ async function Content() {
   const phase = challengePhase(ctx.challenge, now);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
     supabase.from("recipes").select("id, user_id, image_path, title, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
     supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today),
+    loadSessions(ctx, { status: "completed", limit: 60 }),
   ]);
+  const fitnessWeek = weekStats(workouts, today);
+  const lastWorkout = workouts[0] ?? null;
   const waterTotal = ((waterRows ?? []) as Pick<WaterEntry, "amount_ml">[]).reduce((s, r) => s + r.amount_ml, 0);
 
   const checkins = (checkinRows ?? []) as Pick<DailyCheckin, "user_id" | "checkin_date" | "activities" | "note" | "created_at">[];
@@ -122,6 +128,8 @@ async function Content() {
       )}
 
       <FeatureCards />
+
+      <FitnessCard weekWorkouts={fitnessWeek.workouts} last={lastWorkout ? { title: lastWorkout.title, date: lastWorkout.workout_date, type: lastWorkout.activity_type } : null} />
 
       <SquadRow members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, checkedInToday: m.stats.checkedInToday }))} />
 

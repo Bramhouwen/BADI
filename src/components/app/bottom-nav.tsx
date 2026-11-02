@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Home, Flame, ChefHat, Camera, Users } from "lucide-react";
+import { Home, Flame, ChefHat, Dumbbell, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/fitness", label: "Fitness", icon: Dumbbell },
   { href: "/checkin", label: "Check-in", icon: Flame },
   { href: "/kitchen", label: "Kitchen", icon: ChefHat },
-  { href: "/wall", label: "Wall", icon: Camera },
   { href: "/squad", label: "Squad", icon: Users },
 ] as const;
 

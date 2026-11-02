@@ -122,9 +122,47 @@ export function buildSeed(): Store {
     );
   }
 
+  const exerciseNames: [string, string][] = [
+    ["Squat", "legs"], ["Leg Press", "legs"], ["Lunges", "legs"], ["Romanian Deadlift", "legs"], ["Leg Extension", "legs"], ["Leg Curl", "legs"], ["Calf Raise", "legs"],
+    ["Bench Press", "chest"], ["Incline Dumbbell Press", "chest"], ["Chest Fly", "chest"], ["Push-up", "chest"],
+    ["Lat Pulldown", "back"], ["Seated Row", "back"], ["Bent-over Row", "back"], ["Pull-up", "back"],
+    ["Shoulder Press", "shoulders"], ["Lateral Raise", "shoulders"], ["Rear Delt Fly", "shoulders"],
+    ["Bicep Curl", "arms"], ["Hammer Curl", "arms"], ["Tricep Pushdown", "arms"], ["Tricep Extension", "arms"],
+    ["Plank", "core"], ["Crunch", "core"], ["Leg Raise", "core"], ["Russian Twist", "core"],
+  ];
+  const exercises: Row[] = exerciseNames.map(([name, muscle_group]) => ({ id: demoId(), name, muscle_group, is_custom: false, owner_user_id: null, created_at: iso(start) }));
+  const exId = (name: string) => exercises.find((e) => e.name === name)!.id as string;
+
+  const workout_sessions: Row[] = [
+    { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "run", title: "Ochtendrun", workout_date: d(2), started_at: iso(d(2), 7, 30), completed_at: iso(d(2), 8, 5), duration_seconds: 1860, distance_meters: 5200, notes: "Rustig tempo, koud maar lekker.", status: "completed", created_at: iso(d(2), 8, 5), updated_at: iso(d(2), 8, 5) },
+    { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "strength", title: "Lower body", workout_date: d(4), started_at: iso(d(4), 18), completed_at: iso(d(4), 18, 55), duration_seconds: 3300, distance_meters: null, notes: null, status: "completed", created_at: iso(d(4), 18, 55), updated_at: iso(d(4), 18, 55) },
+    { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "walk", title: "Avondwandeling", workout_date: d(6), started_at: null, completed_at: iso(d(6), 20), duration_seconds: 2700, distance_meters: 4100, notes: null, status: "completed", created_at: iso(d(6), 20), updated_at: iso(d(6), 20) },
+    { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "run", title: "Intervallen", workout_date: d(9), started_at: null, completed_at: iso(d(9), 8), duration_seconds: 1500, distance_meters: 4000, notes: null, status: "completed", created_at: iso(d(9), 8), updated_at: iso(d(9), 8) },
+  ];
+  const strengthSession = workout_sessions[1].id as string;
+  const workout_exercises: Row[] = [
+    { id: demoId(), session_id: strengthSession, exercise_id: exId("Squat"), sort_order: 0, notes: null },
+    { id: demoId(), session_id: strengthSession, exercise_id: exId("Romanian Deadlift"), sort_order: 1, notes: null },
+    { id: demoId(), session_id: strengthSession, exercise_id: exId("Leg Press"), sort_order: 2, notes: null },
+  ];
+  const exercise_sets: Row[] = [];
+  const setPlan: [number, [number, number][]][] = [[0, [[40, 12], [50, 10], [55, 8]]], [1, [[50, 10], [60, 8], [60, 8]]], [2, [[100, 12], [120, 10], [120, 10]]]];
+  for (const [wi, sets] of setPlan) sets.forEach(([w, r], i) => exercise_sets.push({ id: demoId(), workout_exercise_id: workout_exercises[wi].id, set_number: i + 1, weight_kg: w, repetitions: r, completed: true }));
+
+  const checkin_sources: Row[] = [];
+  for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
+
   return {
     profiles,
     water_entries,
+    exercises,
+    workout_plans: [],
+    workout_templates: [],
+    template_exercises: [],
+    workout_sessions,
+    workout_exercises,
+    exercise_sets,
+    checkin_sources,
     challenges,
     memberships,
     invitations: [],

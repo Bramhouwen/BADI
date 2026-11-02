@@ -3,7 +3,7 @@
 ## 1. Supabase (productie)
 
 1. Maak een Supabase-project (regio bij voorkeur `eu-central-1`, Frankfurt).
-2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql` (of `supabase db push` met de CLI).
+2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql` (of `supabase db push` met de CLI).
 3. **Authentication > URL Configuration**:
    - Site URL: `https://<jouw-domein>`
    - Redirect URLs: `https://<jouw-domein>/auth/callback`

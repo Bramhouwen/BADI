@@ -9,6 +9,7 @@ import { ACTIVITY_KEYS, type ActivityKey } from "@/lib/constants";
 import { isEditableDate, isValidDateKey, todayKey } from "@/lib/dates";
 import { computeStreakStats, type StreakStats } from "@/lib/streaks";
 import type { ActionResult } from "@/lib/types";
+import { clearManualSources, recomputeCheckinDay, setManualSources } from "@/lib/checkin-sync";
 
 const schema = z.object({
   date: z.string().refine(isValidDateKey, "Ongeldige datum."),
@@ -41,17 +42,10 @@ export async function saveCheckin(input: { date: string; activities: string[]; n
   const previous = computeStreakStats(existingDates, today);
   const created = !existingDates.includes(date);
 
-  const { error } = await supabase.from("daily_checkins").upsert(
-    {
-      challenge_id: ctx.challenge.id,
-      user_id: ctx.userId,
-      checkin_date: date,
-      activities: [...new Set(activities)],
-      note: note ? note : null,
-    },
-    { onConflict: "challenge_id,user_id,checkin_date" },
-  );
-  if (error) return { ok: false, error: friendlyError(error) };
+  // Manual ticks become sources; workouts of the same day stay in place.
+  await setManualSources(ctx, date, [...new Set(activities)]);
+  const result = await recomputeCheckinDay(ctx, date, note ? note : null);
+  if (!result.written) return { ok: false, error: friendlyError("CHECKIN_OUTSIDE_WINDOW") };
 
   const stats = computeStreakStats(created ? [...existingDates, date] : existingDates, today);
   revalidatePath("/", "layout");
@@ -62,14 +56,12 @@ export async function deleteCheckin(date: string): Promise<ActionResult> {
   if (!isValidDateKey(date)) return { ok: false, error: "Ongeldige datum." };
   const ctx = await requireContext();
   if (!isEditableDate(ctx.challenge, date)) return { ok: false, error: friendlyError("CHECKIN_OUTSIDE_WINDOW") };
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("daily_checkins")
-    .delete()
-    .eq("challenge_id", ctx.challenge.id)
-    .eq("user_id", ctx.userId)
-    .eq("checkin_date", date);
-  if (error) return { ok: false, error: friendlyError(error) };
+  // Only the manual part is removed; a workout on that day keeps its own support.
+  await clearManualSources(ctx, date);
+  const result = await recomputeCheckinDay(ctx, date);
   revalidatePath("/", "layout");
+  if (result.activities.length > 0) {
+    return { ok: true, data: undefined };
+  }
   return { ok: true };
 }

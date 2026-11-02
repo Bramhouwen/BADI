@@ -14,7 +14,7 @@ function store(): Store {
   return g.__winterArcDemoStore;
 }
 
-const FK: Record<string, string> = { profiles: "user_id" };
+const FK: Record<string, string> = { profiles: "user_id", exercises: "exercise_id" };
 
 type Filter = (row: Row) => boolean;
 
@@ -58,6 +58,20 @@ class Query implements PromiseLike<Result> {
   }
   lte(col: string, val: unknown) {
     this.filters.push((r) => String(r[col]) <= String(val));
+    return this;
+  }
+  or(expr: string) {
+    // Supports the one pattern the app uses: "owner_user_id.is.null,owner_user_id.eq.<id>"
+    const parts = expr.split(",").map((p) => p.trim());
+    this.filters.push((r) =>
+      parts.some((p) => {
+        const [col, op, ...rest] = p.split(".");
+        const val = rest.join(".");
+        if (op === "is" && val === "null") return r[col] == null;
+        if (op === "eq") return String(r[col]) === val;
+        return false;
+      }),
+    );
     return this;
   }
   in(col: string, vals: unknown[]) {

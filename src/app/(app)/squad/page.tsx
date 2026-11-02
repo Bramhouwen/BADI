@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Inbox } from "lucide-react";
+import { Camera, Inbox } from "lucide-react";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
@@ -83,10 +83,15 @@ async function Content() {
         title="The Squad"
         subtitle="We doen dit samen. Geen ranking, wel elkaar."
         action={
+          <div className="flex items-center gap-2">
+          <Link href="/wall" className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="The Wall">
+            <Camera className="h-[18px] w-[18px]" strokeWidth={1.6} />
+          </Link>
           <Link href="/squad/compliments" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="Ontvangen complimenten">
             <Inbox className="h-[18px] w-[18px]" strokeWidth={1.6} />
             {(unreadCount ?? 0) > 0 ? <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-sage ring-2 ring-white" aria-hidden /> : null}
           </Link>
+          </div>
         }
       />
 

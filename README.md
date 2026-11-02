@@ -28,6 +28,7 @@ src/
       kitchen/             Winter Arc Kitchen (lijst, detail, nieuw, bewerken)
       wall/                The Wall (feed, detail, nieuw)
       water/               Waterteller per dag met zevendaags overzicht
+      fitness/             Fitness Tracker: dashboard, starten, krachtlogger, schema's, geschiedenis, progressie
       squad/               Squad, complimenten, inbox
       profile/             Profiel, uitnodigen, zeven principes
       notifications/       Meldingen
@@ -65,7 +66,7 @@ Vereisten: Node 22+, npm, een Supabase-project (gratis tier is genoeg).
 2. Maak een Supabase-project op https://supabase.com en voer de migratie uit:
    - Open **SQL Editor** in het Supabase dashboard.
    - Plak de inhoud van `supabase/migrations/0001_winter_arc_schema.sql` en voer uit.
-   - Voer daarna ook `0002_fix_pgcrypto_search_path.sql` (nodig op Supabase, waar pgcrypto in het schema `extensions` staat) en `0003_water_entries.sql` (waterteller) uit, in die volgorde.
+   - Voer daarna ook `0002_fix_pgcrypto_search_path.sql` (nodig op Supabase, waar pgcrypto in het schema `extensions` staat), `0003_water_entries.sql` (waterteller) en `0004_fitness_tracker.sql` (Fitness Tracker) uit, in die volgorde.
    - Heb je de Supabase CLI: `supabase link --project-ref <ref>` en daarna `supabase db push`.
 
    De migratie maakt alle tabellen, triggers (edit-venster, maximaal vier leden, rate limiting), RLS-policies, de private storage buckets (`wall`, `recipes`, `avatars`) met policies en de RPC's voor uitnodigingen.
@@ -135,6 +136,7 @@ Wil je de Kitchen gevuld starten? Voer `supabase/seed/recipes.sql` uit in de SQL
 - **Buiten de challenge** kun je alles teruglezen, maar geen nieuwe challenge-dagen verdienen.
 - **Privacy**: alle data is alleen leesbaar voor leden van dezelfde squad (RLS). Foto's staan in private buckets en worden via signed URLs (1 uur geldig) geserveerd. Complimenten zijn alleen zichtbaar voor zender en ontvanger. Alcohol-uitzonderingen zijn strikt privé.
 - **Geen ranking**: squad-kaarten roteren per dag en worden nooit op streak gesorteerd. Wrapped kent geen winnaar.
+- **Fitness en check-in**: een voltooide training ondersteunt automatisch Bewogen (cardio, HIIT, yoga, overig) of Krachttraining plus Bewogen (kracht) op die dag. Handmatige vinkjes en trainingen zijn aparte bronnen in `checkin_sources`; de dagstatus is de vereniging daarvan, dus een categorie telt nooit dubbel en een handmatig vinkje verdwijnt nooit door het verwijderen van een training. Trainingen buiten het correctievenster (vandaag of gisteren) worden bewaard, maar kunnen geen check-in meer veranderen.
 
 ## Tests
 
