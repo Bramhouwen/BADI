@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ExerciseDemoButton } from "./exercise-demo";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -227,6 +228,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                     {prev ? ` · vorige keer: ${prev.sets.map((s) => `${s.weight_kg !== null ? formatKg(s.weight_kg) : "lichaam"} × ${s.repetitions ?? "–"}`).join(", ")}` : ""}
                   </p>
                 </div>
+                <ExerciseDemoButton name={ex.name} subtitle={muscleLabel(ex.muscle_group)} />
                 <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="soft flex h-8 w-8 items-center justify-center rounded-full disabled:opacity-30" aria-label="Omhoog">
                   <ArrowUp className="h-3.5 w-3.5" strokeWidth={1.7} />
                 </button>

@@ -1,4 +1,5 @@
 import { addDays, todayKey } from "@/lib/dates";
+import { MOBILITY_EXERCISES } from "@/lib/exercise-motion/library";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
 
 export type Row = Record<string, unknown>;
@@ -130,6 +131,7 @@ export function buildSeed(): Store {
     ["Bicep Curl", "arms"], ["Hammer Curl", "arms"], ["Tricep Pushdown", "arms"], ["Tricep Extension", "arms"],
     ["Plank", "core"], ["Crunch", "core"], ["Leg Raise", "core"], ["Russian Twist", "core"],
   ];
+  for (const name of MOBILITY_EXERCISES) exerciseNames.push([name, "mobility"]);
   const exercises: Row[] = exerciseNames.map(([name, muscle_group]) => ({ id: demoId(), name, muscle_group, is_custom: false, owner_user_id: null, created_at: iso(start) }));
   const exId = (name: string) => exercises.find((e) => e.name === name)!.id as string;
 

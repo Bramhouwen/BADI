@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { ExerciseDemoButton } from "./exercise-demo";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,7 @@ export function ExercisePicker({
                     {e.is_custom ? " · eigen oefening" : ""}
                   </span>
                 </button>
+                <ExerciseDemoButton name={e.name} subtitle={muscleLabel(e.muscle_group)} />
                 {e.is_custom ? (
                   <>
                     <button type="button" onClick={() => openEdit(e)} className="soft flex h-8 w-8 items-center justify-center rounded-full" aria-label="Bewerken">

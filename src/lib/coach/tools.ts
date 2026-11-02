@@ -7,7 +7,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { RECIPE_CATEGORIES } from "@/lib/constants";
 
 const ACTIVITY_TYPES = ["run", "walk", "cycle", "strength", "hiit", "yoga", "other"] as const;
-const MUSCLE_GROUPS = ["legs", "chest", "back", "shoulders", "arms", "core", "cardio", "other"] as const;
+const MUSCLE_GROUPS = ["legs", "chest", "back", "shoulders", "arms", "core", "mobility", "cardio", "other"] as const;
 
 export const saveRecipeInput = z.object({
   title: z.string().trim().min(1).max(80),

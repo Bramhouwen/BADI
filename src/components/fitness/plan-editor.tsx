@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ExerciseDemoButton } from "./exercise-demo";
 import { ArrowDown, ArrowUp, Copy, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -262,6 +263,7 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
             {row.target_weight_kg !== null ? ` · ${formatKg(row.target_weight_kg)}` : ""}
           </p>
         </div>
+        <ExerciseDemoButton name={row.name} subtitle={muscleLabel(row.muscle_group)} className="bg-white/80" />
         <button type="button" onClick={() => setEditing((e) => !e)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80" aria-label="Doelen aanpassen">
           <Pencil className="h-3.5 w-3.5" strokeWidth={1.6} />
         </button>

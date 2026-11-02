@@ -3,7 +3,7 @@ import type { ActivityKey } from "./constants";
 import { addDays, diffDays, type DateKey } from "./dates";
 
 export type ActivityType = "run" | "walk" | "cycle" | "strength" | "hiit" | "yoga" | "other";
-export type MuscleGroup = "legs" | "chest" | "back" | "shoulders" | "arms" | "core" | "cardio" | "other";
+export type MuscleGroup = "legs" | "chest" | "back" | "shoulders" | "arms" | "core" | "mobility" | "cardio" | "other";
 
 export interface ActivityMeta {
   key: ActivityType;
@@ -40,6 +40,7 @@ export const MUSCLE_GROUPS: { key: MuscleGroup; label: string }[] = [
   { key: "shoulders", label: "Schouders" },
   { key: "arms", label: "Armen" },
   { key: "core", label: "Core" },
+  { key: "mobility", label: "Warming-up en mobiliteit" },
   { key: "cardio", label: "Cardio" },
   { key: "other", label: "Overig" },
 ];

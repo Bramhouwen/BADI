@@ -282,7 +282,7 @@ export async function repeatSession(id: string): Promise<ActionResult> {
 
 const exerciseSchema = z.object({
   name: z.string().trim().min(1, "Geef de oefening een naam.").max(60, "Maximaal 60 tekens."),
-  muscle_group: z.enum(["legs", "chest", "back", "shoulders", "arms", "core", "cardio", "other"]),
+  muscle_group: z.enum(["legs", "chest", "back", "shoulders", "arms", "core", "mobility", "cardio", "other"]),
 });
 
 export async function createExercise(input: { name: string; muscle_group: string }): Promise<ActionResult<{ id: string }>> {

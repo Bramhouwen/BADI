@@ -5,6 +5,7 @@ const items = [
   { href: "/fitness", label: "Overzicht" },
   { href: "/fitness/start", label: "Starten" },
   { href: "/fitness/plans", label: "Schema's" },
+  { href: "/fitness/exercises", label: "Oefeningen" },
   { href: "/fitness/history", label: "Geschiedenis" },
   { href: "/fitness/progress", label: "Progressie" },
 ] as const;
