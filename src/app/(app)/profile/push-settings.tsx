@@ -5,7 +5,8 @@ import { BellRing } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/components/ui/field";
-import { removePushSubscription, savePushSubscription, updateNotificationSetting } from "@/app/actions/push";
+import { removePushSubscription, savePushSubscription, sendCoachTestPush, updateNotificationSetting } from "@/app/actions/push";
+import { useToast } from "@/components/ui/toast";
 import { NOTIFICATION_KINDS, NOTIFICATION_LABELS, type NotificationSettings } from "@/lib/notification-kinds";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,16 @@ export function PushSettings({ publicKey, initial }: { publicKey: string | null;
   const [settings, setSettings] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
+
+  function test(slot: "morning" | "evening") {
+    setError(null);
+    start(async () => {
+      const r = await sendCoachTestPush(slot);
+      if (!r.ok) setError(r.error);
+      else toast(`Testbericht verstuurd naar ${r.data!.devices} ${r.data!.devices === 1 ? "apparaat" : "apparaten"}.`, "success");
+    });
+  }
 
   useEffect(() => {
     let alive = true;
@@ -141,6 +152,17 @@ export function PushSettings({ publicKey, initial }: { publicKey: string | null;
           </li>
         ))}
       </ul>
+
+      {state === "on" ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" size="sm" onClick={() => test("morning")} disabled={pending}>
+            Test ochtend
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => test("evening")} disabled={pending}>
+            Test avond
+          </Button>
+        </div>
+      ) : null}
 
       {state === "on" ? (
         <button type="button" onClick={disable} disabled={pending} className="w-full text-center text-[12.5px] font-medium text-muted underline-offset-2 hover:underline">

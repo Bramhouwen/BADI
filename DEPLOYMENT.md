@@ -3,7 +3,7 @@
 ## 1. Supabase (productie)
 
 1. Maak een Supabase-project (regio bij voorkeur `eu-central-1`, Frankfurt).
-2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql`, `0010_baddy_coach.sql`, `0011_baddy_memory_feedback.sql`, `0012_checkin_plan_joker_push.sql` (of `supabase db push` met de CLI).
+2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql`, `0010_baddy_coach.sql`, `0011_baddy_memory_feedback.sql`, `0012_checkin_plan_joker_push.sql`, `0013_water_bottles_coach_push.sql`, `0014_coach_push_schedule.sql` (of `supabase db push` met de CLI).
 3. **Authentication > URL Configuration**:
    - Site URL: `https://<jouw-domein>`
    - Redirect URLs: `https://<jouw-domein>/auth/callback`

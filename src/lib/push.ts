@@ -4,7 +4,7 @@ import webpush from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isDemo } from "@/lib/demo";
 
-export type PushKind = "chat" | "mentions" | "recipes" | "jokers" | "compliments";
+export type PushKind = "chat" | "mentions" | "recipes" | "jokers" | "compliments" | "coach";
 
 export interface PushPayload {
   title: string;
@@ -13,6 +13,40 @@ export interface PushPayload {
   url: string;
   /** Notifications with the same tag replace each other on the device. */
   tag?: string;
+  /** Image shown with the notification; defaults to the app icon. */
+  icon?: string;
+}
+
+export interface PushSubscriptionKeys {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+/**
+ * Sends one payload to the given devices. Calls onGone for subscriptions the
+ * push service reports as expired (404 or 410). Returns how many succeeded.
+ */
+export async function sendToSubscriptions(subs: PushSubscriptionKeys[], payload: PushPayload, onGone?: (endpoint: string) => PromiseLike<unknown>): Promise<number> {
+  const keys = vapid();
+  if (!keys || isDemo() || subs.length === 0) return 0;
+  const body = JSON.stringify(payload);
+  let ok = 0;
+  await Promise.all(
+    subs.map(async (t) => {
+      try {
+        await webpush.sendNotification({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, body, {
+          vapidDetails: { subject: keys.subject, publicKey: keys.publicKey, privateKey: keys.privateKey },
+          TTL: 60 * 60 * 12,
+        });
+        ok += 1;
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if ((status === 404 || status === 410) && onGone) await onGone(t.endpoint);
+      }
+    }),
+  );
+  return ok;
 }
 
 function vapid() {
@@ -41,20 +75,7 @@ export async function sendPush(supabase: SupabaseClient, kind: PushKind, payload
     const exclude = new Set(opts.exclude ?? []);
     const targets = ((data ?? []) as { user_id: string; endpoint: string; p256dh: string; auth: string }[]).filter((t) => !exclude.has(t.user_id));
     if (!targets.length) return;
-    const body = JSON.stringify({ ...payload, tag: payload.tag ?? kind });
-    await Promise.all(
-      targets.map(async (t) => {
-        try {
-          await webpush.sendNotification({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, body, {
-            vapidDetails: { subject: keys.subject, publicKey: keys.publicKey, privateKey: keys.privateKey },
-            TTL: 60 * 60 * 12,
-          });
-        } catch (err) {
-          const status = (err as { statusCode?: number }).statusCode;
-          if (status === 404 || status === 410) await supabase.rpc("forget_push_endpoint", { p_endpoint: t.endpoint });
-        }
-      }),
-    );
+    await sendToSubscriptions(targets, { ...payload, tag: payload.tag ?? kind }, (endpoint) => supabase.rpc("forget_push_endpoint", { p_endpoint: endpoint }));
   } catch {
     // Notifications are best effort.
   }

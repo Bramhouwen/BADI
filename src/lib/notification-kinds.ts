@@ -1,7 +1,8 @@
-export const NOTIFICATION_KINDS = ["chat", "mentions", "recipes", "jokers", "compliments"] as const;
+export const NOTIFICATION_KINDS = ["coach", "chat", "mentions", "recipes", "jokers", "compliments"] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export const NOTIFICATION_LABELS: Record<NotificationKind, { label: string; hint: string }> = {
+  coach: { label: "Baddy om 7:00 en 21:00", hint: "Een goedemorgen en een goedenavond" },
   chat: { label: "Squadchat", hint: "Nieuwe berichten in de groep" },
   mentions: { label: "Als iemand je tagt", hint: "Een @-vermelding in de chat" },
   recipes: { label: "Nieuwe recepten", hint: "Een recept in de Kitchen, ook van Baddy" },

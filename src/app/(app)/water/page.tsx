@@ -27,6 +27,7 @@ async function Content() {
     .gte("log_date", from)
     .lte("log_date", today);
   const entries = (data ?? []) as Pick<WaterEntry, "log_date" | "amount_ml">[];
+  const { data: bottleRows } = await supabase.from("water_bottles").select("id, name, amount_ml").eq("user_id", ctx.userId).order("created_at", { ascending: true });
   const perDay = new Map<string, number>();
   for (const e of entries) perDay.set(e.log_date, (perDay.get(e.log_date) ?? 0) + e.amount_ml);
   const total = perDay.get(today) ?? 0;
@@ -37,7 +38,7 @@ async function Content() {
   return (
     <Page className="space-y-6">
       <PageTitle title="Water" subtitle={`Richtlijn: ${formatMl(WATER_GOAL_ML)} per dag. Jouw behoefte kan anders zijn.`} back="/" />
-      <WaterTracker total={total} goal={WATER_GOAL_ML} variant="full" />
+      <WaterTracker total={total} goal={WATER_GOAL_ML} variant="full" bottles={(bottleRows ?? []) as { id: string; name: string; amount_ml: number }[]} />
       <AskBaddyLink question="Geef me praktische tips om dagelijks 2,5 tot 3 liter water te drinken" label="Tips van Baddy voor meer water" />
 
       <section>

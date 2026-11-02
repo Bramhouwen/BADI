@@ -11,17 +11,20 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { WaterWave } from "./water-wave";
 import { formatMl } from "@/lib/format";
+import { MyBottles, type WaterBottle } from "./my-bottles";
 
 interface Props {
   total: number;
   goal?: number;
   /** compact = card on Home, full = the dedicated page */
   variant?: "compact" | "full";
+  /** The member's saved bottles (full variant). */
+  bottles?: WaterBottle[];
 }
 
 const QUICK_ICONS = { glass: GlassWater, bottle: Droplets, cup: Coffee, big: CupSoda } as const;
 
-export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: Props) {
+export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full", bottles = [] }: Props) {
   const [pending, start] = useTransition();
   const [opt, setOpt] = useOptimistic(total, (_p: number, next: number) => next);
   const [custom, setCustom] = useState(250);
@@ -134,6 +137,15 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
         </div>
       </div>
 
+      <MyBottles
+        initial={bottles}
+        disabled={pending}
+        onAdd={(ml) => {
+          setCustom(ml);
+          add(ml);
+        }}
+      />
+
       <div className="glass space-y-3 rounded-[22px] px-4 py-4">
         <div className="flex items-center justify-between">
           <label htmlFor="water-custom" className="text-sm font-medium text-text">
@@ -144,20 +156,18 @@ export function WaterTracker({ total, goal = WATER_GOAL_ML, variant = "full" }: 
         <input
           id="water-custom"
           type="range"
-          min={50}
-          max={1000}
-          step={50}
+          min={10}
+          max={1500}
+          step={10}
           value={custom}
           onChange={(e) => setCustom(Number(e.target.value))}
           className="h-1.5 w-full accent-[var(--water-deep)]"
           aria-label="Eigen hoeveelheid in ml"
         />
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted">Plus voegt deze hoeveelheid toe, min haalt de laatste toevoeging weg.</p>
-          <button type="button" onClick={undo} disabled={pending || opt === 0} className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs text-muted hover:bg-blush hover:text-ink disabled:opacity-40">
-            <Undo2 className="h-3.5 w-3.5" /> Laatste ongedaan maken
-          </button>
-        </div>
+        <p className="text-xs leading-snug text-muted">Plus voegt deze hoeveelheid toe, min haalt de laatste toevoeging weg.</p>
+        <button type="button" onClick={undo} disabled={pending || opt === 0} className="-ml-2 flex h-9 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-muted hover:bg-blush hover:text-ink disabled:opacity-40">
+          <Undo2 className="h-3.5 w-3.5" /> Laatste ongedaan maken
+        </button>
       </div>
     </div>
   );

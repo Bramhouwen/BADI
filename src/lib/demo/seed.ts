@@ -214,6 +214,8 @@ export function buildSeed(): Store {
     compliments,
     alcohol_exceptions: [{ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, exception_date: d(3), chat_message_id: null, created_at: iso(d(3), 18) }],
     planned_trainings: [],
+    water_bottles: [],
+    coach_push_log: [],
     push_subscriptions: [],
     notification_settings: [],
     notifications,

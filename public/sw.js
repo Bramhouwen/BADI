@@ -3,7 +3,7 @@
  * offline page for navigations when the network is unavailable. Authenticated
  * pages, Supabase requests and other personal data are never cached.
  */
-const VERSION = "badi-v16";
+const VERSION = "badi-v17";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -80,7 +80,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",
-      icon: "/icons/icon-192.png",
+      icon: data.icon || "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
       tag: data.tag || "badi",
       renotify: true,

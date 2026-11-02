@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseEnv } from "./env";
 import { isDemo } from "@/lib/demo";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/invite", "/manifest.webmanifest", "/sw.js", "/offline", "/icons"];
+const PUBLIC_PATHS = ["/login", "/auth", "/invite", "/manifest.webmanifest", "/sw.js", "/offline", "/icons", "/api/cron"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
