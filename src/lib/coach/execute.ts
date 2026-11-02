@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppContext } from "@/lib/data";
 import type { StoredRef } from "./prompt";
-import { createPlanInput, exerciseKey, recipeRow, saveRecipeInput } from "./tools";
+import { MAX_MEMORIES, createPlanInput, exerciseKey, forgetMemoryInput, recipeRow, saveMemoryInput, saveRecipeInput } from "./tools";
 
 export interface ToolOutcome {
   /** Text returned to the model as the tool result. */
@@ -84,10 +84,35 @@ async function createPlan(supabase: SupabaseClient, ctx: AppContext, raw: unknow
   };
 }
 
+async function saveMemory(supabase: SupabaseClient, ctx: AppContext, raw: unknown): Promise<ToolOutcome> {
+  const parsed = saveMemoryInput.safeParse(raw);
+  if (!parsed.success) return { content: "Een notitie moet tussen 1 en 200 tekens zijn.", isError: true };
+  const { count } = await supabase.from("coach_memories").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId);
+  if ((count ?? 0) >= MAX_MEMORIES) return { content: `Je geheugen is vol (${MAX_MEMORIES} notities). Vergeet eerst een notitie die niet meer belangrijk is.`, isError: true };
+  const { data, error } = await supabase
+    .from("coach_memories")
+    .insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, content: parsed.data.content, source: "coach" })
+    .select("id, content")
+    .single();
+  if (error || !data) return { content: "Onthouden is mislukt.", isError: true };
+  const row = data as { id: string; content: string };
+  return { content: JSON.stringify({ saved: true, id: row.id }), ref: { type: "memory", id: row.id, name: row.content } };
+}
+
+async function forgetMemory(supabase: SupabaseClient, ctx: AppContext, raw: unknown): Promise<ToolOutcome> {
+  const parsed = forgetMemoryInput.safeParse(raw);
+  if (!parsed.success) return { content: "Onbekende notitie.", isError: true };
+  const { error } = await supabase.from("coach_memories").delete().eq("id", parsed.data.id).eq("user_id", ctx.userId);
+  if (error) return { content: "Vergeten is mislukt.", isError: true };
+  return { content: JSON.stringify({ forgotten: true }) };
+}
+
 export async function executeCoachTool(name: string, input: unknown, supabase: SupabaseClient, ctx: AppContext): Promise<ToolOutcome> {
   try {
     if (name === "save_recipe") return await saveRecipe(supabase, ctx, input);
     if (name === "create_workout_plan") return await createPlan(supabase, ctx, input);
+    if (name === "save_memory") return await saveMemory(supabase, ctx, input);
+    if (name === "forget_memory") return await forgetMemory(supabase, ctx, input);
     return { content: `Onbekende tool: ${name}`, isError: true };
   } catch {
     return { content: "Er ging iets mis bij het uitvoeren.", isError: true };

@@ -201,6 +201,7 @@ export function buildSeed(): Store {
     squad_messages,
     squad_chat_reads,
     coach_messages: [],
+    coach_memories: [],
     challenges,
     memberships,
     invitations: [],

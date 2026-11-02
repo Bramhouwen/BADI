@@ -24,7 +24,15 @@ export async function runDemoCoach(opts: {
   const refs: StoredRef[] = [];
   let reply: string;
 
-  if (/recept|ontbijt|lunch|avondeten|maaltijd/.test(q)) {
+  if (/onthoud|ik eet geen|ik ben vegetari|allergisch|blessure/.test(q)) {
+    const fact = opts.message.replace(/^(onthoud( dat)?|baddy,?)\s*/i, "").trim().slice(0, 200) || "Voorkeur doorgegeven";
+    const outcome = await executeCoachTool("save_memory", { content: fact.charAt(0).toUpperCase() + fact.slice(1) }, opts.supabase, opts.ctx);
+    if (outcome.ref) {
+      refs.push(outcome.ref);
+      opts.onRef?.(outcome.ref);
+    }
+    reply = "Genoteerd, daar houd ik voortaan rekening mee. Je ziet al mijn notities over jou op je profiel onder **Wat Baddy over mij weet**.";
+  } else if (/recept|ontbijt|lunch|avondeten|maaltijd/.test(q)) {
     const outcome = await executeCoachTool(
       "save_recipe",
       {

@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, ChefHat, Dumbbell, RotateCcw } from "lucide-react";
+import { ArrowUp, Bookmark, Brain, ChefHat, Dumbbell, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/toast";
 import { RichText } from "@/components/coach/rich-text";
-import { clearCoachConversation } from "@/app/actions/coach";
+import { clearCoachConversation, rateCoachMessage } from "@/app/actions/coach";
 import type { StoredRef } from "@/lib/coach/prompt";
+import { cn } from "@/lib/utils";
 
 export interface CoachMessage {
   id: string;
@@ -16,8 +17,11 @@ export interface CoachMessage {
   body: string;
   refs: StoredRef[];
   created_at: string;
+  feedback?: 1 | -1 | null;
   streaming?: boolean;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type CoachEvent =
   | { type: "status"; status: "thinking" | "working" }
@@ -37,6 +41,14 @@ const STARTERS = [
 ];
 
 function RefCard({ refItem }: { refItem: StoredRef }) {
+  if (refItem.type === "memory") {
+    return (
+      <Link href="/profile#baddy-geheugen" className="flex items-center gap-2 px-1 text-[12px] text-muted hover:text-ink">
+        <Bookmark className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+        <span className="min-w-0 truncate">Onthouden: {refItem.name}</span>
+      </Link>
+    );
+  }
   const recipe = refItem.type === "recipe";
   return (
     <Link
@@ -147,11 +159,31 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
   useEffect(() => {
     if (!autoSend || autoSent.current) return;
     autoSent.current = true;
-    // Clean the URL without a navigation, so the page is not re-rendered mid-answer.
-    window.history.replaceState(window.history.state, "", "/coach");
+    // A refresh keeps ?send=1 in some browsers; remember what was sent so it is never sent twice.
+    const key = "badi:coach-autosent";
+    let already = false;
+    try {
+      already = sessionStorage.getItem(key) === prefill;
+      sessionStorage.setItem(key, prefill);
+    } catch {}
+    // Clean the URL once the router has settled, without a navigation.
+    setTimeout(() => window.history.replaceState(null, "", "/coach"), 600);
+    // Already sent in this session: leave it ready in the field instead of sending it twice.
+    if (already) return;
     setTimeout(() => void ask(prefill), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSend]);
+
+  async function rate(id: string, value: 1 | -1) {
+    const current = messages.find((m) => m.id === id)?.feedback ?? null;
+    const next = current === value ? null : value;
+    setMessages((list) => list.map((m) => (m.id === id ? { ...m, feedback: next } : m)));
+    const r = await rateCoachMessage(id, next);
+    if (!r.ok) {
+      setMessages((list) => list.map((m) => (m.id === id ? { ...m, feedback: current } : m)));
+      toast(r.error, "error");
+    }
+  }
 
   async function clear() {
     if (!window.confirm("Wil je je gesprek met Baddy wissen? Recepten en schema's blijven staan.")) return;
@@ -168,6 +200,9 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
           <h1 className="font-display text-[27px] leading-tight">Baddy</h1>
           <p className="text-[12.5px] leading-snug text-muted">Coach van de squad. Kent de zeven principes en jouw cijfers.</p>
         </div>
+        <Link href="/profile#baddy-geheugen" aria-label="Wat Baddy over mij weet" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush">
+          <Brain className="h-[17px] w-[17px]" strokeWidth={1.6} />
+        </Link>
         {messages.length > 0 ? (
           <button type="button" onClick={clear} disabled={busy} aria-label="Gesprek wissen" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush disabled:opacity-50">
             <RotateCcw className="h-[17px] w-[17px]" strokeWidth={1.6} />
@@ -219,6 +254,28 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
                 {m.refs.map((r) => (
                   <RefCard key={`${r.type}-${r.id}`} refItem={r} />
                 ))}
+                {!m.streaming && m.body && UUID.test(m.id) ? (
+                  <div className="flex items-center gap-1 px-1" role="group" aria-label="Was dit nuttig?">
+                    <button
+                      type="button"
+                      onClick={() => rate(m.id, 1)}
+                      aria-pressed={m.feedback === 1}
+                      aria-label="Nuttig"
+                      className={cn("flex h-7 w-7 items-center justify-center rounded-full", m.feedback === 1 ? "bg-sage/25 text-ink" : "text-muted/70 hover:text-ink")}
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => rate(m.id, -1)}
+                      aria-pressed={m.feedback === -1}
+                      aria-label="Niet nuttig"
+                      className={cn("flex h-7 w-7 items-center justify-center rounded-full", m.feedback === -1 ? "bg-blush text-ink" : "text-muted/70 hover:text-ink")}
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           ),

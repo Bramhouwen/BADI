@@ -46,6 +46,10 @@ export const createPlanInput = z.object({
 });
 export type CreatePlanInput = z.infer<typeof createPlanInput>;
 
+export const saveMemoryInput = z.object({ content: z.string().trim().min(1).max(200) });
+export const forgetMemoryInput = z.object({ id: z.string().uuid() });
+export const MAX_MEMORIES = 40;
+
 export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "save_recipe",
@@ -105,6 +109,27 @@ export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
         },
       },
       required: ["name", "workouts"],
+    },
+  },
+  {
+    name: "save_memory",
+    description:
+      "Onthoudt één blijvend feit over degene met wie je praat, zoals een voorkeur, allergie, blessure, doel of beschikbare tijd. Kort, feitelijk, in de derde persoon.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object",
+      properties: { content: { type: "string", description: "Het feit, maximaal 200 tekens. Bijvoorbeeld: 'Eet geen vis'." } },
+      required: ["content"],
+    },
+  },
+  {
+    name: "forget_memory",
+    description: "Verwijdert een notitie uit je geheugen die niet meer klopt. Gebruik de id tussen blokhaken uit 'Wat je onthoudt over deze persoon'.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string", description: "De id van de notitie." } },
+      required: ["id"],
     },
   },
 ];

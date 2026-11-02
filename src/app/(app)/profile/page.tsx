@@ -13,6 +13,7 @@ import { IconBadge } from "@/components/ui/icon-badge";
 import { ProfileForm } from "./profile-form";
 import { AlcoholExceptions } from "./alcohol-exceptions";
 import { SharingSettings } from "./sharing-settings";
+import { BaddyMemory } from "./baddy-memory";
 import type { AlcoholException } from "@/lib/types";
 
 export const metadata = { title: "Profiel" };
@@ -33,10 +34,11 @@ function Row({ href, icon: Icon, title, body }: { href: string; icon: typeof Boo
 async function Content() {
   const ctx = await requireContext();
   const supabase = await createClient();
-  const [avatar, { data: exceptionRows }, sharing] = await Promise.all([
+  const [avatar, { data: exceptionRows }, sharing, { data: memoryRows }] = await Promise.all([
     signedUrl("avatars", ctx.profile.avatar_path),
     supabase.from("alcohol_exceptions").select("*").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id).order("exception_date"),
     loadSharing(ctx.userId),
+    supabase.from("coach_memories").select("id, content, source").eq("user_id", ctx.userId).order("created_at", { ascending: true }),
   ]);
   const exceptions = (exceptionRows ?? []) as AlcoholException[];
   const wrapped = wrappedStatus(ctx.challenge);
@@ -59,6 +61,12 @@ async function Content() {
             body={wrapped === "final" ? "Jullie definitieve terugblik." : wrapped === "preliminary" ? "Voorlopige terugblik tijdens de finale." : `Beschikbaar vanaf ${formatDateNl(ctx.challenge.end_date, { day: "numeric", month: "long" })}.`}
           />
         </div>
+      </section>
+
+      <section id="baddy-geheugen">
+        <SectionTitle action={<Link href="/coach" className="text-[13px] text-muted">Naar Baddy</Link>}>Wat Baddy over mij weet</SectionTitle>
+        <p className="mb-2.5 px-0.5 text-[12.5px] leading-snug text-muted">Alleen jij en Baddy zien dit. Baddy houdt er bij elk advies rekening mee.</p>
+        <BaddyMemory initial={(memoryRows ?? []) as { id: string; content: string; source: "coach" | "member" }[]} />
       </section>
 
       <section id="zichtbaarheid">

@@ -60,6 +60,11 @@ class Query implements PromiseLike<Result> {
     this.filters.push((r) => String(r[col]) <= String(val));
     return this;
   }
+  not(col: string, op: string, val: unknown) {
+    if (op === "is" && val === null) this.filters.push((r) => r[col] !== null && r[col] !== undefined);
+    else this.filters.push((r) => r[col] !== val);
+    return this;
+  }
   gt(col: string, val: unknown) {
     this.filters.push((r) => String(r[col]) > String(val));
     return this;

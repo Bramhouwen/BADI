@@ -4,8 +4,8 @@ import { getContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { isDemo } from "@/lib/demo";
 import { todayKey } from "@/lib/dates";
-import { COACH_DAILY_LIMIT, COACH_HISTORY_MESSAGES, contextBlock, parseRefs, refsNote, type StoredRef } from "@/lib/coach/prompt";
-import { loadCoachContext } from "@/lib/coach/context";
+import { COACH_DAILY_LIMIT, COACH_HISTORY_MESSAGES, contextBlock, feedbackBlock, inspiration, inspirationBlock, kitchenBlock, memoryBlock, parseRefs, refsNote, type StoredRef } from "@/lib/coach/prompt";
+import { loadCoachContext, loadCoachExtras } from "@/lib/coach/context";
 import { hasCoachKey, runCoach, type CoachTurn } from "@/lib/coach/run";
 import { runDemoCoach } from "@/lib/coach/demo";
 
@@ -47,10 +47,15 @@ export async function POST(request: Request) {
     .gte("created_at", startOfToday(ctx.challenge.timezone));
   if ((count ?? 0) >= COACH_DAILY_LIMIT) return json(429, `Je hebt vandaag al ${COACH_DAILY_LIMIT} vragen gesteld. Morgen kan het weer.`);
 
-  const [{ data: historyRows }, coachCtx] = await Promise.all([
+  const [{ data: historyRows }, coachCtx, extras] = await Promise.all([
     supabase.from("coach_messages").select("role, body, refs").eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(COACH_HISTORY_MESSAGES),
     loadCoachContext(supabase, ctx),
+    loadCoachExtras(supabase, ctx, { personal: true }),
   ]);
+  const month = Number(todayKey(new Date(), ctx.challenge.timezone).slice(5, 7));
+  const dynamicSystem = [contextBlock(coachCtx), memoryBlock(extras.memories), feedbackBlock(extras.feedback), kitchenBlock(extras.kitchen), inspirationBlock(inspiration(month))]
+    .filter(Boolean)
+    .join("\n\n");
   const { error: insertError } = await supabase.from("coach_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, role: "user", body: parsed.data.message });
   if (insertError) return json(500, "Je vraag opslaan is niet gelukt.");
 
@@ -73,7 +78,7 @@ export async function POST(request: Request) {
               supabase,
               ctx,
               turns,
-              dynamicSystem: contextBlock(coachCtx),
+              dynamicSystem,
               effort: "medium",
               onText: (delta) => send({ type: "text", delta }),
               onRef: (ref) => send({ type: "ref", ref }),

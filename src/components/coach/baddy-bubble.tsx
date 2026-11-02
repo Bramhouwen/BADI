@@ -10,7 +10,7 @@ import { AskField, BADDY_PHOTO, askHref } from "./baddy-ask";
 
 /** Pages where the bubble would cover a composer or duplicate an entry point. */
 function hiddenOn(path: string): boolean {
-  if (path === "/" || path.startsWith("/coach") || path.startsWith("/squad")) return true;
+  if (path === "/" || path.startsWith("/coach") || path.startsWith("/squad") || path.startsWith("/profile")) return true;
   if (path.endsWith("/new") || path.endsWith("/edit")) return true;
   if (path.startsWith("/fitness/workout") || path.startsWith("/fitness/start/")) return true;
   return false;

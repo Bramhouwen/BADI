@@ -20,6 +20,8 @@ export interface CoachRunOptions {
   /** Volatile instructions (personal context, squad situation) after the cached prefix. */
   dynamicSystem: string;
   effort: "low" | "medium";
+  /** Tool set; defaults to all coach tools. The squad chat leaves out the personal memory tools. */
+  tools?: Anthropic.Beta.BetaTool[];
   onText?: (delta: string) => void;
   onRef?: (ref: StoredRef) => void;
   onStatus?: (status: "thinking" | "working") => void;
@@ -62,7 +64,7 @@ export async function runCoach(opts: CoachRunOptions): Promise<CoachResult> {
       fallbacks: "default",
       output_config: { effort: opts.effort },
       system,
-      tools: COACH_TOOLS,
+      tools: opts.tools ?? COACH_TOOLS,
       messages,
     });
     let roundText = "";

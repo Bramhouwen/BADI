@@ -66,7 +66,7 @@ Vereisten: Node 22+, npm, een Supabase-project (gratis tier is genoeg).
 2. Maak een Supabase-project op https://supabase.com en voer de migratie uit:
    - Open **SQL Editor** in het Supabase dashboard.
    - Plak de inhoud van `supabase/migrations/0001_winter_arc_schema.sql` en voer uit.
-   - Voer daarna ook `0002_fix_pgcrypto_search_path.sql` (nodig op Supabase, waar pgcrypto in het schema `extensions` staat), `0003_water_entries.sql` (waterteller), `0004_fitness_tracker.sql` (Fitness Tracker) en `0005_squad_stats.sql` (Squad-statistieken en deelinstellingen) `0006_squad_chat.sql` (Squad-chat) `0007_chat_attachments.sql` (bijlagen in de chat) `0008_chat_mentions.sql` (@-tags) `0009_recipes_optional_fields.sql` (foto optioneel bij recepten) en `0010_baddy_coach.sql` (Baddy de Coach) uit, in die volgorde.
+   - Voer daarna ook `0002_fix_pgcrypto_search_path.sql` (nodig op Supabase, waar pgcrypto in het schema `extensions` staat), `0003_water_entries.sql` (waterteller), `0004_fitness_tracker.sql` (Fitness Tracker) en `0005_squad_stats.sql` (Squad-statistieken en deelinstellingen) `0006_squad_chat.sql` (Squad-chat) `0007_chat_attachments.sql` (bijlagen in de chat) `0008_chat_mentions.sql` (@-tags) `0009_recipes_optional_fields.sql` (foto optioneel bij recepten) `0010_baddy_coach.sql` (Baddy de Coach) en `0011_baddy_memory_feedback.sql` (geheugen en feedback voor Baddy) uit, in die volgorde.
    - Heb je de Supabase CLI: `supabase link --project-ref <ref>` en daarna `supabase db push`.
 
    De migratie maakt alle tabellen, triggers (edit-venster, maximaal vier leden, rate limiting), RLS-policies, de private storage buckets (`wall`, `recipes`, `avatars`) met policies en de RPC's voor uitnodigingen.

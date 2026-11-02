@@ -38,8 +38,24 @@ export const BADDY_SYSTEM = `Je bent Baddy, de coach in BADI: een privé-app voo
 Je kunt dingen echt in de app zetten:
 - save_recipe: zet een recept in de Kitchen van de squad, met jou als auteur.
 - create_workout_plan: maakt een trainingsschema in Fitness voor degene met wie je praat.
+- save_memory en forget_memory: je geheugen over degene met wie je praat (zie Geheugen).
 Gebruik ze zodra iemand vraagt om recepten of een schema te maken, toe te voegen of op te slaan. Bij een vraag om ideeën of tips antwoord je gewoon in de chat zonder iets op te slaan. Sla maximaal drie recepten per beurt op. Na het opslaan herhaal je niet het hele recept in de chat: noem kort wat je hebt toegevoegd en waar het staat.
 Voor een schema gebruik je bij voorkeur deze standaardoefeningen (exacte namen): Squat, Leg Press, Lunges, Romanian Deadlift, Leg Extension, Leg Curl, Calf Raise, Bench Press, Incline Dumbbell Press, Chest Fly, Push-up, Lat Pulldown, Seated Row, Bent-over Row, Pull-up, Shoulder Press, Lateral Raise, Rear Delt Fly, Bicep Curl, Hammer Curl, Tricep Pushdown, Tricep Extension, Plank, Crunch, Leg Raise, Russian Twist. Een andere oefening mag, die wordt dan als eigen oefening toegevoegd.
+
+# Variatie
+- Kijk naar "Recepten in de Kitchen" en maak geen recept dat daar al staat of er sterk op lijkt. Vul liever aan wat weinig voorkomt.
+- Vraagt iemand om meerdere recepten, dan heeft elk recept een andere eiwitbron, een andere keuken en een andere bereidingswijze.
+- Gebruik "Inspiratie voor deze vraag" als startpunt voor recepten, tenzij de vraag zelf iets anders wil.
+- Herhaal geen tip of oefening die je in dit gesprek al gaf. Kies een andere invalshoek.
+- Let op de feedback: doe meer van wat een duim omhoog kreeg en vermijd wat een duim omlaag kreeg.
+
+# Geheugen
+Onder "Wat je onthoudt over deze persoon" staan notities die jij eerder hebt opgeslagen of die de persoon zelf heeft toegevoegd. Houd er altijd rekening mee.
+- Gebruik save_memory als iemand iets blijvends over zichzelf vertelt dat je advies verandert: voorkeuren en afkeuren, allergieën of intoleranties, dieet, blessures of beperkingen, doelen, beschikbare tijd en materiaal, trainingsniveau.
+- Eén kort feit per notitie, in de derde persoon, bijvoorbeeld "Eet geen vis" of "Knieklachten, geen diepe lunges".
+- Sla niets op wat alleen voor vandaag geldt, en geen gevoelige details die je niet nodig hebt.
+- Klopt een notitie niet meer, gebruik dan forget_memory en sla zo nodig de nieuwe situatie op.
+- Zeg in je antwoord kort dat je het onthoudt.
 
 # Grenzen
 - Je bent geen arts, diëtist of fysiotherapeut. Bij pijn, blessures, medische aandoeningen, medicijnen, zwangerschap of twijfel verwijs je vriendelijk naar de huisarts of een fysiotherapeut.
@@ -109,7 +125,7 @@ export function squadBlock(askerFirstName: string, today: string): string {
 }
 
 export interface StoredRef {
-  type: "recipe" | "plan";
+  type: "recipe" | "plan" | "memory";
   id: string;
   name: string;
 }
@@ -117,7 +133,7 @@ export interface StoredRef {
 /** A short note appended to stored assistant turns so Baddy remembers what it already saved. */
 export function refsNote(refs: StoredRef[]): string {
   if (!refs.length) return "";
-  const parts = refs.map((r) => (r.type === "recipe" ? `recept "${r.name}"` : `schema "${r.name}"`));
+  const parts = refs.map((r) => (r.type === "recipe" ? `recept "${r.name}"` : r.type === "plan" ? `schema "${r.name}"` : `onthouden: "${r.name}"`));
   return `\n\n(In de app opgeslagen: ${parts.join(", ")}.)`;
 }
 
@@ -126,11 +142,120 @@ export function parseRefs(raw: unknown): StoredRef[] {
   return raw
     .map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : null))
     .filter((r): r is Record<string, unknown> => Boolean(r))
-    .filter((r) => (r.type === "recipe" || r.type === "plan") && typeof r.id === "string" && typeof r.name === "string")
+    .filter((r) => (r.type === "recipe" || r.type === "plan" || r.type === "memory") && typeof r.id === "string" && typeof r.name === "string")
     .map((r) => ({ type: r.type as StoredRef["type"], id: r.id as string, name: r.name as string }));
 }
 
 /** True when a squad chat message addresses Baddy. */
 export function mentionsBaddy(body: string): boolean {
   return /(^|[^\p{L}\p{N}_])@baddy(?![\p{L}\p{N}_])/iu.test(body);
+}
+
+// ---------------------------------------------------------------------------
+// Variation, memory and feedback blocks (all volatile: they go after the cache breakpoint)
+// ---------------------------------------------------------------------------
+
+const CUISINES = ["Mexicaans", "Indiaas", "Japans", "Koreaans", "Thais", "Vietnamees", "Libanees", "Marokkaans", "Grieks", "Italiaans", "Spaans", "Turks", "Ethiopisch", "Peruaans", "Hollands", "Scandinavisch"];
+const METHODS = ["traybake uit de oven", "alles in één pan", "wok", "airfryer", "soep", "bowl of salade", "wrap", "stoofpot", "van de grill", "meal prep voor drie dagen", "zonder koken", "klaar in 15 minuten"];
+const PROTEINS = ["kip", "kalkoen", "mager rundergehakt", "zalm", "kabeljauw", "garnalen", "tonijn", "eieren", "magere kwark", "Griekse yoghurt", "hüttenkäse", "tofu", "tempeh", "linzen", "kikkererwten", "zwarte bonen", "edamame"];
+/** Dutch seasonal produce per month (1-12), a rough guide for inspiration. */
+const SEASONAL: Record<number, string[]> = {
+  1: ["boerenkool", "spruitjes", "knolselderij", "pastinaak", "rode kool", "witlof", "prei"],
+  2: ["boerenkool", "witlof", "pastinaak", "rode biet", "prei", "spruitjes"],
+  3: ["prei", "witlof", "spinazie", "rode biet", "winterwortel"],
+  4: ["asperges", "rabarber", "spinazie", "radijs", "lente-ui"],
+  5: ["asperges", "rabarber", "spinazie", "radijs", "sla", "aardbeien"],
+  6: ["aardbeien", "courgette", "doperwten", "tuinbonen", "sla", "kersen"],
+  7: ["courgette", "sperziebonen", "tomaat", "komkommer", "bessen", "kersen"],
+  8: ["tomaat", "courgette", "paprika", "mais", "bramen", "pruimen"],
+  9: ["pompoen", "appels", "peren", "bramen", "paprika", "prei"],
+  10: ["pompoen", "paddenstoelen", "appels", "peren", "knolselderij", "rode kool"],
+  11: ["pompoen", "boerenkool", "spruitjes", "knolselderij", "pastinaak", "stoofperen", "paddenstoelen"],
+  12: ["boerenkool", "spruitjes", "rode kool", "knolselderij", "pastinaak", "witlof", "stoofperen"],
+};
+
+function pick<T>(list: T[], n: number, rand: () => number): T[] {
+  const copy = [...list];
+  const out: T[] = [];
+  while (out.length < n && copy.length) out.push(copy.splice(Math.floor(rand() * copy.length), 1)[0]);
+  return out;
+}
+
+export interface Inspiration {
+  cuisines: string[];
+  methods: string[];
+  proteins: string[];
+  seasonal: string[];
+}
+
+/** A random set of angles for this request; `month` is 1-12. */
+export function inspiration(month: number, rand: () => number = Math.random): Inspiration {
+  return {
+    cuisines: pick(CUISINES, 2, rand),
+    methods: pick(METHODS, 2, rand),
+    proteins: pick(PROTEINS, 3, rand),
+    seasonal: pick(SEASONAL[month] ?? SEASONAL[1], 3, rand),
+  };
+}
+
+export function inspirationBlock(i: Inspiration): string {
+  return [
+    "# Inspiratie voor deze vraag",
+    "Gebruik bij recepten bij voorkeur een combinatie hiervan:",
+    `- Keuken: ${i.cuisines.join(" of ")}`,
+    `- Bereiding: ${i.methods.join(" of ")}`,
+    `- Eiwitbron: ${i.proteins.join(", ")}`,
+    `- Seizoensproduct: ${i.seasonal.join(", ")}`,
+  ].join("\n");
+}
+
+export interface KitchenItem {
+  title: string;
+  category: string | null;
+  byCoach: boolean;
+  reactions: number;
+  favorite: boolean;
+}
+
+export function kitchenBlock(items: KitchenItem[]): string {
+  if (!items.length) return "# Recepten in de Kitchen\nDe Kitchen is nog leeg.";
+  const counts = new Map<string, number>();
+  for (const it of items) counts.set(it.category ?? "Zonder categorie", (counts.get(it.category ?? "Zonder categorie") ?? 0) + 1);
+  const liked = [...items].filter((i) => i.reactions > 0 || i.favorite).sort((a, b) => Number(b.favorite) - Number(a.favorite) || b.reactions - a.reactions).slice(0, 5);
+  const lines = [
+    `# Recepten in de Kitchen (${items.length})`,
+    `Per categorie: ${[...counts.entries()].map(([c, n]) => `${c} ${n}`).join(", ")}.`,
+    ...items.map((i) => `- ${i.title}${i.category ? ` (${i.category})` : ""}${i.byCoach ? " [van jou]" : ""}`),
+  ];
+  if (liked.length) lines.push(`Favoriet of veel reacties: ${liked.map((i) => i.title).join("; ")}.`);
+  return lines.join("\n");
+}
+
+export interface MemoryItem {
+  id: string;
+  content: string;
+}
+
+export function memoryBlock(items: MemoryItem[]): string {
+  if (!items.length) return "# Wat je onthoudt over deze persoon\nNog niets.";
+  return ["# Wat je onthoudt over deze persoon", ...items.map((m) => `- [${m.id}] ${m.content}`)].join("\n");
+}
+
+export interface FeedbackItem {
+  rating: 1 | -1;
+  snippet: string;
+}
+
+export function feedbackBlock(items: FeedbackItem[]): string {
+  if (!items.length) return "";
+  return [
+    "# Feedback op je eerdere antwoorden",
+    ...items.map((f) => `- ${f.rating === 1 ? "Duim omhoog" : "Duim omlaag"}: "${f.snippet}"`),
+  ].join("\n");
+}
+
+/** First words of an answer, on one line, for the feedback block. */
+export function snippet(text: string, max = 110): string {
+  const one = text.replace(/\s+/g, " ").replace(/\*\*/g, "").trim();
+  return one.length > max ? `${one.slice(0, max - 1).trimEnd()}…` : one;
 }

@@ -7,7 +7,7 @@ import { challengeDay, challengeLengthDays, challengePhase, formatDateNl, todayK
 import { activityMeta, weekStats, type SessionLike } from "@/lib/fitness";
 import { computeStreakStats } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
-import type { CoachContext } from "./prompt";
+import { snippet, type CoachContext, type FeedbackItem, type KitchenItem, type MemoryItem } from "./prompt";
 
 /** Everything Baddy may know about the person it is talking to, read with their own session (RLS applies). */
 export async function loadCoachContext(supabase: SupabaseClient, ctx: AppContext): Promise<CoachContext> {
@@ -50,5 +50,40 @@ export async function loadCoachContext(supabase: SupabaseClient, ctx: AppContext
       km: s.distance_meters ? s.distance_meters / 1000 : null,
     })),
     alcoholExceptionsUsed: alcohol ?? 0,
+  };
+}
+
+export interface CoachExtras {
+  kitchen: KitchenItem[];
+  memories: MemoryItem[];
+  feedback: FeedbackItem[];
+}
+
+/** Squad recipes, the member's memory and recent feedback on Baddy's answers. */
+export async function loadCoachExtras(supabase: SupabaseClient, ctx: AppContext, opts: { personal: boolean }): Promise<CoachExtras> {
+  const [{ data: recipes }, { data: reactions }, { data: favs }, memoriesRes, feedbackRes] = await Promise.all([
+    supabase.from("recipes").select("id, title, category, by_coach").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(80),
+    supabase.from("recipe_reactions").select("recipe_id"),
+    supabase.from("recipe_favorites").select("recipe_id").eq("user_id", ctx.userId),
+    opts.personal ? supabase.from("coach_memories").select("id, content").eq("user_id", ctx.userId).order("created_at", { ascending: true }) : Promise.resolve({ data: [] }),
+    opts.personal
+      ? supabase.from("coach_messages").select("body, feedback").eq("user_id", ctx.userId).eq("role", "assistant").not("feedback", "is", null).order("created_at", { ascending: false }).limit(8)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const reactionCount = new Map<string, number>();
+  for (const r of (reactions ?? []) as { recipe_id: string }[]) reactionCount.set(r.recipe_id, (reactionCount.get(r.recipe_id) ?? 0) + 1);
+  const favorite = new Set(((favs ?? []) as { recipe_id: string }[]).map((f) => f.recipe_id));
+  return {
+    kitchen: ((recipes ?? []) as { id: string; title: string; category: string | null; by_coach?: boolean }[]).map((r) => ({
+      title: r.title,
+      category: r.category,
+      byCoach: Boolean(r.by_coach),
+      reactions: reactionCount.get(r.id) ?? 0,
+      favorite: favorite.has(r.id),
+    })),
+    memories: (memoriesRes.data ?? []) as MemoryItem[],
+    feedback: ((feedbackRes.data ?? []) as { body: string; feedback: number }[])
+      .filter((f) => f.feedback === 1 || f.feedback === -1)
+      .map((f) => ({ rating: f.feedback as 1 | -1, snippet: snippet(f.body) })),
   };
 }

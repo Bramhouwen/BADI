@@ -6,7 +6,9 @@ import { getSquad } from "@/lib/data";
 import { isDemo } from "@/lib/demo";
 import { firstName } from "@/lib/utils";
 import { formatDateNl, todayKey } from "@/lib/dates";
-import { SQUAD_COACH_DAILY_LIMIT, squadBlock } from "./prompt";
+import { SQUAD_COACH_DAILY_LIMIT, inspiration, inspirationBlock, kitchenBlock, squadBlock } from "./prompt";
+import { loadCoachExtras } from "./context";
+import { COACH_TOOLS } from "./tools";
 import { hasCoachKey, runCoach } from "./run";
 import { runDemoCoach } from "./demo";
 
@@ -49,9 +51,10 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     if (isDemo()) {
       result = await runDemoCoach({ supabase, ctx, message: askerBody, squad: true });
     } else {
-      const [squad, { data: rows }] = await Promise.all([
+      const [squad, { data: rows }, extras] = await Promise.all([
         getSquad(ctx.challenge.id),
         supabase.from("squad_messages").select("user_id, body, is_coach, attachment_type, attachment_name").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(20),
+        loadCoachExtras(supabase, ctx, { personal: false }),
       ]);
       const nameOf = (id: string) => firstName(squad.find((m) => m.user_id === id)?.profile.display_name ?? "Iemand");
       const transcript = ((rows ?? []) as { user_id: string; body: string; is_coach: boolean; attachment_type: string | null; attachment_name: string | null }[])
@@ -67,8 +70,13 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
         supabase,
         ctx,
         turns: [{ role: "user", content: `Groepschat:\n${transcript}\n\nBeantwoord het laatste bericht van ${asker} aan jou.` }],
-        dynamicSystem: squadBlock(asker, formatDateNl(todayKey(new Date(), ctx.challenge.timezone), { weekday: "long", day: "numeric", month: "long" })),
+        dynamicSystem: [
+          squadBlock(asker, formatDateNl(todayKey(new Date(), ctx.challenge.timezone), { weekday: "long", day: "numeric", month: "long" })),
+          kitchenBlock(extras.kitchen),
+          inspirationBlock(inspiration(Number(todayKey(new Date(), ctx.challenge.timezone).slice(5, 7)))),
+        ].join("\n\n"),
         effort: "low",
+        tools: COACH_TOOLS.filter((t) => t.name === "save_recipe" || t.name === "create_workout_plan"),
       });
     }
     const recipe = result.refs.find((r) => r.type === "recipe");
