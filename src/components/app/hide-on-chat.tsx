@@ -4,7 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 export function isChatPath(path: string | null): boolean {
-  return Boolean(path && (path === "/squad/chat" || path.startsWith("/squad/chat/")));
+  return Boolean(path && (path === "/squad/chat" || path.startsWith("/squad/chat/") || path === "/coach"));
 }
 
 function Gate({ children }: { children: ReactNode }) {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Bookmark, Brain, ChefHat, Dumbbell, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ArrowLeft, ArrowUp, Bookmark, Brain, ChefHat, Dumbbell, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/toast";
 import { RichText } from "@/components/coach/rich-text";
@@ -71,7 +71,6 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
   const [draft, setDraft] = useState(prefill);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<"thinking" | "working" | null>(null);
-  const [focused, setFocused] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const autoSent = useRef(false);
   const router = useRouter();
@@ -193,28 +192,39 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg px-5 pt-0.5">
-      <div className="mb-4 flex items-center gap-3">
-        <Avatar name="Baddy" src={BADDY_AVATAR} size="lg" className="h-14 w-14 ring-[3px] ring-sage/60" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[27px] leading-tight">Baddy</h1>
-          <p className="text-[12.5px] leading-snug text-muted">Coach van de squad. Kent de zeven principes en jouw cijfers.</p>
-        </div>
-        <Link href="/profile#baddy-geheugen" aria-label="Wat Baddy over mij weet" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush">
-          <Brain className="h-[17px] w-[17px]" strokeWidth={1.6} />
-        </Link>
-        {messages.length > 0 ? (
-          <button type="button" onClick={clear} disabled={busy} aria-label="Gesprek wissen" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush disabled:opacity-50">
-            <RotateCcw className="h-[17px] w-[17px]" strokeWidth={1.6} />
+    <div className="chat-thread mx-auto w-full max-w-3xl px-4" style={{ paddingTop: "calc(var(--sat) + 78px)" }}>
+      {/* Full-screen header, like the squad chats: the app header and tab bar are hidden here. */}
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-ink/[0.06] bg-[#f6ece4]/92 backdrop-blur-md" style={{ paddingTop: "var(--sat)" }}>
+        <div className="mx-auto flex h-[62px] max-w-3xl items-center gap-2.5 px-3">
+          <button
+            type="button"
+            onClick={() => (window.history.length > 1 ? router.back() : router.push("/squad"))}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-blush"
+            aria-label="Terug"
+          >
+            <ArrowLeft className="h-5 w-5" strokeWidth={1.7} />
           </button>
-        ) : null}
-      </div>
+          <Avatar name="Baddy" src={BADDY_AVATAR} size="sm" className="h-10 w-10 ring-2 ring-sage/50" />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-sans text-[15.5px] font-semibold leading-tight text-text">Baddy de Coach</h1>
+            <p className="truncate text-[12px] leading-tight text-muted">Kent de zeven principes en jouw cijfers</p>
+          </div>
+          <Link href="/profile#baddy-geheugen" aria-label="Wat Baddy over mij weet" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-blush">
+            <Brain className="h-[18px] w-[18px]" strokeWidth={1.6} />
+          </Link>
+          {messages.length > 0 ? (
+            <button type="button" onClick={clear} disabled={busy} aria-label="Gesprek wissen" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-blush disabled:opacity-50">
+              <RotateCcw className="h-[18px] w-[18px]" strokeWidth={1.6} />
+            </button>
+          ) : null}
+        </div>
+      </header>
 
       {!available ? (
         <p className="soft mb-4 rounded-[16px] px-4 py-3 text-[13px] leading-snug">Baddy is nog niet gekoppeld. Zodra de beheerder een Anthropic API-sleutel heeft ingesteld, kun je hier vragen stellen.</p>
       ) : null}
 
-      <div className="space-y-3 pb-[88px]" aria-live="polite">
+      <div className="space-y-3" style={{ paddingBottom: "calc(var(--sab) + 92px)" }} aria-live="polite">
         {messages.length === 0 ? (
           <div className="space-y-2 pt-2">
             <p className="px-1 text-[12.5px] text-muted">Begin met een vraag, of kies er een:</p>
@@ -287,10 +297,10 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
           e.preventDefault();
           void ask(draft);
         }}
-        className="fixed inset-x-0 z-30 flex justify-center px-4 transition-[bottom] duration-200"
-        style={{ bottom: focused ? "calc(var(--sab) + 10px)" : "calc(var(--nav-h) + var(--sab) + 16px)" }}
+        className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-gradient-to-t from-[#f6ece4] via-[#f6ece4]/95 to-transparent px-3 pt-3"
+        style={{ paddingBottom: "calc(var(--sab) + 8px)" }}
       >
-        <div className="glass flex w-full max-w-lg items-end gap-1.5 rounded-[24px] p-1.5 pl-4 shadow-[0_14px_30px_-18px_rgba(95,53,41,0.5)]">
+        <div className="flex w-full max-w-3xl items-end gap-1.5 rounded-[24px] bg-white p-1.5 pl-4 shadow-[0_6px_18px_-12px_rgba(95,53,41,0.45)] ring-1 ring-ink/[0.05]">
           <textarea
             ref={textarea}
             value={draft}
@@ -299,8 +309,6 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
               e.currentTarget.style.height = "auto";
               e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
             }}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

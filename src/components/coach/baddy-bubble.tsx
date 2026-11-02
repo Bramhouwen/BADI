@@ -51,6 +51,9 @@ function Bubble() {
         </span>
       </button>
 
+      {/* Room at the end of the page so the bubble never covers the last content. */}
+      <div aria-hidden style={{ height: offset + 44 }} />
+
       <Sheet open={open} onClose={() => setOpen(false)} title="Vraag Baddy">
         <div className="space-y-3 pb-2">
           <div className="flex items-center gap-3">
