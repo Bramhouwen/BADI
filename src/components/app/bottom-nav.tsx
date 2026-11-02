@@ -49,7 +49,7 @@ function NavItems({ pathname, badges }: { pathname: string | null; badges?: Part
             >
               <span className="relative">
                 <Icon className="h-[20px] w-[20px]" strokeWidth={active ? 1.8 : 1.5} aria-hidden />
-                {badges?.[href]}
+                {!active ? badges?.[href] : null}
               </span>
               <span>{label}</span>
             </Link>

@@ -174,7 +174,11 @@ export function buildSeed(): Store {
     [DEMO_USER_ID, 1, 18, 26, "19:30 bij mij."],
     [SAM, 0, 7, 45, "Nieuwe foto op de Wall, kijk maar."],
     [NOOR, 0, 8, 5, "Recept van vanavond staat in de Kitchen: linzen dahl."],
-  ].map(([user_id, n, h, mi, body]) => ({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id, body, created_at: iso(d(n as number), h as number, mi as number) }));
+  ].map(([user_id, n, h, mi, body]) => ({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id, body, created_at: iso(d(n as number), h as number, mi as number), attachment_type: null, attachment_path: null, attachment_name: null, ref_id: null }));
+  squad_messages.push(
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, body: "", created_at: iso(d(0), 8, 6), attachment_type: "recipe", attachment_path: null, attachment_name: recipes[3].title, ref_id: recipes[3].id },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, body: "Deze dus", created_at: iso(d(0), 7, 46), attachment_type: "post", attachment_path: null, attachment_name: wall_posts[3].caption, ref_id: wall_posts[3].id },
+  );
 
   const squad_chat_reads: Row[] = [];
 

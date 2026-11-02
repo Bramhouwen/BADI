@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isStaticMediaPath, staticMediaUrl } from "./media-paths";
 
-export type Bucket = "wall" | "recipes" | "avatars";
+export type Bucket = "wall" | "recipes" | "avatars" | "chat";
 
 const SIGNED_URL_TTL = 60 * 60; // one hour
 

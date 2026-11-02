@@ -13,6 +13,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { SquadChat, type ChatMember } from "./squad-chat";
+import type { PostOption, RecipeOption } from "./chat-attach";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Squad" };
@@ -24,17 +25,35 @@ async function Content() {
   const today = todayKey(now, ctx.challenge.timezone);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: messageRows }, { count: unreadCount }] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: messageRows }, { count: unreadCount }, { data: recipeRows }, { data: postRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date").eq("challenge_id", ctx.challenge.id),
-    supabase.from("squad_messages").select("id, user_id, body, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(CHAT_PAGE_SIZE),
+    supabase
+      .from("squad_messages")
+      .select("id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id")
+      .eq("challenge_id", ctx.challenge.id)
+      .order("created_at", { ascending: false })
+      .limit(CHAT_PAGE_SIZE),
     supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
+    supabase.from("recipes").select("id, title, image_path").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(40),
+    supabase.from("wall_posts").select("id, image_path, caption").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(40),
   ]);
 
   const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string }[];
   const newestFirst = (messageRows ?? []) as ChatMessage[];
   const messages = [...newestFirst].reverse();
-  const avatars = await signedUrlMap("avatars", squad.map((m) => m.profile.avatar_path).filter((p): p is string => Boolean(p)));
+  const recipeRaw = (recipeRows ?? []) as { id: string; title: string; image_path: string | null }[];
+  const postRaw = (postRows ?? []) as { id: string; image_path: string; caption: string | null }[];
+  const attachmentPaths = messages.map((m) => m.attachment_path).filter((p): p is string => Boolean(p));
+  const [avatars, recipeImages, postImages, chatSigned] = await Promise.all([
+    signedUrlMap("avatars", squad.map((m) => m.profile.avatar_path).filter((p): p is string => Boolean(p))),
+    signedUrlMap("recipes", recipeRaw.map((r) => r.image_path).filter((p): p is string => Boolean(p))),
+    signedUrlMap("wall", postRaw.map((p) => p.image_path)),
+    signedUrlMap("chat", attachmentPaths),
+  ]);
+  const recipes: RecipeOption[] = recipeRaw.map((r) => ({ id: r.id, title: r.title, image: r.image_path ? recipeImages.get(r.image_path) ?? null : null }));
+  const posts: PostOption[] = postRaw.map((p) => ({ id: p.id, image: postImages.get(p.image_path) ?? null, caption: p.caption }));
+  const signed = Object.fromEntries(chatSigned);
 
   const members = rotateMembers(squad, day).map((m) => {
     const stats = computeStreakStats(checkins.filter((c) => c.user_id === m.user_id).map((c) => c.checkin_date), today);
@@ -111,6 +130,9 @@ async function Content() {
         challengeId={ctx.challenge.id}
         today={today}
         tz={ctx.challenge.timezone}
+        recipes={recipes}
+        posts={posts}
+        signed={signed}
       />
     </Page>
   );

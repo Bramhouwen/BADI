@@ -5,13 +5,46 @@ import { dateKeyInTz, formatDateNl, type DateKey } from "./dates";
 
 export const CHAT_PAGE_SIZE = 40;
 
+export const ATTACHMENT_TYPES = ["image", "file", "recipe", "post"] as const;
+export type AttachmentType = (typeof ATTACHMENT_TYPES)[number];
+
 export interface ChatMessage {
   id: string;
   user_id: string;
   body: string;
   created_at: string;
+  attachment_type?: AttachmentType | null;
+  /** Object path in the private "chat" bucket for image and file. */
+  attachment_path?: string | null;
+  /** File name, recipe title or wall caption at the time of sending. */
+  attachment_name?: string | null;
+  /** Recipe or wall post id for references. */
+  ref_id?: string | null;
   /** True while the optimistic copy waits for the server. */
   pending?: boolean;
+}
+
+/** Short label for an attachment, used in previews and accessibility text. */
+export function attachmentLabel(m: Pick<ChatMessage, "attachment_type" | "attachment_name">): string | null {
+  switch (m.attachment_type) {
+    case "image":
+      return "Foto";
+    case "file":
+      return m.attachment_name ? `Bestand: ${m.attachment_name}` : "Bestand";
+    case "recipe":
+      return m.attachment_name ? `Recept: ${m.attachment_name}` : "Recept";
+    case "post":
+      return "Foto van de Wall";
+    default:
+      return null;
+  }
+}
+
+/** The link an attachment points to inside the app, or null for uploads. */
+export function attachmentHref(m: Pick<ChatMessage, "attachment_type" | "ref_id">): string | null {
+  if (m.attachment_type === "recipe" && m.ref_id) return `/kitchen/${m.ref_id}`;
+  if (m.attachment_type === "post" && m.ref_id) return `/wall/${m.ref_id}`;
+  return null;
 }
 
 export interface ChatRun {

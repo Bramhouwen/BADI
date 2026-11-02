@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Send } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ErrorText, Input } from "@/components/ui/field";
@@ -17,8 +18,6 @@ export function ComplimentSheet({ open, onClose, receiver }: { open: boolean; on
   const [pending, start] = useTransition();
   const reduce = useReducedMotion();
 
-  const text = custom.trim() || message;
-
   function close() {
     onClose();
     setTimeout(() => {
@@ -29,18 +28,21 @@ export function ComplimentSheet({ open, onClose, receiver }: { open: boolean; on
     }, 300);
   }
 
-  function send() {
-    if (!text) {
+  /** One tap on a preset sends it right away; own text goes through the button. */
+  function send(text: string) {
+    const body = text.trim();
+    if (!body) {
       setError("Kies een compliment of schrijf er zelf een.");
       return;
     }
     setError(null);
+    setMessage(body);
     start(async () => {
-      const r = await sendCompliment({ receiver_id: receiver.id, message: text });
+      const r = await sendCompliment({ receiver_id: receiver.id, message: body });
       if (!r.ok) setError(r.error);
       else {
         setSent(true);
-        setTimeout(close, 1600);
+        setTimeout(close, 1400);
       }
     });
   }
@@ -63,32 +65,31 @@ export function ComplimentSheet({ open, onClose, receiver }: { open: boolean; on
           </motion.div>
         ) : (
           <motion.div key="form" initial={false} className="space-y-4 pb-2">
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Kies een compliment">
+            <p className="text-[12.5px] text-muted">Tik op een compliment om het direct te versturen.</p>
+            <div className="grid grid-cols-1 gap-2" role="group" aria-label="Kies een compliment">
               {PRESET_COMPLIMENTS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  aria-pressed={message === c && !custom}
-                  onClick={() => {
-                    setMessage(c);
-                    setCustom("");
-                  }}
+                  disabled={pending}
+                  onClick={() => send(c)}
                   className={cn(
-                    "rounded-full border px-3.5 py-2 text-sm font-medium transition",
-                    message === c && !custom ? "tile border-transparent" : "border-ink/10 bg-white/70 text-text/90 hover:bg-white",
+                    "glass flex items-center justify-between rounded-[18px] px-4 py-3 text-left text-[14.5px] font-medium text-text transition hover:bg-blush/50 disabled:opacity-60",
+                    pending && message === c && "bg-sage/20",
                   )}
                 >
-                  {c}
+                  <span>{c}</span>
+                  <Send className="h-4 w-4 text-muted" strokeWidth={1.7} aria-hidden />
                 </button>
               ))}
             </div>
             <div>
-              <Input value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={140} placeholder="Of schrijf zelf iets liefs..." aria-label="Eigen compliment" />
+              <Input value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={140} placeholder="Of schrijf zelf iets..." aria-label="Eigen compliment" />
               <p className="mt-1 text-right text-xs text-muted">{custom.length}/140</p>
             </div>
             <ErrorText>{error}</ErrorText>
-            <Button size="lg" className="w-full" onClick={send} loading={pending}>
-              Stuur compliment
+            <Button size="lg" className="w-full" onClick={() => send(custom)} loading={pending && message === custom.trim()} disabled={!custom.trim() || pending}>
+              Stuur eigen compliment
             </Button>
           </motion.div>
         )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, groupMessages, unreadCount } from "@/lib/chat";
+import { attachmentHref, attachmentLabel, dayLabel, groupMessages, unreadCount } from "@/lib/chat";
 
 const tz = "Europe/Amsterdam";
 const today = "2026-11-12";
@@ -45,5 +45,17 @@ describe("unreadCount", () => {
     expect(unreadCount(msgs, null, "a")).toBe(2);
     expect(unreadCount(msgs, "2026-11-12T07:00:00Z", "a")).toBe(0);
     expect(unreadCount(msgs, null, "b")).toBe(3);
+  });
+});
+
+describe("attachments", () => {
+  it("labels and links each attachment type", () => {
+    expect(attachmentLabel({ attachment_type: "image", attachment_name: null })).toBe("Foto");
+    expect(attachmentLabel({ attachment_type: "file", attachment_name: "schema.pdf" })).toBe("Bestand: schema.pdf");
+    expect(attachmentLabel({ attachment_type: "recipe", attachment_name: "Linzen dahl" })).toBe("Recept: Linzen dahl");
+    expect(attachmentLabel({ attachment_type: null, attachment_name: null })).toBeNull();
+    expect(attachmentHref({ attachment_type: "recipe", ref_id: "r1" })).toBe("/kitchen/r1");
+    expect(attachmentHref({ attachment_type: "post", ref_id: "p1" })).toBe("/wall/p1");
+    expect(attachmentHref({ attachment_type: "image", ref_id: null })).toBeNull();
   });
 });

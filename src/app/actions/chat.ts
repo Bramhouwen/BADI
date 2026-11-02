@@ -6,19 +6,51 @@ import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { CHAT_PAGE_SIZE, type ChatMessage } from "@/lib/chat";
 import type { ActionResult } from "@/lib/types";
+import { isOwnedMediaPath } from "@/lib/media-paths";
 
 const uuid = z.string().uuid();
 
-export async function sendMessage(input: { body: string }): Promise<ActionResult<ChatMessage>> {
-  const parsed = z.object({ body: z.string().trim().min(1, "Typ eerst een bericht.").max(1000, "Maximaal 1000 tekens.") }).safeParse(input);
+const MESSAGE_COLUMNS = "id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id";
+
+const attachmentSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("image"), path: z.string().min(1).max(300) }),
+  z.object({ type: z.literal("file"), path: z.string().min(1).max(300), name: z.string().trim().min(1).max(200) }),
+  z.object({ type: z.literal("recipe"), refId: uuid }),
+  z.object({ type: z.literal("post"), refId: uuid }),
+]);
+export type MessageAttachment = z.infer<typeof attachmentSchema>;
+
+export async function sendMessage(input: { body: string; attachment?: MessageAttachment }): Promise<ActionResult<ChatMessage>> {
+  const parsed = z
+    .object({ body: z.string().trim().max(1000, "Maximaal 1000 tekens."), attachment: attachmentSchema.optional() })
+    .safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const { body, attachment } = parsed.data;
+  if (!body && !attachment) return { ok: false, error: "Typ eerst een bericht." };
   const ctx = await requireContext();
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("squad_messages")
-    .insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body: parsed.data.body })
-    .select("id, user_id, body, created_at")
-    .single();
+
+  const row: Record<string, unknown> = { challenge_id: ctx.challenge.id, user_id: ctx.userId, body };
+  if (attachment?.type === "image" || attachment?.type === "file") {
+    if (!isOwnedMediaPath(attachment.path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldig bestand." };
+    row.attachment_type = attachment.type;
+    row.attachment_path = attachment.path;
+    row.attachment_name = attachment.type === "file" ? attachment.name : null;
+  } else if (attachment?.type === "recipe") {
+    const { data: recipe } = await supabase.from("recipes").select("id, title").eq("id", attachment.refId).eq("challenge_id", ctx.challenge.id).maybeSingle();
+    if (!recipe) return { ok: false, error: "Dit recept bestaat niet meer." };
+    row.attachment_type = "recipe";
+    row.ref_id = attachment.refId;
+    row.attachment_name = String((recipe as { title: string }).title).slice(0, 200);
+  } else if (attachment?.type === "post") {
+    const { data: post } = await supabase.from("wall_posts").select("id, caption").eq("id", attachment.refId).eq("challenge_id", ctx.challenge.id).maybeSingle();
+    if (!post) return { ok: false, error: "Deze foto bestaat niet meer." };
+    row.attachment_type = "post";
+    row.ref_id = attachment.refId;
+    row.attachment_name = ((post as { caption: string | null }).caption ?? "").slice(0, 200) || null;
+  }
+
+  const { data, error } = await supabase.from("squad_messages").insert(row).select(MESSAGE_COLUMNS).single();
   if (error || !data) return { ok: false, error: "Versturen is niet gelukt." };
   await supabase.from("squad_chat_reads").upsert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, last_read_at: new Date().toISOString() }, { onConflict: "challenge_id,user_id" });
   return { ok: true, data: data as ChatMessage };
@@ -52,7 +84,7 @@ export async function loadOlderMessages(before: string): Promise<ActionResult<Ch
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("squad_messages")
-    .select("id, user_id, body, created_at")
+    .select(MESSAGE_COLUMNS)
     .eq("challenge_id", ctx.challenge.id)
     .lt("created_at", before)
     .order("created_at", { ascending: false })

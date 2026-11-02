@@ -330,7 +330,7 @@ export function createDemoClient() {
       from: () => ({
         createSignedUrls: async (paths: string[]) => ({ data: paths.map((path) => ({ path, signedUrl: demoUrl(path), error: null })), error: null }),
         createSignedUrl: async (path: string) => ({ data: { signedUrl: demoUrl(path) }, error: null }),
-        upload: async () => ({ data: { path: "demo-upload" }, error: null }),
+        upload: async (path: string) => ({ data: { path }, error: null }),
         remove: async () => ({ data: [], error: null }),
       }),
     },

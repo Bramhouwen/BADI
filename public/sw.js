@@ -3,7 +3,7 @@
  * offline page for navigations when the network is unavailable. Authenticated
  * pages, Supabase requests and other personal data are never cached.
  */
-const VERSION = "badi-v9";
+const VERSION = "badi-v10";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
