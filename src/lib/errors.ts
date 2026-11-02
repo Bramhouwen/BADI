@@ -26,6 +26,8 @@ export function friendlyError(error: unknown): string {
   if (message.includes("Invalid login credentials")) return "Onjuist e-mailadres of wachtwoord.";
   if (message.includes("Email not confirmed")) return "Bevestig eerst je e-mailadres via de mail die je hebt ontvangen.";
   if (message.includes("Password should be")) return "Kies een wachtwoord van minimaal 8 tekens.";
-  if (message.includes("rate limit")) return "Even geduld, probeer het zo opnieuw.";
+  if (message.toLowerCase().includes("email rate limit") || message.toLowerCase().includes("over_email_send_rate_limit"))
+    return "De mailserver laat maar een paar mails per uur toe. Maak een account met een wachtwoord, of probeer de mail over een uur opnieuw.";
+  if (message.includes("rate limit")) return "Te veel pogingen achter elkaar. Probeer het over een paar minuten opnieuw.";
   return message || "Er ging iets mis. Probeer het opnieuw.";
 }
