@@ -9,7 +9,7 @@ import { CoachChat, type CoachMessage } from "./coach-chat";
 
 export const metadata = { title: "Baddy" };
 
-async function Content({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+async function Content({ searchParams }: { searchParams: Promise<{ q?: string | string[]; send?: string | string[] }> }) {
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   const supabase = await createClient();
   const { data } = await supabase.from("coach_messages").select("id, role, body, refs, created_at").eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(60);
@@ -17,10 +17,10 @@ async function Content({ searchParams }: { searchParams: Promise<{ q?: string | 
     .reverse()
     .map((m) => ({ id: m.id, role: m.role, body: m.body, refs: parseRefs(m.refs), created_at: m.created_at }));
   const prefill = typeof sp.q === "string" ? sp.q.slice(0, 400) : "";
-  return <CoachChat initial={messages} prefill={prefill} available={isDemo() || hasCoachKey()} />;
+  return <CoachChat initial={messages} prefill={prefill} autoSend={sp.send === "1" && prefill.length > 0} available={isDemo() || hasCoachKey()} />;
 }
 
-export default function CoachPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+export default function CoachPage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; send?: string | string[] }> }) {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Content searchParams={searchParams} />

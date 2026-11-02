@@ -81,6 +81,6 @@ Meldingen zijn in-app (het belletje rechtsboven). Push-notificaties zijn bewust 
 
 1. Maak een API-sleutel aan op console.anthropic.com en zet een tegoed of betaalmethode klaar.
 2. Voeg in Vercel onder Settings, Environment Variables `ANTHROPIC_API_KEY` toe voor Production (en Preview als je wilt), zonder `NEXT_PUBLIC_`.
-3. Redeploy. Zonder sleutel toont Baddy een melding dat hij nog niet gekoppeld is.
+3. Redeploy. Zonder sleutel toont Baddy een melding dat ze nog niet gekoppeld is.
 
 Baddy gebruikt `claude-opus-5-5`. Per lid geldt een limiet van 40 vragen per dag en in de squadchat 15 antwoorden per dag, om kosten te begrenzen.

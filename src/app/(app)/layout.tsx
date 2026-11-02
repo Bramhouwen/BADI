@@ -2,6 +2,7 @@ import { AppHeader } from "@/components/app/header";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { SquadUnreadDot } from "@/components/app/squad-unread";
+import { BaddyBubble } from "@/components/coach/baddy-bubble";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -10,6 +11,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <main className="flex-1" style={{ paddingBottom: "calc(var(--nav-h) + var(--sab) + 20px)" }}>
         {children}
       </main>
+      <BaddyBubble />
       <BottomNav
         squadBadge={
           <Suspense fallback={null}>

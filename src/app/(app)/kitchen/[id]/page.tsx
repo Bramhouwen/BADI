@@ -33,7 +33,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   const member = squad.find((m) => m.user_id === recipe.user_id)?.profile;
   const byCoach = Boolean((recipe as { by_coach?: boolean }).by_coach);
   const author = byCoach ? { display_name: "Baddy", avatar_path: null } : member;
-  const authorAvatar = byCoach ? "/brand/baddy.png" : await signedUrl("avatars", member?.avatar_path);
+  const authorAvatar = byCoach ? "/brand/baddy.jpg" : await signedUrl("avatars", member?.avatar_path);
   const reactions = (reactionRows ?? []) as Pick<PostReaction, "user_id" | "reaction">[];
   const counts: Partial<Record<ReactionKey, number>> = {};
   for (const r of reactions) counts[r.reaction] = (counts[r.reaction] ?? 0) + 1;

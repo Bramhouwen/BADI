@@ -26,7 +26,7 @@ type CoachEvent =
   | { type: "done"; id: string | null }
   | { type: "error"; message: string };
 
-export const BADDY_AVATAR = "/brand/baddy.png";
+export const BADDY_AVATAR = "/brand/baddy.jpg";
 
 const STARTERS = [
   "Maak drie ontbijtjes zonder toegevoegde suikers",
@@ -54,13 +54,14 @@ function RefCard({ refItem }: { refItem: StoredRef }) {
   );
 }
 
-export function CoachChat({ initial, prefill, available }: { initial: CoachMessage[]; prefill: string; available: boolean }) {
+export function CoachChat({ initial, prefill, autoSend = false, available }: { initial: CoachMessage[]; prefill: string; autoSend?: boolean; available: boolean }) {
   const [messages, setMessages] = useState<CoachMessage[]>(initial);
   const [draft, setDraft] = useState(prefill);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<"thinking" | "working" | null>(null);
   const [focused, setFocused] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const autoSent = useRef(false);
   const router = useRouter();
   const toast = useToast();
 
@@ -142,6 +143,16 @@ export function CoachChat({ initial, prefill, available }: { initial: CoachMessa
     }
   }
 
+  // A question from the Home bar or the bubble is sent once, and the query is removed so a refresh does not resend it.
+  useEffect(() => {
+    if (!autoSend || autoSent.current) return;
+    autoSent.current = true;
+    // Clean the URL without a navigation, so the page is not re-rendered mid-answer.
+    window.history.replaceState(window.history.state, "", "/coach");
+    setTimeout(() => void ask(prefill), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSend]);
+
   async function clear() {
     if (!window.confirm("Wil je je gesprek met Baddy wissen? Recepten en schema's blijven staan.")) return;
     const r = await clearCoachConversation();
@@ -152,7 +163,7 @@ export function CoachChat({ initial, prefill, available }: { initial: CoachMessa
   return (
     <div className="mx-auto w-full max-w-lg px-5 pt-0.5">
       <div className="mb-4 flex items-center gap-3">
-        <Avatar name="Baddy" src={BADDY_AVATAR} size="lg" className="h-14 w-14" />
+        <Avatar name="Baddy" src={BADDY_AVATAR} size="lg" className="h-14 w-14 ring-[3px] ring-sage/60" />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-[27px] leading-tight">Baddy</h1>
           <p className="text-[12.5px] leading-snug text-muted">Coach van de squad. Kent de zeven principes en jouw cijfers.</p>

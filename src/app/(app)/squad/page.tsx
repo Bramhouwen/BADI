@@ -70,7 +70,7 @@ async function Content() {
   });
   const chatMembers: Record<string, ChatMember> = {
     ...Object.fromEntries(members.map((m) => [m.id, { name: firstName(m.name), avatar: m.avatar }])),
-    [BADDY_ID]: { name: "Baddy", avatar: "/brand/baddy.png" },
+    [BADDY_ID]: { name: "Baddy", avatar: "/brand/baddy.jpg" },
   };
 
   return (
@@ -81,7 +81,7 @@ async function Content() {
         action={
           <div className="flex items-center gap-2">
             <Link href="/coach" className="flex h-10 items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-3 text-[12.5px] font-medium text-ink shadow-sm hover:bg-blush" aria-label="Baddy de Coach">
-              <Avatar name="Baddy" src="/brand/baddy.png" size="xs" className="h-8 w-8" />
+              <Avatar name="Baddy" src="/brand/baddy.jpg" size="xs" className="h-8 w-8" />
               Baddy
             </Link>
             <Link href="/wall" className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="The Wall">
