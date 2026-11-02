@@ -48,24 +48,39 @@ export function CheckinBoard(props: Props) {
   const score = dailyScore(current, joker);
   const jokersLeft = Math.max(0, maxJokers - jokers.length);
 
-  function toggle(key: ActivityKey) {
-    const on = !current.includes(key);
-    if (!on && auto[date]?.[key]) {
-      toast(auto[date][key] === "water" ? "Dit staat aan via je water. Pas je water aan om het te wijzigen." : "Dit staat aan via een training in Fitness.", "default");
-      return;
+  function toggle(key: ActivityKey, day: string = date): boolean {
+    const on = !(acts[day] ?? []).includes(key);
+    if (!on && auto[day]?.[key]) {
+      toast(auto[day][key] === "water" ? "Dit staat aan via je water. Pas je water aan om het te wijzigen." : "Dit staat aan via een training in Fitness. Verwijder die training om dit uit te zetten.", "default");
+      return false;
     }
     const before = acts;
-    setActs((a) => ({ ...a, [date]: on ? [...(a[date] ?? []), key] : (a[date] ?? []).filter((k) => k !== key) }));
+    setActs((a) => ({ ...a, [day]: on ? [...(a[day] ?? []), key] : (a[day] ?? []).filter((k) => k !== key) }));
     start(async () => {
-      const r = await toggleActivity({ date, key, on });
+      const r = await toggleActivity({ date: day, key, on });
       if (!r.ok) {
         setActs(before);
         toast(r.error, "error");
         return;
       }
-      setActs((a) => ({ ...a, [date]: r.data!.activities }));
+      setActs((a) => ({ ...a, [day]: r.data!.activities }));
       setStreak(r.data!.stats.current);
     });
+    return true;
+  }
+
+  /** Week cell: today cycles empty, planned, done; yesterday toggles done; other days only plan. */
+  function tapCell(day: string, kind: TrainingKind, isPlanned: boolean, done: boolean) {
+    if (!dates.includes(day)) return plan(day, kind);
+    if (done) {
+      if (toggle(kind, day) && isPlanned && day >= today) plan(day, kind);
+      return;
+    }
+    if (isPlanned || day < today) {
+      toggle(kind, day);
+      return;
+    }
+    plan(day, kind);
   }
 
   function setJoker(on: boolean) {
@@ -215,18 +230,24 @@ export function CheckinBoard(props: Props) {
                   </span>
                   <span className="min-w-0">
                     <span className="block text-[14.5px] font-medium text-text">{meta(kind).label}</span>
-                    <span className="block text-[11.5px] text-muted">{via === "workout" ? "Vastgelegd in Fitness" : isPlanned ? "Gepland" : "Niet gepland"}</span>
+                    <span className="block text-[11.5px] text-muted">{via === "workout" ? "Vastgelegd in Fitness" : done ? "Afgevinkt" : isPlanned ? "Gepland" : "Niet gepland"}</span>
                   </span>
                 </button>
                 {!done ? (
-                  <Link href={kind === "run" ? "/fitness/start/run" : "/fitness/start"} className="flex shrink-0 items-center gap-0.5 rounded-full bg-white px-2.5 py-1 text-[11.5px] font-medium text-ink shadow-sm">
-                    Vastleggen <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  </Link>
+                  <button type="button" onClick={() => toggle(kind)} className="espresso shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium shadow-none">
+                    Afvinken
+                  </button>
                 ) : null}
               </li>
             );
           })}
         </ul>
+        <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-muted">
+          Getraind met een andere app? Afvinken telt mee voor je weekdoel. Tijd en afstand bewaren kan in{" "}
+          <Link href="/fitness/start" className="inline-flex items-center font-medium text-ink underline-offset-2 hover:underline">
+            Fitness <ChevronRight className="h-3 w-3" strokeWidth={1.8} />
+          </Link>
+        </p>
       </section>
 
       <section aria-label="Week">
@@ -266,7 +287,8 @@ export function CheckinBoard(props: Props) {
 
           <ol className="grid grid-cols-7 gap-1.5" aria-label="Plan je trainingen">
             {progress.days.map((d) => {
-              const past = d.date < today;
+              const editable = dates.includes(d.date);
+              const past = d.date < today && !editable;
               const outside = d.date < challengeStart || d.date > challengeEnd;
               return (
                 <li key={d.date} className={cn("flex flex-col items-center gap-1", outside && "opacity-40")}>
@@ -280,7 +302,7 @@ export function CheckinBoard(props: Props) {
                         key={kind}
                         type="button"
                         disabled={past || outside}
-                        onClick={() => plan(d.date, kind)}
+                        onClick={() => tapCell(d.date, kind, isPlanned, done)}
                         aria-pressed={isPlanned}
                         aria-label={`${TRAINING_LABEL[kind]} ${formatDateNl(d.date, { weekday: "long", day: "numeric", month: "long" })}${done ? ", gedaan" : isPlanned ? ", gepland" : ""}`}
                         className={cn(
@@ -298,7 +320,7 @@ export function CheckinBoard(props: Props) {
               );
             })}
           </ol>
-          <p className="text-[11px] leading-snug text-muted">Tik op R (hardlopen) of K (kracht) om een dag te plannen. Groen gevuld is gedaan.</p>
+          <p className="text-[11px] leading-snug text-muted">Tik op R (hardlopen) of K (kracht) om te plannen. Vandaag en gisteren tik je een geplande training nog een keer om hem af te vinken. Groen gevuld is gedaan.</p>
         </div>
       </section>
     </div>
