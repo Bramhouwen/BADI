@@ -60,6 +60,14 @@ class Query implements PromiseLike<Result> {
     this.filters.push((r) => String(r[col]) <= String(val));
     return this;
   }
+  gt(col: string, val: unknown) {
+    this.filters.push((r) => String(r[col]) > String(val));
+    return this;
+  }
+  lt(col: string, val: unknown) {
+    this.filters.push((r) => String(r[col]) < String(val));
+    return this;
+  }
   or(expr: string) {
     // Supports the one pattern the app uses: "owner_user_id.is.null,owner_user_id.eq.<id>"
     const parts = expr.split(",").map((p) => p.trim());

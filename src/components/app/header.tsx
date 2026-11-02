@@ -43,7 +43,7 @@ async function HeaderStatus() {
 
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-30" style={{ paddingTop: "var(--sat)" }}>
+    <header className="sticky top-0 z-30 bg-[#f6ece4]/90 backdrop-blur-md" style={{ paddingTop: "var(--sat)" }}>
       <div className="mx-auto flex h-[60px] max-w-lg items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2.5" aria-label="BADI home">
           <Image src="/brand/runner-dark.png" alt="BADI, run squat" width={34} height={30} priority className="h-[26px] w-auto" />

@@ -162,6 +162,22 @@ export function buildSeed(): Store {
     { user_id: NOOR, share_workout_counts: true, share_minutes_distance: false, share_active_days: true, share_checkins: true, share_records: false, share_recent_workouts: true, updated_at: iso(start) },
   ];
 
+  const squad_messages: Row[] = [
+    [SAM, 6, 19, 12, "Zondag 9:00 verzamelen bij het park voor 5 km?"],
+    [NOOR, 6, 19, 20, "Ik ben erbij."],
+    [ALEX, 6, 20, 5, "Ik ook, maar ik loop rustig achteraan."],
+    [DEMO_USER_ID, 6, 20, 40, "Top, ik neem de route van vorige week."],
+    [SAM, 2, 7, 55, "Lower body gedaan, squat 55 kg x 8."],
+    [NOOR, 2, 12, 30, "Lunchwandeling van 3 km. Zon!"],
+    [DEMO_USER_ID, 1, 18, 10, "Wie heeft er zin in een avondloop morgen?"],
+    [ALEX, 1, 18, 25, "Hoe laat?"],
+    [DEMO_USER_ID, 1, 18, 26, "19:30 bij mij."],
+    [SAM, 0, 7, 45, "Nieuwe foto op de Wall, kijk maar."],
+    [NOOR, 0, 8, 5, "Recept van vanavond staat in de Kitchen: linzen dahl."],
+  ].map(([user_id, n, h, mi, body]) => ({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id, body, created_at: iso(d(n as number), h as number, mi as number) }));
+
+  const squad_chat_reads: Row[] = [];
+
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
 
@@ -177,6 +193,8 @@ export function buildSeed(): Store {
     exercise_sets,
     checkin_sources,
     stat_sharing,
+    squad_messages,
+    squad_chat_reads,
     challenges,
     memberships,
     invitations: [],

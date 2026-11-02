@@ -16,6 +16,7 @@ import { SectionTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { ActivityGrid } from "./activity-grid";
+import { ComplimentButton } from "./compliment-button";
 
 export const metadata = { title: "Squad-profiel" };
 
@@ -90,6 +91,8 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
           <p className="mt-1 text-[12.5px] text-ink/80">{status ?? (isMe ? "Nog geen activiteit" : "Nog geen gedeelde activiteit")}</p>
         </div>
       </section>
+
+      {!isMe ? <ComplimentButton receiver={{ id: userId, name }} /> : null}
 
       {isMe ? (
         <p className="flex items-start gap-2 px-0.5 text-[12px] leading-snug text-muted">

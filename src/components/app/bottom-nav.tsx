@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Home, Flame, ChefHat, Dumbbell, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ function useKeyboardOpen() {
   return open;
 }
 
-function NavItems({ pathname }: { pathname: string | null }) {
+function NavItems({ pathname, badges }: { pathname: string | null; badges?: Partial<Record<string, ReactNode>> }) {
   return (
     <ul className="flex items-stretch px-1.5 py-1">
       {items.map(({ href, label, icon: Icon }) => {
@@ -47,7 +47,10 @@ function NavItems({ pathname }: { pathname: string | null }) {
                 active ? "text-paper" : "text-paper/55 hover:text-paper/85",
               )}
             >
-              <Icon className="h-[20px] w-[20px]" strokeWidth={active ? 1.8 : 1.5} aria-hidden />
+              <span className="relative">
+                <Icon className="h-[20px] w-[20px]" strokeWidth={active ? 1.8 : 1.5} aria-hidden />
+                {badges?.[href]}
+              </span>
               <span>{label}</span>
             </Link>
           </li>
@@ -58,12 +61,13 @@ function NavItems({ pathname }: { pathname: string | null }) {
 }
 
 /** Reads the URL at request time; streams in behind Suspense so the shell stays static. */
-function ActiveNavItems() {
+function ActiveNavItems({ badges }: { badges?: Partial<Record<string, ReactNode>> }) {
   const pathname = usePathname();
-  return <NavItems pathname={pathname} />;
+  return <NavItems pathname={pathname} badges={badges} />;
 }
 
-export function BottomNav() {
+export function BottomNav({ squadBadge }: { squadBadge?: ReactNode }) {
+  const badges = { "/squad": squadBadge };
   const keyboardOpen = useKeyboardOpen();
 
   return (
@@ -73,8 +77,8 @@ export function BottomNav() {
       style={{ paddingBottom: "calc(var(--sab) + 8px)" }}
     >
       <div className="espresso pointer-events-auto w-full max-w-lg rounded-[24px]">
-        <Suspense fallback={<NavItems pathname={null} />}>
-          <ActiveNavItems />
+        <Suspense fallback={<NavItems pathname={null} badges={badges} />}>
+          <ActiveNavItems badges={badges} />
         </Suspense>
       </div>
     </nav>
