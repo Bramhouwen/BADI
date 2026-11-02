@@ -6,8 +6,8 @@ import { loadPlans } from "@/lib/fitness/data";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconBadge } from "@/components/ui/icon-badge";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
+import { WorkoutRow } from "@/components/fitness/workout-card";
 import { AskBaddyLink } from "@/components/coach/ask-baddy";
 
 export const metadata = { title: "Mijn schema's" };
@@ -33,23 +33,29 @@ async function Content() {
         />
       ) : (
         <>
-          <ul className="space-y-2">
+          <div className="space-y-6">
             {plans.map((p) => (
-              <li key={p.id}>
-                <Link href={`/fitness/plans/${p.id}`} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-2.5 pr-3 hover:bg-blush/40">
-                  <IconBadge icon={ClipboardList} size="md" />
+              <section key={p.id} aria-label={p.name}>
+                <Link href={`/fitness/plans/${p.id}`} className="mb-2.5 flex items-center gap-2 px-0.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium text-text">{p.name}</span>
+                    <span className="block truncate font-display text-[20px] leading-tight text-text">{p.name}</span>
                     <span className="block truncate text-[11.5px] text-muted">
                       {p.templates.length} {p.templates.length === 1 ? "workout" : "workouts"}
                       {p.goal ? ` · ${p.goal}` : ""}
                     </span>
                   </span>
-                  <ChevronRight className="h-4 w-4 text-muted" strokeWidth={1.6} />
+                  <span className="flex shrink-0 items-center gap-0.5 text-[12.5px] font-medium text-muted">
+                    Bewerken <ChevronRight className="h-4 w-4" strokeWidth={1.6} />
+                  </span>
                 </Link>
-              </li>
+                {p.templates.length > 0 ? (
+                  <WorkoutRow items={p.templates.map((template) => ({ template }))} />
+                ) : (
+                  <p className="px-0.5 text-[12.5px] text-muted">Nog geen workouts in dit schema.</p>
+                )}
+              </section>
             ))}
-          </ul>
+          </div>
           <Link href="/fitness/plans/new" className="espresso inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-[13.5px] font-medium">
             <Plus className="h-4 w-4" strokeWidth={1.8} /> Nieuw schema
           </Link>

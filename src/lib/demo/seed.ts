@@ -217,6 +217,27 @@ export function buildSeed(): Store {
   for (const [hi, days] of [[0, [0, 1, 2, 4]], [1, [1, 2, 3, 5, 6]], [2, [1, 2]]] as [number, number[]][])
     for (const n of days) custom_habit_logs.push({ habit_id: custom_habits[hi].id, user_id: custom_habits[hi].user_id, log_date: d(n), created_at: iso(d(n), 8) });
 
+  // One plan with two strength workouts, so the workout cards and pages have content.
+  const planId = demoId();
+  const workout_plans: Row[] = [{ id: planId, user_id: DEMO_USER_ID, name: "Kracht 3x per week", description: null, goal: "Sterker worden", created_at: iso(start), updated_at: iso(d(1)) }];
+  const workout_templates: Row[] = [
+    { id: demoId(), plan_id: planId, name: "Full body", activity_type: "strength", sort_order: 0, created_at: iso(start) },
+    { id: demoId(), plan_id: planId, name: "Benen en billen", activity_type: "strength", sort_order: 1, created_at: iso(start) },
+  ];
+  const template_exercises: Row[] = (
+    [
+      [0, "Squat", 4, 8, 40],
+      [0, "Bench Press", 3, 10, 30],
+      [0, "Lat Pulldown", 3, 10, 35],
+      [0, "Shoulder Press", 3, 10, 8],
+      [0, "Plank", 3, null, null],
+      [1, "Romanian Deadlift", 3, 10, 40],
+      [1, "Lunges", 3, 12, 8],
+      [1, "Leg Press", 3, 12, 80],
+      [1, "Calf Raise", 3, 15, 10],
+    ] as [number, string, number, number | null, number | null][]
+  ).map(([ti, name, target_sets, target_reps, target_weight_kg], i) => ({ id: demoId(), template_id: workout_templates[ti].id, exercise_id: exId(name), sort_order: i, target_sets, target_reps, target_weight_kg }));
+
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
 
@@ -224,9 +245,9 @@ export function buildSeed(): Store {
     profiles,
     water_entries,
     exercises,
-    workout_plans: [],
-    workout_templates: [],
-    template_exercises: [],
+    workout_plans,
+    workout_templates,
+    template_exercises,
     workout_sessions,
     workout_exercises,
     exercise_sets,

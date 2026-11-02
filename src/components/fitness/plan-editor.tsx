@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { ExerciseDemoButton } from "./exercise-demo";
 import { ArrowDown, ArrowUp, Copy, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,6 @@ import {
   moveTemplate,
   moveTemplateExercise,
   removeTemplateExercise,
-  startFromTemplate,
   updatePlan,
   updateTemplate,
   updateTemplateExercise,
@@ -239,9 +239,9 @@ function TemplateCard({
             <Plus className="h-4 w-4" strokeWidth={1.7} /> Oefening
           </Button>
         ) : null}
-        <Button size="sm" className="flex-1" onClick={() => run(() => startFromTemplate(template.id))} loading={pending}>
-          <Play className="h-4 w-4" strokeWidth={1.7} /> Start deze workout
-        </Button>
+        <Link href={`/fitness/workouts/${template.id}`} className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-ink/10 bg-white text-[13px] font-medium text-ink shadow-sm hover:bg-blush">
+          <Play className="h-4 w-4" strokeWidth={1.7} /> Bekijk workout
+        </Link>
       </div>
       <ExercisePicker open={picker} onClose={() => setPicker(false)} exercises={exercises} onPick={(e) => run(() => addTemplateExercise(template.id, { exercise_id: e.id, target_sets: 3, target_reps: 10, target_weight_kg: null }))} />
     </Card>

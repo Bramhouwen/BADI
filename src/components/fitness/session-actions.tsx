@@ -52,11 +52,12 @@ export function SessionActions({ id, editHref }: { id: string; editHref: string 
 type StartTarget = string | (() => Promise<{ ok: boolean; error?: string } | void>);
 
 /** Compact pair: start live (with timer) or log a finished workout afterwards. A target is a link or a server action. */
-export function StartChoice({ start: startTarget, after }: { start: StartTarget; after: StartTarget }) {
+export function StartChoice({ start: startTarget, after, size = "sm" }: { start: StartTarget; after: StartTarget; size?: "sm" | "lg" }) {
   const [pending, run] = useTransition();
   const toast = useToast();
-  const pill = "inline-flex h-9 items-center justify-center rounded-full px-3 text-[12.5px] font-medium transition disabled:opacity-60";
+  const pill = size === "lg" ? "inline-flex h-12 flex-1 items-center justify-center rounded-full px-4 font-medium transition disabled:opacity-60" : "inline-flex h-9 items-center justify-center rounded-full px-3 text-[12.5px] font-medium transition disabled:opacity-60";
   const styles = { start: `${pill} espresso shadow-none`, after: `${pill} border border-ink/10 bg-white text-ink shadow-sm hover:bg-blush` };
+  const labels = size === "lg" ? ["Start training", "Achteraf invullen"] : ["Start", "Achteraf"];
   const render = (target: StartTarget, label: string, cls: string) =>
     typeof target === "string" ? (
       <Link href={target} className={cls}>
@@ -79,9 +80,9 @@ export function StartChoice({ start: startTarget, after }: { start: StartTarget;
     );
   return (
     // Buttons inherit font from their parent (globals.css), so the size sits on the wrapper.
-    <div className="flex shrink-0 gap-1.5 text-[12.5px] font-medium">
-      {render(startTarget, "Start", styles.start)}
-      {render(after, "Achteraf", styles.after)}
+    <div className={size === "lg" ? "flex w-full gap-2 text-[14px] font-medium" : "flex shrink-0 gap-1.5 text-[12.5px] font-medium"}>
+      {render(startTarget, labels[0], styles.start)}
+      {render(after, labels[1], styles.after)}
     </div>
   );
 }

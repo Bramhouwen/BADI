@@ -12,6 +12,8 @@ import { formatDuration, formatKg, formatVolume, muscleLabel, sessionVolumeKg, t
 import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/data";
 import { finishStrengthSession, saveStrengthDraft, type DraftExercise, type DraftSet, type StrengthDraft } from "@/app/actions/fitness";
 import { ExercisePicker } from "./exercise-picker";
+import { WorkoutPlayer } from "./workout-player";
+import { ChipTabs } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
 
@@ -55,6 +57,12 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
   const [isDirty, setIsDirty] = useState(false);
   const toast = useToast();
   const reduce = useReducedMotion();
+  // A live workout opens on one exercise at a time; the list stays one tap away for editing.
+  const [view, setView] = useState<"player" | "list">(mode === "draft" && session.exercises.length > 0 ? "player" : "list");
+  const [current, setCurrent] = useState(() => {
+    const i = session.exercises.findIndex((e) => e.sets.some((x) => !x.completed));
+    return i < 0 ? 0 : i;
+  });
 
   const timerKey = `badi:strength-timer:${session.id}`;
   // Timestamp-based timer: the start moment is persisted so a reload or background tab keeps counting correctly.
@@ -122,7 +130,10 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
   function addExercise(e: ExerciseRow) {
     const prev = last[e.id];
     const sets = prev ? prev.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, completed: false })) : [{ weight_kg: null, repetitions: null, completed: false }];
-    setItems((l) => [...l, { key: `${e.id}-${Date.now()}`, exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, notes: "", sets }]);
+    setItems((l) => {
+      if (view === "player") setCurrent(l.length);
+      return [...l, { key: `${e.id}-${Date.now()}`, exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, notes: "", sets }];
+    });
     mark();
   }
 
@@ -130,6 +141,16 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     setItems((l) => l.map((x, k) => (k === i ? { ...x, ...patch } : x)));
     mark();
   }
+
+  function toggleSet(i: number, n: number) {
+    setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: x.sets.map((y, m) => (m === n ? { ...y, completed: !y.completed } : y)) } : x)));
+    mark();
+  }
+
+  const prevLabel = (exerciseId: string) => {
+    const prev = last[exerciseId];
+    return prev ? prev.sets.map((s) => `${s.weight_kg !== null ? formatKg(s.weight_kg) : "lichaam"} × ${s.repetitions ?? "–"}`).join(", ") : undefined;
+  };
 
   function move(i: number, dir: -1 | 1) {
     setItems((l) => {
@@ -204,6 +225,29 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
         </div>
       </Card>
 
+      {live && items.length > 0 ? (
+        <ChipTabs
+          label="Weergave"
+          value={view}
+          onChange={setView}
+          options={[
+            { key: "player", label: "Per oefening" },
+            { key: "list", label: "Alle oefeningen" },
+          ]}
+        />
+      ) : null}
+
+      {live && view === "player" && items.length > 0 ? (
+        <WorkoutPlayer
+          items={items}
+          index={Math.min(current, items.length - 1)}
+          onIndex={(i) => setCurrent(Math.max(0, Math.min(items.length - 1, i)))}
+          onToggle={toggleSet}
+          onEdit={() => setView("list")}
+          previous={prevLabel(items[Math.min(current, items.length - 1)].exercise_id)}
+        />
+      ) : (
+      <>
       <div className="grid grid-cols-[1fr_156px] gap-3">
         <div>
           <Label htmlFor="title">Naam</Label>
@@ -225,7 +269,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                   <p className="truncate text-[15px] font-medium text-text">{ex.name}</p>
                   <p className="text-[11px] text-muted">
                     {muscleLabel(ex.muscle_group)}
-                    {prev ? ` · vorige keer: ${prev.sets.map((s) => `${s.weight_kg !== null ? formatKg(s.weight_kg) : "lichaam"} × ${s.repetitions ?? "–"}`).join(", ")}` : ""}
+                    {prev ? ` · vorige keer: ${prevLabel(ex.exercise_id)}` : ""}
                   </p>
                 </div>
                 <ExerciseDemoButton name={ex.name} subtitle={muscleLabel(ex.muscle_group)} />
@@ -308,6 +352,9 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
           );
         })}
       </ol>
+
+      </>
+      )}
 
       <Button variant="secondary" className="w-full" onClick={() => setPicker(true)}>
         <Plus className="h-4 w-4" strokeWidth={1.8} /> Oefening toevoegen

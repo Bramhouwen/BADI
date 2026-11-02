@@ -4,22 +4,34 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { motionFor } from "@/lib/exercise-motion/library";
+import { exerciseMedia } from "@/lib/exercise-video";
 import { ExerciseFigure } from "./exercise-figure";
+import { ExerciseVideo } from "./exercise-video";
 import { cn } from "@/lib/utils";
 
-/** Sheet with the moving figure and the how-to for one exercise. */
+/** True when there is a filmed clip or a moving figure for this exercise. */
+export function hasDemo(name: string): boolean {
+  return Boolean(exerciseMedia(name) || motionFor(name));
+}
+
+/** Sheet with the demo clip (or the moving figure) and the how-to for one exercise. */
 export function ExerciseDemoSheet({ name, subtitle, open, onClose }: { name: string; subtitle?: string; open: boolean; onClose: () => void }) {
   const motion = motionFor(name);
-  if (!motion) return null;
+  const media = exerciseMedia(name);
+  if (!motion && !media) return null;
   return (
     <Sheet open={open} onClose={onClose} title={name}>
       <div className="space-y-4 pb-2">
         {subtitle ? <p className="-mt-2 text-[12.5px] text-muted">{subtitle}</p> : null}
-        <div className="rounded-[22px] bg-[#fbf3ec] ring-1 ring-ink/[0.05]">
-          <ExerciseFigure motion={motion} label={`Uitvoering van ${name}`} className="mx-auto block h-[240px] w-full max-w-[300px]" />
-        </div>
+        {media ? (
+          <ExerciseVideo media={media} label={`Uitvoering van ${name}`} className="aspect-square w-full rounded-[22px]" />
+        ) : motion ? (
+          <div className="rounded-[22px] bg-[#fbf3ec] ring-1 ring-ink/[0.05]">
+            <ExerciseFigure motion={motion} label={`Uitvoering van ${name}`} className="mx-auto block h-[240px] w-full max-w-[300px]" />
+          </div>
+        ) : null}
         <ol className="space-y-2">
-          {motion.cues.map((c, i) => (
+          {(motion?.cues ?? []).map((c, i) => (
             <li key={i} className="flex gap-2.5">
               <span className="mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink">
                 <span className="text-[11px] font-semibold text-paper">{i + 1}</span>
@@ -36,7 +48,7 @@ export function ExerciseDemoSheet({ name, subtitle, open, onClose }: { name: str
 /** Small play button next to an exercise name; renders nothing for exercises without a demo. */
 export function ExerciseDemoButton({ name, subtitle, className }: { name: string; subtitle?: string; className?: string }) {
   const [open, setOpen] = useState(false);
-  if (!motionFor(name)) return null;
+  if (!hasDemo(name)) return null;
   return (
     <>
       <button
@@ -56,8 +68,11 @@ export function ExerciseDemoButton({ name, subtitle, className }: { name: string
   );
 }
 
-/** Still thumbnail of an exercise (start position with the end position faintly behind it). */
+/** Still thumbnail of an exercise: the first frame of its clip, or the figure's start and end position. */
 export function ExerciseThumb({ name, className }: { name: string; className?: string }) {
+  const media = exerciseMedia(name);
+  // eslint-disable-next-line @next/next/no-img-element -- small static posters, already sized for this use
+  if (media) return <img src={media.poster} alt="" loading="lazy" decoding="async" className={cn("bg-[#efe3d6] object-cover", className)} />;
   const motion = motionFor(name);
   if (!motion) return null;
   return <ExerciseFigure motion={motion} animate={false} label={name} className={className} />;

@@ -268,3 +268,17 @@ export function timerElapsed(state: TimerState, now: number = Date.now()): numbe
 export function daysAgo(date: DateKey, today: DateKey): number {
   return diffDays(date, today);
 }
+
+/** Rough time for a strength workout: about 45 seconds of work and 90 seconds of rest per set, rounded to 5 minutes. */
+export const SECONDS_PER_SET = 135;
+
+export function templateSummary(exercises: { target_sets: number }[]): { exercises: number; sets: number; minutes: number } {
+  const sets = exercises.reduce((n, e) => n + Math.max(0, e.target_sets), 0);
+  return { exercises: exercises.length, sets, minutes: sets === 0 ? 0 : Math.max(5, Math.round((sets * SECONDS_PER_SET) / 60 / 5) * 5) };
+}
+
+/** "3 × 10 · 20 kg", "3 × 10" or "3 sets". */
+export function targetLabel(t: { target_sets: number; target_reps: number | null; target_weight_kg: number | null }): string {
+  const base = t.target_reps ? `${t.target_sets} × ${t.target_reps}` : `${t.target_sets} ${t.target_sets === 1 ? "set" : "sets"}`;
+  return t.target_weight_kg ? `${base} · ${formatKg(t.target_weight_kg)}` : base;
+}

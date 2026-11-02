@@ -9,14 +9,15 @@ import { SectionTitle } from "@/components/ui/card";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
 import { StartChoice } from "@/components/fitness/session-actions";
-import { startFromTemplate, startStrengthSession } from "@/app/actions/fitness";
+import { WorkoutRow } from "@/components/fitness/workout-card";
+import { startStrengthSession } from "@/app/actions/fitness";
 
 export const metadata = { title: "Training starten" };
 
 async function Content() {
   const ctx = await requireContext();
   const plans = await loadPlans(ctx);
-  const templates = plans.flatMap((p) => p.templates.map((t) => ({ ...t, planName: p.name }))).slice(0, 6);
+  const templates = plans.flatMap((p) => p.templates.map((template) => ({ template, planName: p.name }))).slice(0, 8);
 
   return (
     <Page className="space-y-5">
@@ -44,17 +45,7 @@ async function Content() {
       {templates.length > 0 ? (
         <section>
           <SectionTitle action={<Link href="/fitness/plans" className="text-[13px] text-muted">{"Alle schema's"}</Link>}>{"Uit je schema's"}</SectionTitle>
-          <ul className="space-y-2">
-            {templates.map((t) => (
-              <li key={t.id} className="glass flex items-center gap-3 rounded-[18px] py-2.5 pl-3.5 pr-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium text-text">{t.name}</span>
-                  <span className="block text-[11.5px] text-muted">{t.planName}</span>
-                </span>
-                <StartChoice start={startFromTemplate.bind(null, t.id, false)} after={startFromTemplate.bind(null, t.id, true)} />
-              </li>
-            ))}
-          </ul>
+          <WorkoutRow items={templates} />
         </section>
       ) : null}
     </Page>

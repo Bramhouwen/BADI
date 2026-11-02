@@ -203,3 +203,12 @@ export async function loadPlan(ctx: AppContext, id: string): Promise<PlanDetail 
   const plans = await loadPlans(ctx);
   return plans.find((p) => p.id === id) ?? null;
 }
+
+export async function loadTemplate(ctx: AppContext, id: string): Promise<{ plan: PlanDetail; template: TemplateRow } | null> {
+  const plans = await loadPlans(ctx);
+  for (const plan of plans) {
+    const template = plan.templates.find((t) => t.id === id);
+    if (template) return { plan, template };
+  }
+  return null;
+}

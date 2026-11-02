@@ -5,13 +5,14 @@ import { ArrowRight, Dumbbell, History, TrendingUp } from "lucide-react";
 import { requireContext } from "@/lib/data";
 import { todayKey } from "@/lib/dates";
 import { formatDistance, formatMinutes, weekStats } from "@/lib/fitness";
-import { loadSessions } from "@/lib/fitness/data";
+import { loadPlans, loadSessions } from "@/lib/fitness/data";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
 import { SessionCard } from "@/components/fitness/session-card";
+import { WorkoutRow } from "@/components/fitness/workout-card";
 
 export const metadata = { title: "Fitness" };
 
@@ -27,7 +28,8 @@ function Stat({ value, label }: { value: string; label: string }) {
 async function Content() {
   const ctx = await requireContext();
   const today = todayKey(new Date(), ctx.challenge.timezone);
-  const [sessions, drafts] = await Promise.all([loadSessions(ctx, { status: "completed" }), loadSessions(ctx, { status: "draft", limit: 3 })]);
+  const [sessions, drafts, plans] = await Promise.all([loadSessions(ctx, { status: "completed" }), loadSessions(ctx, { status: "draft", limit: 3 }), loadPlans(ctx)]);
+  const workouts = plans.flatMap((p) => p.templates.map((template) => ({ template, planName: p.name }))).slice(0, 8);
   const week = weekStats(sessions, today);
   const recent = sessions.slice(0, 3);
   const hasAny = sessions.length > 0;
@@ -72,6 +74,13 @@ async function Content() {
             Verder
           </Link>
         </Card>
+      ) : null}
+
+      {workouts.length > 0 ? (
+        <section>
+          <SectionTitle action={<Link href="/fitness/plans" className="text-[13px] text-muted">{"Alle schema's"}</Link>}>Jouw workouts</SectionTitle>
+          <WorkoutRow items={workouts} />
+        </section>
       ) : null}
 
       <section>
