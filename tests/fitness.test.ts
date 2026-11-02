@@ -145,3 +145,13 @@ describe("timer", () => {
     expect(timerElapsed({ startedAt: null, accumulated: 60 }, t0 + 125_000)).toBe(60);
   });
 });
+
+describe("draft status", () => {
+  it("shows the start time, with the day when it was not today, or the afterwards hint", async () => {
+    const { draftStatus } = await import("@/lib/fitness");
+    const tz = "Europe/Amsterdam";
+    expect(draftStatus({ started_at: "2026-11-02T17:05:00.000Z", workout_date: "2026-11-02" }, "2026-11-02", tz)).toBe("Gestart om 18:05");
+    expect(draftStatus({ started_at: "2026-11-01T17:05:00.000Z", workout_date: "2026-11-01" }, "2026-11-02", tz)).toBe("Gestart zo 1 nov 18:05");
+    expect(draftStatus({ started_at: null, workout_date: "2026-11-02" }, "2026-11-02", tz)).toBe("Achteraf invullen, nog niet opgeslagen");
+  });
+});

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Pause, Play, Square } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Pause, Play, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorText, Hint, Input, Label, Textarea } from "@/components/ui/field";
 import { IconBadge } from "@/components/ui/icon-badge";
-import { activityMeta, formatDuration, formatPace, formatSpeed, paceSecPerKm, speedKmh, timerElapsed, type ActivityType, type TimerState } from "@/lib/fitness";
+import { activityMeta, CARDIO_TIMER_KEY, formatDuration, formatPace, formatSpeed, paceSecPerKm, speedKmh, timerElapsed, type ActivityType, type TimerState } from "@/lib/fitness";
 import { createCardioSession, updateCardioSession } from "@/app/actions/fitness";
 import type { ActionResult } from "@/lib/types";
 import { useMounted } from "@/lib/use-mounted";
@@ -20,7 +21,7 @@ export interface CardioInitial {
   notes?: string | null;
 }
 
-const DRAFT_KEY = "badi:cardio-timer";
+const DRAFT_KEY = CARDIO_TIMER_KEY;
 
 function split(seconds: number) {
   return { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60), s: seconds % 60 };
@@ -76,6 +77,17 @@ export function CardioForm({ type, today, initial, sessionId, after = false }: {
     window.addEventListener("beforeunload", h);
     return () => window.removeEventListener("beforeunload", h);
   }, [dirty]);
+
+  const router = useRouter();
+  function cancel() {
+    if ((elapsed > 0 || dirty) && !confirm("Deze training annuleren? De timer en wat je hebt ingevuld gaan verloren.")) return;
+    setDirty(false);
+    loaded.current = false;
+    try {
+      localStorage.removeItem(`${DRAFT_KEY}:${type}`);
+    } catch {}
+    router.push("/fitness");
+  }
 
   function applyTimer() {
     const sp = split(elapsed);
@@ -181,6 +193,12 @@ export function CardioForm({ type, today, initial, sessionId, after = false }: {
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         {sessionId ? "Wijzigingen opslaan" : "Training opslaan"}
       </Button>
+      {!sessionId ? (
+        <button type="button" onClick={cancel} className="mx-auto flex items-center gap-1.5 text-muted hover:text-danger">
+          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.7} />
+          <span className="text-[12.5px]">Training annuleren</span>
+        </button>
+      ) : null}
     </form>
   );
 }

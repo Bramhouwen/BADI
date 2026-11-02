@@ -13,6 +13,7 @@ import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/
 import { finishStrengthSession, saveStrengthDraft, type DraftExercise, type DraftSet, type StrengthDraft } from "@/app/actions/fitness";
 import { ExercisePicker } from "./exercise-picker";
 import { WorkoutPlayer } from "./workout-player";
+import { DiscardDraftButton } from "./session-actions";
 import { ChipTabs } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
@@ -373,6 +374,17 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
             {after ? "Training opslaan" : "Training afronden"}
           </Button>
           <p className="text-center text-[11px] text-muted">{savedAt ? "Concept automatisch opgeslagen." : isDirty ? "Wijzigingen worden opgeslagen…" : "Je concept wordt automatisch bewaard."}</p>
+          <DiscardDraftButton
+            id={session.id}
+            variant="text"
+            className="pt-2"
+            onDone={() => {
+              dirty.current = false;
+              try {
+                localStorage.removeItem(timerKey);
+              } catch {}
+            }}
+          />
         </>
       ) : (
         <Button size="lg" className="w-full" onClick={saveEdit} loading={pending}>

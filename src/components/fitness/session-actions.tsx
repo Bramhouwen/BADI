@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Pencil, Repeat, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { deleteSession, repeatSession } from "@/app/actions/fitness";
+import { deleteSession, discardDraft, repeatSession } from "@/app/actions/fitness";
+import { cn } from "@/lib/utils";
 
 export function SessionActions({ id, editHref }: { id: string; editHref: string }) {
   const [pending, start] = useTransition();
@@ -84,5 +86,36 @@ export function StartChoice({ start: startTarget, after, size = "sm" }: { start:
       {render(startTarget, labels[0], styles.start)}
       {render(after, labels[1], styles.after)}
     </div>
+  );
+}
+
+/**
+ * Throws away an unfinished workout after a confirm. "icon" is the round trash button on draft cards,
+ * "text" the quiet link under the logger. onDone runs before navigating, e.g. to clear a local timer.
+ */
+export function DiscardDraftButton({ id, variant = "icon", onDone, className }: { id: string; variant?: "icon" | "text"; onDone?: () => void; className?: string }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const toast = useToast();
+  function discard() {
+    if (!confirm("Deze training verwijderen? Wat je hebt ingevuld gaat verloren.")) return;
+    start(async () => {
+      const r = await discardDraft(id);
+      if (!r.ok) return toast(r.error, "error");
+      onDone?.();
+      toast("Training verwijderd", "success");
+      router.push("/fitness");
+      router.refresh();
+    });
+  }
+  return variant === "icon" ? (
+    <button type="button" onClick={discard} disabled={pending} aria-label="Training verwijderen" className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-muted shadow-sm ring-1 ring-ink/[0.06] hover:text-danger disabled:opacity-50", className)}>
+      <Trash2 className="h-4 w-4" strokeWidth={1.7} />
+    </button>
+  ) : (
+    <button type="button" onClick={discard} disabled={pending} className={cn("mx-auto flex items-center gap-1.5 text-muted hover:text-danger disabled:opacity-50", className)}>
+      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.7} />
+      <span className="text-[12.5px]">Training verwijderen</span>
+    </button>
   );
 }

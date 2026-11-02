@@ -266,6 +266,18 @@ export async function deleteSession(id: string): Promise<ActionResult> {
   redirect("/fitness/history");
 }
 
+/** Throws away an unfinished (draft) workout. Completed workouts go through deleteSession. */
+export async function discardDraft(id: string): Promise<ActionResult> {
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Onbekende training." };
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("workout_sessions").delete().eq("id", id).eq("user_id", ctx.userId).eq("status", "draft").select("id");
+  if (error) return { ok: false, error: friendlyError(error) };
+  if (!data || data.length === 0) return { ok: false, error: "Dit concept bestaat niet meer." };
+  revalidateFitness();
+  return { ok: true };
+}
+
 /** Repeats a completed session: strength opens a new draft, cardio opens a pre-filled form. */
 export async function repeatSession(id: string): Promise<ActionResult> {
   if (!uuid.safeParse(id).success) return { ok: false, error: "Onbekende training." };

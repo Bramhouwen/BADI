@@ -2,13 +2,15 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Dumbbell } from "lucide-react";
 import { requireContext } from "@/lib/data";
-import { ACTIVITY_TYPES, ACTIVITY_TYPE_KEYS, sessionVolumeKg, type ActivityType } from "@/lib/fitness";
+import { ACTIVITY_TYPES, ACTIVITY_TYPE_KEYS, draftStatus, sessionVolumeKg, type ActivityType } from "@/lib/fitness";
+import { todayKey } from "@/lib/dates";
 import { loadSessions, loadStrengthHistory } from "@/lib/fitness/data";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
 import { SessionCard } from "@/components/fitness/session-card";
+import { InProgress } from "@/components/fitness/in-progress";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Geschiedenis" };
@@ -18,6 +20,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ type?: string
   const type = typeof sp.type === "string" && (ACTIVITY_TYPE_KEYS as string[]).includes(sp.type) ? (sp.type as ActivityType) : undefined;
   const ctx = await requireContext();
   const [sessions, drafts, strength] = await Promise.all([loadSessions(ctx, { status: "completed", type }), loadSessions(ctx, { status: "draft" }), loadStrengthHistory(ctx)]);
+  const today = todayKey(new Date(), ctx.challenge.timezone);
   const volumes = new Map(strength.sessions.map((s) => [s.id, sessionVolumeKg(s.exercises.flatMap((e) => e.sets))]));
 
   return (
@@ -35,13 +38,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ type?: string
         })}
       </div>
 
-      {drafts.length > 0 && !type ? (
-        <div className="space-y-2">
-          {drafts.map((s) => (
-            <SessionCard key={s.id} session={s} />
-          ))}
-        </div>
-      ) : null}
+      {!type ? <InProgress drafts={drafts.map((d) => ({ id: d.id, title: d.title, type: d.activity_type, status: draftStatus(d, today, ctx.challenge.timezone) }))} /> : null}
 
       {sessions.length === 0 ? (
         <EmptyState icon={Dumbbell} title="Nog geen trainingen" body={type ? "Nog geen training van dit type. Kies een ander filter of start een training." : "Leg je eerste training vast; daarna vind je hem hier terug."} />

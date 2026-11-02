@@ -1,6 +1,6 @@
 import { Activity, Bike, Dumbbell, Flame, Footprints, Leaf, Route, type LucideIcon } from "lucide-react";
 import type { ActivityKey } from "./constants";
-import { addDays, diffDays, type DateKey } from "./dates";
+import { addDays, diffDays, formatDateNl, type DateKey } from "./dates";
 
 export type ActivityType = "run" | "walk" | "cycle" | "strength" | "hiit" | "yoga" | "other";
 export type MuscleGroup = "legs" | "chest" | "back" | "shoulders" | "arms" | "core" | "mobility" | "cardio" | "other";
@@ -281,4 +281,14 @@ export function templateSummary(exercises: { target_sets: number }[]): { exercis
 export function targetLabel(t: { target_sets: number; target_reps: number | null; target_weight_kg: number | null }): string {
   const base = t.target_reps ? `${t.target_sets} × ${t.target_reps}` : `${t.target_sets} ${t.target_sets === 1 ? "set" : "sets"}`;
   return t.target_weight_kg ? `${base} · ${formatKg(t.target_weight_kg)}` : base;
+}
+
+/** localStorage key prefix of a running cardio timer (`<prefix>:<type>`); the cardio form writes it, the Fitness overview reads it. */
+export const CARDIO_TIMER_KEY = "badi:cardio-timer";
+
+/** Status line of an unsaved workout: "Gestart om 18:05", "Gestart di 3 nov 18:05" or the logging-afterwards hint. */
+export function draftStatus(d: { started_at: string | null; workout_date: DateKey }, today: DateKey, tz: string): string {
+  if (!d.started_at) return "Achteraf invullen, nog niet opgeslagen";
+  const time = new Intl.DateTimeFormat("nl-NL", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date(d.started_at));
+  return d.workout_date === today ? `Gestart om ${time}` : `Gestart ${formatDateNl(d.workout_date, { weekday: "short", day: "numeric", month: "short" })} ${time}`;
 }
