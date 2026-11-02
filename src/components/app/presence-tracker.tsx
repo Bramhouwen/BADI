@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { setOnline } from "@/lib/presence";
+import { receiveTyping, registerTypingSender, setOnline } from "@/lib/presence";
 import { DEMO_ONLINE_IDS, isDemo } from "@/lib/demo";
 
 /**
@@ -29,12 +29,23 @@ export function PresenceTracker({ userId, challengeId }: { userId: string; chall
       if (document.visibilityState === "visible") void channel.track({ at: new Date().toISOString() });
       else void channel.untrack();
     };
-    channel.on("presence", { event: "sync" }, sync).subscribe((status) => {
-      if (status === "SUBSCRIBED") track();
-    });
+    channel
+      .on("presence", { event: "sync" }, sync)
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        const p = payload as { from?: string; to?: string };
+        if (!p?.from || p.from === userId) return;
+        // Group typing is for everyone; private typing only for the recipient.
+        if (p.to === "squad") receiveTyping("squad", p.from);
+        else if (p.to === userId) receiveTyping(`dm:${p.from}`, p.from);
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") track();
+      });
+    registerTypingSender((to) => void channel.send({ type: "broadcast", event: "typing", payload: { from: userId, to } }));
     document.addEventListener("visibilitychange", track);
     return () => {
       document.removeEventListener("visibilitychange", track);
+      registerTypingSender(null);
       void channel.untrack();
       void supabase.removeChannel(channel);
       setOnline([]);

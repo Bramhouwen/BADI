@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Lock, Settings2 } from "lucide-react";
+import { Lock, MessageCircle, Settings2 } from "lucide-react";
 import { getSquad, requireContext } from "@/lib/data";
 import { loadMemberHabits, loadMemberStats } from "@/lib/squad/data";
 import { habitWeek } from "@/lib/habits";
@@ -108,7 +108,14 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
         </div>
       </section>
 
-      {!isMe ? <ComplimentButton receiver={{ id: userId, name }} /> : null}
+      {!isMe ? (
+        <div className="grid grid-cols-2 gap-2.5">
+          <Link href={`/squad/chat/${userId}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white text-[14px] font-medium text-ink shadow-sm hover:bg-blush">
+            <MessageCircle className="h-4 w-4" strokeWidth={1.7} /> Bericht
+          </Link>
+          <ComplimentButton receiver={{ id: userId, name }} />
+        </div>
+      ) : null}
 
       {isMe ? (
         <p className="flex items-start gap-2 px-0.5 text-[12px] leading-snug text-muted">

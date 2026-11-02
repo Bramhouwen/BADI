@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import type { MessageAttachment } from "@/app/actions/chat";
 import { ComplimentSheet } from "./compliment-sheet";
-import type { ChatMember } from "./squad-chat";
+import type { ChatMember } from "@/lib/chat";
 
 export interface RecipeOption {
   id: string;

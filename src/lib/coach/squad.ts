@@ -36,6 +36,7 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     .select("id", { count: "exact", head: true })
     .eq("challenge_id", ctx.challenge.id)
     .eq("is_coach", true)
+    .is("recipient_id", null)
     .gte("created_at", dayStart);
   if ((count ?? 0) >= SQUAD_COACH_DAILY_LIMIT) {
     await insert("Ik heb vandaag al veel meegepraat in de groep. Stel je vraag gerust in je eigen gesprek met mij.");
@@ -54,7 +55,8 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     } else {
       const [squad, { data: rows }, extras] = await Promise.all([
         getSquad(ctx.challenge.id),
-        supabase.from("squad_messages").select("user_id, body, is_coach, attachment_type, attachment_name").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(20),
+        // Group messages only: private chats of the asker never reach Baddy's squad answer.
+        supabase.from("squad_messages").select("user_id, body, is_coach, attachment_type, attachment_name").eq("challenge_id", ctx.challenge.id).is("recipient_id", null).order("created_at", { ascending: false }).limit(20),
         loadCoachExtras(supabase, ctx, { personal: false }),
       ]);
       const nameOf = (id: string) => firstName(squad.find((m) => m.user_id === id)?.profile.display_name ?? "Iemand");
@@ -84,7 +86,7 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     const planNote = result.refs.filter((r) => r.type === "plan").map((r) => `Schema "${r.name}" staat in Fitness.`).join(" ");
     const body = [result.text, planNote].filter(Boolean).join("\n\n").slice(0, 1000) || "…";
     await insert(body, recipe?.id, recipe?.name);
-    await sendPush(supabase, "chat", { title: "Baddy in de squad", body: body.slice(0, 160), url: "/squad", tag: "squad-chat" });
+    await sendPush(supabase, "chat", { title: "Baddy in de squad", body: body.slice(0, 160), url: "/squad/chat", tag: "squad-chat" });
     if (recipe) await sendPush(supabase, "recipes", { title: "Nieuw recept van Baddy", body: `${recipe.name} staat in de Kitchen.`, url: `/kitchen/${recipe.id}`, tag: "recipe" });
   } catch {
     await insert("Ik kon even niet antwoorden. Probeer het zo nog eens.");

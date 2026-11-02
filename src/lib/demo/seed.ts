@@ -183,6 +183,28 @@ export function buildSeed(): Store {
 
   const squad_chat_reads: Row[] = [];
 
+  // A few private messages with Bram, a read state for the ticks and reactions in the group.
+  const dm = (from: string, to: string, n: number, h: number, mi: number, body: string): Row => ({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: from, recipient_id: to, body, mentions: [], created_at: iso(d(n), h, mi), attachment_type: null, attachment_path: null, attachment_name: null, ref_id: null, is_coach: false });
+  squad_messages.push(
+    dm(NOOR, DEMO_USER_ID, 1, 20, 10, "Die linzen dahl was echt goed. Ik zet hem morgen in de Kitchen."),
+    dm(DEMO_USER_ID, NOOR, 1, 20, 14, "Graag! Ik ga hem deze week maken 🙌"),
+    dm(SAM, DEMO_USER_ID, 0, 7, 50, "Ga je vanavond mee lopen?"),
+    dm(DEMO_USER_ID, SAM, 0, 7, 58, "Ja! 19:30 bij het park?"),
+    dm(SAM, DEMO_USER_ID, 0, 8, 2, "Top, tot dan 👟"),
+  );
+  for (const m of squad_messages) if (!("recipient_id" in m)) m.recipient_id = null;
+  const direct_reads: Row[] = [
+    { user_id: SAM, peer_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, last_read_at: iso(d(0), 8, 1) },
+    { user_id: DEMO_USER_ID, peer_id: NOOR, challenge_id: DEMO_CHALLENGE_ID, last_read_at: iso(d(1), 20, 15) },
+    { user_id: DEMO_USER_ID, peer_id: SAM, challenge_id: DEMO_CHALLENGE_ID, last_read_at: iso(d(0), 7, 59) },
+  ];
+  const groupFirst = squad_messages[0].id;
+  const message_reactions: Row[] = [
+    { message_id: groupFirst, user_id: NOOR, emoji: "🔥", created_at: iso(d(6), 19, 30) },
+    { message_id: groupFirst, user_id: ALEX, emoji: "🔥", created_at: iso(d(6), 19, 31) },
+    { message_id: groupFirst, user_id: DEMO_USER_ID, emoji: "👍", created_at: iso(d(6), 20, 41) },
+  ];
+
   // Sam shares two own habits; Bram (demo user) starts with one.
   const custom_habits: Row[] = [
     { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, name: "10 minuten lezen", emoji: "📖", sort_order: 0, created_at: iso(start) },
@@ -210,6 +232,8 @@ export function buildSeed(): Store {
     stat_sharing,
     squad_messages,
     squad_chat_reads,
+    direct_reads,
+    message_reactions,
     custom_habits,
     custom_habit_logs,
     coach_messages: [],

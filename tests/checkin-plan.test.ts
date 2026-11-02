@@ -72,7 +72,7 @@ describe("manual ticks", () => {
 
 describe("notification settings", () => {
   it("default to everything on", () => {
-    expect(settingsFromRow(null)).toEqual({ coach: true, chat: true, mentions: true, recipes: true, jokers: true, compliments: true });
+    expect(settingsFromRow(null)).toEqual({ coach: true, direct: true, chat: true, mentions: true, recipes: true, jokers: true, compliments: true });
     expect(settingsFromRow({ chat: false }).chat).toBe(false);
   });
 });

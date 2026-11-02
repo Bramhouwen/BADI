@@ -5,6 +5,12 @@ import { dateKeyInTz, formatDateNl, type DateKey } from "./dates";
 
 export const CHAT_PAGE_SIZE = 40;
 
+/** How a sender appears in the chat. */
+export interface ChatMember {
+  name: string;
+  avatar: string | null;
+}
+
 export const ATTACHMENT_TYPES = ["image", "file", "recipe", "post"] as const;
 export type AttachmentType = (typeof ATTACHMENT_TYPES)[number];
 
@@ -22,6 +28,8 @@ export interface ChatMessage {
   ref_id?: string | null;
   /** Written by Baddy de Coach (stored under the member who tagged Baddy). */
   is_coach?: boolean;
+  /** Null for the squad group chat, the other member's id for a private message. */
+  recipient_id?: string | null;
   /** True while the optimistic copy waits for the server. */
   pending?: boolean;
 }

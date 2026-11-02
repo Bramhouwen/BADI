@@ -10,7 +10,7 @@ export function ComplimentButton({ receiver }: { receiver: { id: string; name: s
   return (
     <>
       <Button variant="primary" size="md" className="w-full" onClick={() => setOpen(true)}>
-        <HandHeart className="h-4 w-4" strokeWidth={1.6} /> Geef compliment
+        <HandHeart className="h-4 w-4" strokeWidth={1.6} /> Compliment
       </Button>
       <ComplimentSheet open={open} onClose={() => setOpen(false)} receiver={receiver} />
     </>

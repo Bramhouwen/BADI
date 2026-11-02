@@ -232,3 +232,8 @@ h2,
 .safe-bottom {
   padding-bottom: var(--sab);
 }
+
+/* Inside a conversation the composer is fixed; the tab bar padding is not needed. */
+main:has(.chat-thread) {
+  padding-bottom: 0 !important;
+}

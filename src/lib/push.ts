@@ -4,7 +4,7 @@ import webpush from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isDemo } from "@/lib/demo";
 
-export type PushKind = "chat" | "mentions" | "recipes" | "jokers" | "compliments" | "coach";
+export type PushKind = "chat" | "direct" | "mentions" | "recipes" | "jokers" | "compliments" | "coach";
 
 export interface PushPayload {
   title: string;
