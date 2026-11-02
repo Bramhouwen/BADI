@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { MissingPhotos } from "@/components/kitchen/ai-photo";
+import { aiImagesAvailable } from "@/lib/recipe-image";
 import Link from "next/link";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -47,6 +49,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
       <div className="-mt-2 mb-4">
         <AskBaddyLink question="Maak een recept zonder toegevoegde suikers voor " label="Laat Baddy een recept maken" />
       </div>
+      {aiImagesAvailable() ? <MissingPhotos count={all.filter((r) => !r.image_path).length} /> : null}
       <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1" role="tablist" aria-label="Filter">
         {(
           [
@@ -97,7 +100,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
             return (
               <li key={r.id}>
                 <RecipeCard
-                  recipe={{ id: r.id, title: r.title, category: r.category }}
+                  recipe={{ id: r.id, title: r.title, category: r.category, image_ai: r.image_ai }}
                   imageUrl={r.image_path ? images.get(r.image_path) ?? null : null}
                   author={
                     r.by_coach

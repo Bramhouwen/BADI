@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { aiImagesAvailable, generateRecipePhotoFor } from "@/lib/recipe-image";
 import { after } from "next/server";
 import { sendPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
@@ -66,6 +67,8 @@ export async function createRecipe(formData: FormData): Promise<ActionResult> {
   const sender = firstName(ctx.profile.display_name);
   const title = parsed.data.title || fallbackTitle(ctx.profile.display_name);
   after(() => sendPush(supabase, "recipes", { title: "Nieuw recept in de Kitchen", body: `${sender} deelde ${title}.`, url: `/kitchen/${data.id}`, tag: "recipe" }));
+  // No photo: make an AI photo in the background; the recipe page refreshes until it is there.
+  if (!parsed.data.image_path && aiImagesAvailable()) after(() => generateRecipePhotoFor(supabase, ctx, data.id as string));
   revalidatePath("/kitchen");
   revalidatePath("/");
   redirect(`/kitchen/${data.id}?created=1`);
@@ -76,9 +79,14 @@ export async function updateRecipe(id: string, formData: FormData): Promise<Acti
   const parsed = recipeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const ctx = await requireContext();
-  if (parsed.data.image_path && !isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
   const supabase = await createClient();
-  const { error } = await supabase.from("recipes").update(toRow(parsed.data, fallbackTitle(ctx.profile.display_name))).eq("id", id).eq("user_id", ctx.userId);
+  const { data: current } = await supabase.from("recipes").select("image_path, image_ai").eq("id", id).eq("user_id", ctx.userId).maybeSingle();
+  const currentPath = (current as { image_path: string | null } | null)?.image_path ?? null;
+  // Keeping the current photo is always fine, also an AI photo another member generated.
+  const keepsPhoto = Boolean(parsed.data.image_path) && parsed.data.image_path === currentPath;
+  if (parsed.data.image_path && !keepsPhoto && !isOwnedMediaPath(parsed.data.image_path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldige foto." };
+  const row = { ...toRow(parsed.data, fallbackTitle(ctx.profile.display_name)), ...(keepsPhoto ? {} : { image_ai: false }) };
+  const { error } = await supabase.from("recipes").update(row).eq("id", id).eq("user_id", ctx.userId);
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/kitchen");
   revalidatePath(`/kitchen/${id}`);

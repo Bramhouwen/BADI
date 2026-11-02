@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AiBadge } from "@/components/kitchen/ai-photo";
 import Image from "next/image";
 import { useOptimistic, useTransition } from "react";
 import { Heart, ChefHat } from "lucide-react";
@@ -47,7 +48,7 @@ export function RecipeCard({
   author,
   favorite,
 }: {
-  recipe: { id: string; title: string; category: string | null };
+  recipe: { id: string; title: string; category: string | null; image_ai?: boolean };
   imageUrl: string | null;
   author: { name: string; avatar: string | null };
   favorite: boolean;
@@ -70,6 +71,7 @@ export function RecipeCard({
             <span className="text-xs text-white/80">{firstName(author.name)}</span>
           </div>
         </div>
+        {imageUrl && recipe.image_ai ? <AiBadge className="absolute left-2 top-2" /> : null}
         <FavoriteButton recipeId={recipe.id} favorite={favorite} className="absolute right-2 top-2" />
       </div>
     </Link>

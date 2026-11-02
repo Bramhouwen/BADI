@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { AiBadge, AiPhotoButton, PhotoPending } from "@/components/kitchen/ai-photo";
+import { aiImagesAvailable } from "@/lib/recipe-image";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -16,6 +18,11 @@ import { FavoriteButton } from "../recipe-card";
 import { RecipeReactions, DeleteRecipeButton } from "./recipe-detail-client";
 import type { Recipe, PostReaction } from "@/lib/types";
 import type { ReactionKey } from "@/lib/constants";
+
+/** A recipe saved in the last few minutes may still be getting its AI photo. */
+function justCreated(createdAt: string): boolean {
+  return Date.now() - Date.parse(createdAt) < 3 * 60 * 1000;
+}
 
 async function Content({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,6 +47,8 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   const mine = reactions.find((r) => r.user_id === ctx.userId)?.reaction ?? null;
   const isOwner = recipe.user_id === ctx.userId;
   const ingredients = (recipe.ingredients ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
+  // Any member may give a recipe without an own photo an AI photo.
+  const canAi = aiImagesAvailable() && (!recipe.image_path || Boolean(recipe.image_ai));
 
   return (
     <div className="mx-auto w-full max-w-lg pb-6">
@@ -49,6 +58,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <ChefHat className="h-12 w-12 text-ink/50" strokeWidth={1.2} aria-hidden />
+            {canAi && justCreated(recipe.created_at) ? <PhotoPending /> : null}
           </div>
         )}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
@@ -65,7 +75,10 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#2b1a14]/90 via-[#2b1a14]/40 to-transparent px-4 pb-4 pt-16">
-          {recipe.category ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-water-deep">{recipe.category}</p> : null}
+          <div className="flex items-center gap-2">
+            {recipe.category ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-water-deep">{recipe.category}</p> : null}
+            {image && recipe.image_ai ? <AiBadge /> : null}
+          </div>
           <h1 className="text-2xl font-bold leading-tight">{recipe.title}</h1>
         </div>
       </div>
@@ -83,6 +96,8 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
             </span>
           ) : null}
         </div>
+
+        {canAi ? <AiPhotoButton recipeId={recipe.id} hasAiPhoto={Boolean(image && recipe.image_ai)} /> : null}
 
         {recipe.description ? <p className="text-[15px] leading-relaxed text-text/90">{recipe.description}</p> : null}
 
