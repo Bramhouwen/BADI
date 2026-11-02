@@ -35,7 +35,8 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
-  other: { "mobile-web-app-capable": "yes" },
+  // The Apple-specific tag is deprecated but older iOS versions still need it to open the icon without Safari chrome.
+  other: { "mobile-web-app-capable": "yes", "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
