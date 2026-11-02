@@ -178,6 +178,7 @@ export function buildSeed(): Store {
   squad_messages.push(
     { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, body: "", created_at: iso(d(0), 8, 6), attachment_type: "recipe", attachment_path: null, attachment_name: recipes[3].title, ref_id: recipes[3].id },
     { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, body: "Deze dus", created_at: iso(d(0), 7, 46), attachment_type: "post", attachment_path: null, attachment_name: wall_posts[3].caption, ref_id: wall_posts[3].id },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: ALEX, body: "@Bram ga je morgen mee met @Sam?", created_at: iso(d(0), 8, 20), attachment_type: null, attachment_path: null, attachment_name: null, ref_id: null, mentions: [DEMO_USER_ID, SAM] },
   );
 
   const squad_chat_reads: Row[] = [];

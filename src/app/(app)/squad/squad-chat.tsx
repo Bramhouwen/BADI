@@ -9,6 +9,7 @@ import { CHAT_PAGE_SIZE, attachmentHref, attachmentLabel, formatTime, groupMessa
 import type { DateKey } from "@/lib/dates";
 import { deleteMessage, loadOlderMessages, markChatRead, sendMessage, type MessageAttachment } from "@/app/actions/chat";
 import { ChatAttach, type PostOption, type RecipeOption } from "./chat-attach";
+import { applyMention, mentionQuery, mentionSuggestions, splitMentions, type MentionMember } from "@/lib/mentions";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,8 @@ interface Props {
   posts: PostOption[];
   /** Signed URLs for uploaded attachments in the initial messages, keyed by object path. */
   signed: Record<string, string>;
+  /** Members as they can be tagged with @. */
+  mentionMembers: MentionMember[];
 }
 
 function mergeById(list: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -38,7 +41,7 @@ function mergeById(list: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] 
 }
 
 /** Group chat for the squad: optimistic sending, live updates, own-message delete, older-message paging. */
-export function SquadChat({ initial, hasMore: initialHasMore, members, me, challengeId, today, tz, recipes, posts, signed: initialSigned }: Props) {
+export function SquadChat({ initial, hasMore: initialHasMore, members, me, challengeId, today, tz, recipes, posts, signed: initialSigned, mentionMembers }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [draft, setDraft] = useState("");
@@ -46,6 +49,9 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
   const [focused, setFocused] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [signed, setSigned] = useState<Record<string, string>>(initialSigned);
+  const [caret, setCaret] = useState(0);
+  const mention = mentionQuery(draft, caret);
+  const suggestions = mention ? mentionSuggestions(mentionMembers, mention.query, me).slice(0, 4) : [];
   const [sending, startSend] = useTransition();
   const [loadingOlder, startOlder] = useTransition();
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -179,9 +185,23 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
     });
   }
 
+  function pickMention(m: MentionMember) {
+    if (!mention) return;
+    const next = applyMention(draft, caret, mention.start, m.label);
+    setDraft(next.text);
+    setCaret(next.caret);
+    requestAnimationFrame(() => {
+      const el = textarea.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(next.caret, next.caret);
+    });
+  }
+
   function onInput(e: React.FormEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
     setDraft(el.value);
+    setCaret(el.selectionStart ?? el.value.length);
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
   }
@@ -265,7 +285,19 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
                                     </span>
                                   </Link>
                                 ) : null}
-                                {m.body ? <p className={cn("whitespace-pre-wrap break-words", m.attachment_type && "px-2 pb-1 pt-1.5")}>{m.body}</p> : null}
+                                {m.body ? (
+                                  <p className={cn("whitespace-pre-wrap break-words", m.attachment_type && "px-2 pb-1 pt-1.5")}>
+                                    {splitMentions(m.body, mentionMembers).map((t, ti) =>
+                                      t.member ? (
+                                        <span key={ti} className={cn("rounded-md px-1 font-semibold", mine ? "bg-white/15" : "bg-sage/20 text-ink", t.member.id === me && "ring-1 ring-sage")}>
+                                          {t.text}
+                                        </span>
+                                      ) : (
+                                        <span key={ti}>{t.text}</span>
+                                      ),
+                                    )}
+                                  </p>
+                                ) : null}
                                 {m.attachment_type && !m.body ? <span className="sr-only">{attachmentLabel(m)}</span> : null}
                               </div>
                               {selected === m.id ? (
@@ -295,7 +327,25 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
         className="fixed inset-x-0 z-30 flex justify-center px-4 transition-[bottom] duration-200"
         style={{ bottom: focused ? "calc(var(--sab) + 10px)" : "calc(var(--nav-h) + var(--sab) + 16px)" }}
       >
-        <div className="glass flex w-full max-w-lg items-end gap-1.5 rounded-[24px] p-1.5 shadow-[0_14px_30px_-18px_rgba(95,53,41,0.5)]">
+        <div className="flex w-full max-w-lg flex-col gap-1.5">
+        {suggestions.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 px-1" role="listbox" aria-label="Squadlid taggen">
+            {suggestions.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="option"
+                aria-selected={false}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pickMention(m)}
+                className="glass flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-[12.5px] font-medium text-text shadow-sm"
+              >
+                <Avatar name={members[m.id]?.name ?? m.label} src={members[m.id]?.avatar} size="xs" className="h-6 w-6 text-[10px]" />@{m.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div className="glass flex w-full items-end gap-1.5 rounded-[24px] p-1.5 shadow-[0_14px_30px_-18px_rgba(95,53,41,0.5)]">
           <button type="button" onClick={() => setAttachOpen(true)} aria-label="Toevoegen" className="soft flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink">
             <Plus className="h-[18px] w-[18px]" strokeWidth={1.9} />
           </button>
@@ -305,7 +355,14 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
             onInput={onInput}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
+            onKeyUp={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
+            onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
             onKeyDown={(e) => {
+              if ((e.key === "Tab" || e.key === "Enter") && suggestions.length > 0 && !e.shiftKey) {
+                e.preventDefault();
+                pickMention(suggestions[0]);
+                return;
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 submit();
@@ -325,6 +382,7 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
           >
             <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
+        </div>
         </div>
       </form>
 

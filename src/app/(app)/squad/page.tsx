@@ -8,6 +8,7 @@ import { challengeDay, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
 import { CHAT_PAGE_SIZE, type ChatMessage } from "@/lib/chat";
+import { mentionLabels } from "@/lib/mentions";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
@@ -54,6 +55,7 @@ async function Content() {
   const recipes: RecipeOption[] = recipeRaw.map((r) => ({ id: r.id, title: r.title, image: r.image_path ? recipeImages.get(r.image_path) ?? null : null }));
   const posts: PostOption[] = postRaw.map((p) => ({ id: p.id, image: postImages.get(p.image_path) ?? null, caption: p.caption }));
   const signed = Object.fromEntries(chatSigned);
+  const mentionMembers = mentionLabels(squad.map((m) => ({ id: m.user_id, display_name: m.profile.display_name })));
 
   const members = rotateMembers(squad, day).map((m) => {
     const stats = computeStreakStats(checkins.filter((c) => c.user_id === m.user_id).map((c) => c.checkin_date), today);
@@ -133,6 +135,7 @@ async function Content() {
         recipes={recipes}
         posts={posts}
         signed={signed}
+        mentionMembers={mentionMembers}
       />
     </Page>
   );

@@ -115,7 +115,7 @@ export interface WaterEntry {
   created_at: string;
 }
 
-export type NotificationType = "compliment" | "reaction" | "post" | "recipe";
+export type NotificationType = "compliment" | "reaction" | "post" | "recipe" | "mention";
 
 export interface AppNotification {
   id: string;

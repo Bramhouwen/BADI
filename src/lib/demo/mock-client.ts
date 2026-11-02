@@ -218,6 +218,7 @@ function afterInsert(table: string, row: Row) {
     if (post && post.user_id !== row.user_id) notify(post.user_id, "reaction", row.user_id, post.id);
   }
   if (table === "wall_posts") for (const u of others()) notify(u, "post", row.user_id, row.id);
+  if (table === "squad_messages") for (const u of (row.mentions as string[] | undefined) ?? []) if (u !== row.user_id) notify(u, "mention", row.user_id, row.id);
   if (table === "recipes") for (const u of others()) notify(u, "recipe", row.user_id, row.id);
 }
 

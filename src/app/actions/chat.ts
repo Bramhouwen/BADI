@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { requireContext } from "@/lib/data";
+import { getSquad, requireContext } from "@/lib/data";
+import { findMentions, mentionLabels } from "@/lib/mentions";
 import { createClient } from "@/lib/supabase/server";
 import { CHAT_PAGE_SIZE, type ChatMessage } from "@/lib/chat";
 import type { ActionResult } from "@/lib/types";
@@ -30,7 +31,9 @@ export async function sendMessage(input: { body: string; attachment?: MessageAtt
   const ctx = await requireContext();
   const supabase = await createClient();
 
-  const row: Record<string, unknown> = { challenge_id: ctx.challenge.id, user_id: ctx.userId, body };
+  const squad = body.includes("@") ? await getSquad(ctx.challenge.id) : [];
+  const mentions = findMentions(body, mentionLabels(squad.map((m) => ({ id: m.user_id, display_name: m.profile.display_name })))).filter((id) => id !== ctx.userId);
+  const row: Record<string, unknown> = { challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions };
   if (attachment?.type === "image" || attachment?.type === "file") {
     if (!isOwnedMediaPath(attachment.path, ctx.challenge.id, ctx.userId)) return { ok: false, error: "Ongeldig bestand." };
     row.attachment_type = attachment.type;
