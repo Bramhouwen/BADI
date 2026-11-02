@@ -129,3 +129,13 @@ describe("tool execution (demo database)", () => {
     expect(out.isError).toBe(true);
   });
 });
+
+describe("recipe size", () => {
+  it("rejects recipes that are far too long", async () => {
+    const { saveRecipeInput } = await import("@/lib/coach/tools");
+    const many = Array.from({ length: 14 }, (_, i) => `ingrediënt ${i + 1}`);
+    expect(saveRecipeInput.safeParse({ title: "X", category: "Avondeten", ingredients: many, instructions: ["a"] }).success).toBe(false);
+    expect(saveRecipeInput.safeParse({ title: "X", category: "Avondeten", ingredients: ["a"], instructions: Array.from({ length: 8 }, () => "stap") }).success).toBe(false);
+    expect(saveRecipeInput.safeParse({ title: "X", category: "Lunch" as never, ingredients: ["a"], instructions: ["b"] }).success).toBe(false);
+  });
+});

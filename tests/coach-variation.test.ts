@@ -20,8 +20,9 @@ describe("inspiration", () => {
     const i = inspiration(11, seeded(7));
     expect(new Set(i.cuisines).size).toBe(2);
     expect(new Set(i.proteins).size).toBe(3);
-    expect(i.seasonal.every((p) => ["pompoen", "boerenkool", "spruitjes", "knolselderij", "pastinaak", "stoofperen", "paddenstoelen"].includes(p))).toBe(true);
-    expect(inspirationBlock(i)).toContain("Seizoensproduct");
+    expect(i.seasonal.every((p) => ["broccoli", "spinazie", "zoete aardappel", "pompoen", "paddenstoelen", "rode ui", "granaatappel", "mandarijn", "appel"].includes(p))).toBe(true);
+    expect(i.seasonal).not.toContain("spruitjes");
+    expect(inspirationBlock(i)).toContain("Alleen als de vraag vaag is");
   });
 
   it("varies between requests", () => {
@@ -65,6 +66,8 @@ describe("context blocks", () => {
 
   it("tells Baddy to vary and to use her memory", () => {
     expect(BADDY_SYSTEM).toContain("# Variatie");
+    expect(BADDY_SYSTEM).toContain("# Per maaltijd");
+    expect(BADDY_SYSTEM).toContain("maximaal 10 ingrediënten");
     expect(BADDY_SYSTEM).toContain("save_memory");
     expect(BADDY_SYSTEM).not.toMatch(/—/);
   });

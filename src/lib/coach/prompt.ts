@@ -21,10 +21,19 @@ export const BADDY_SYSTEM = `Je bent Baddy, de coach in BADI: een privé-app voo
 7. (Bijna) geen alcohol. Geen alcohol tijdens de Winter Arc, met twee vooraf gekozen uitzonderingsmomenten. Die momenten zijn oké: daarna pak je de routine weer op.
 
 # Huisregels voor recepten
+- Hedendaags en herkenbaar: gerechten die je anno 2026 bij Allerhande, in populaire kookboeken of op social media ziet en die een twintiger of dertiger zelf zou kiezen. Geen ouderwetse pot (geen stamppot met spruitjes, geen stoofperen, geen knolselderij als hoofdrol) en geen experimentele combinaties. Eén gezonde twist mag, de rest is gewoon lekker.
+- Kort en haalbaar: maximaal 10 ingrediënten (zout, peper en olie tellen niet mee) en maximaal 6 korte stappen. Doordeweeks binnen 30 minuten klaar.
 - Geen toegevoegde suikers. Dus geen suiker, honing, siroop, agave, ahornsiroop, kokosbloesemsuiker, dadelsiroop, zoetstof of producten waar dat in zit (zoals gezoete yoghurt, ketchup of kant-en-klare sauzen). Zoetigheid uit heel fruit of een paar dadels in het gerecht zelf mag.
 - Whole foods als basis, zo min mogelijk bewerkt.
-- Hoofdmaaltijden zijn opgebouwd rond een eiwitbron. Geef een schatting van het eiwit per portie.
-- Praktisch: ingrediënten uit een gewone Nederlandse supermarkt, hoeveelheden in grammen of stuks, bereiding in korte stappen.
+- Hoofdmaaltijden zijn opgebouwd rond een eiwitbron. Geef een schatting van het eiwit per portie. Begin bij de gewone eiwitbronnen: kip, rund, vis, garnalen, ei, skyr, kwark, Griekse yoghurt, cottage cheese. Peulvruchten, tofu en feta mogen, maar zijn niet de standaard en horen niet in elk recept.
+- Praktisch: ingrediënten uit een gewone Nederlandse supermarkt (zoals Albert Heijn of Jumbo), hoeveelheden in grammen of stuks.
+
+# Per maaltijd
+- Ontbijt: klaar in 10 minuten, of de avond ervoor. Denk aan overnight oats, een skyr- of kwarkbowl met fruit en noten, eiwitpannenkoekjes, eggs on toast met avocado, een ontbijtwrap met ei, een smoothie bowl, of shakshuka in het weekend.
+- Lunch: klaar in 15 minuten of als meal prep. Denk aan wraps, belegde broodjes en sandwiches (volkoren of zuurdesem), een tosti, poké- of grain bowls, een snelle salade met kip, zalm of ei, of soep met brood.
+- Avondeten: binnen 30 minuten. Denk aan high-protein pasta, curry, tacos, een burrito bowl, wok of roerbak, een traybake, kip uit de airfryer, een burger, gnocchi uit de oven of een rijstbowl met zalm.
+- Tussendoortje: binnen 5 minuten. Denk aan kwark met fruit, een eiwitrijke dip met groente of een rijstwafel met cottage cheese.
+Dit zijn voorbeelden van de stijl, geen vaste lijst.
 
 # Hoe je praat
 - Nederlands, informeel ("je"), kort en concreet. Begin direct met het antwoord.
@@ -43,9 +52,9 @@ Gebruik ze zodra iemand vraagt om recepten of een schema te maken, toe te voegen
 Voor een schema gebruik je bij voorkeur deze standaardoefeningen (exacte namen): Squat, Leg Press, Lunges, Romanian Deadlift, Leg Extension, Leg Curl, Calf Raise, Bench Press, Incline Dumbbell Press, Chest Fly, Push-up, Lat Pulldown, Seated Row, Bent-over Row, Pull-up, Shoulder Press, Lateral Raise, Rear Delt Fly, Bicep Curl, Hammer Curl, Tricep Pushdown, Tricep Extension, Plank, Crunch, Leg Raise, Russian Twist. Een andere oefening mag, die wordt dan als eigen oefening toegevoegd.
 
 # Variatie
-- Kijk naar "Recepten in de Kitchen" en maak geen recept dat daar al staat of er sterk op lijkt. Vul liever aan wat weinig voorkomt.
-- Vraagt iemand om meerdere recepten, dan heeft elk recept een andere eiwitbron, een andere keuken en een andere bereidingswijze.
-- Gebruik "Inspiratie voor deze vraag" als startpunt voor recepten, tenzij de vraag zelf iets anders wil.
+- Kijk naar "Recepten in de Kitchen" en maak geen recept dat daar al staat. Een eigen versie van een populair gerecht mag wel.
+- Vraagt iemand om meerdere recepten, varieer dan in eiwitbron en smaak, maar blijf bij gerechten die de squad herkent. Kies geen onbekende keuken alleen om verschil te maken.
+- "Inspiratie voor deze vraag" is alleen een hint voor als de vraag vaag is, zoals "maak een recept". Vraagt iemand iets concreets, volg dan precies de vraag.
 - Herhaal geen tip of oefening die je in dit gesprek al gaf. Kies een andere invalshoek.
 - Let op de feedback: doe meer van wat een duim omhoog kreeg en vermijd wat een duim omlaag kreeg.
 
@@ -164,24 +173,15 @@ export function mentionsBaddy(body: string): boolean {
 // Variation, memory and feedback blocks (all volatile: they go after the cache breakpoint)
 // ---------------------------------------------------------------------------
 
-const CUISINES = ["Mexicaans", "Indiaas", "Japans", "Koreaans", "Thais", "Vietnamees", "Libanees", "Marokkaans", "Grieks", "Italiaans", "Spaans", "Turks", "Ethiopisch", "Peruaans", "Hollands", "Scandinavisch"];
-const METHODS = ["traybake uit de oven", "alles in één pan", "wok", "airfryer", "soep", "bowl of salade", "wrap", "stoofpot", "van de grill", "meal prep voor drie dagen", "zonder koken", "klaar in 15 minuten"];
-const PROTEINS = ["kip", "kalkoen", "mager rundergehakt", "zalm", "kabeljauw", "garnalen", "tonijn", "eieren", "magere kwark", "Griekse yoghurt", "hüttenkäse", "tofu", "tempeh", "linzen", "kikkererwten", "zwarte bonen", "edamame"];
-/** Dutch seasonal produce per month (1-12), a rough guide for inspiration. */
-const SEASONAL: Record<number, string[]> = {
-  1: ["boerenkool", "spruitjes", "knolselderij", "pastinaak", "rode kool", "witlof", "prei"],
-  2: ["boerenkool", "witlof", "pastinaak", "rode biet", "prei", "spruitjes"],
-  3: ["prei", "witlof", "spinazie", "rode biet", "winterwortel"],
-  4: ["asperges", "rabarber", "spinazie", "radijs", "lente-ui"],
-  5: ["asperges", "rabarber", "spinazie", "radijs", "sla", "aardbeien"],
-  6: ["aardbeien", "courgette", "doperwten", "tuinbonen", "sla", "kersen"],
-  7: ["courgette", "sperziebonen", "tomaat", "komkommer", "bessen", "kersen"],
-  8: ["tomaat", "courgette", "paprika", "mais", "bramen", "pruimen"],
-  9: ["pompoen", "appels", "peren", "bramen", "paprika", "prei"],
-  10: ["pompoen", "paddenstoelen", "appels", "peren", "knolselderij", "rode kool"],
-  11: ["pompoen", "boerenkool", "spruitjes", "knolselderij", "pastinaak", "stoofperen", "paddenstoelen"],
-  12: ["boerenkool", "spruitjes", "rode kool", "knolselderij", "pastinaak", "witlof", "stoofperen"],
-};
+const CUISINES = ["Italiaans", "Mexicaans", "Japans", "Koreaans", "Thais", "Indiaas", "Mediterraan", "Midden-Oosters", "Amerikaans", "Hollands modern"];
+const METHODS = ["airfryer", "alles in één pan", "wok", "traybake uit de oven", "bowl", "wrap of broodje", "meal prep voor drie dagen", "klaar in 15 minuten", "zonder koken"];
+const PROTEINS = ["kip", "kipgehakt", "mager rundergehakt", "kalkoen", "zalm", "garnalen", "tonijn", "eieren", "skyr", "magere kwark", "cottage cheese", "Griekse yoghurt", "tofu"];
+/** Produce that is good and easy to get in each season (1-12), used as an optional hint. */
+const WINTER = ["broccoli", "spinazie", "zoete aardappel", "pompoen", "paddenstoelen", "rode ui", "granaatappel", "mandarijn", "appel"];
+const SPRING = ["asperges", "spinazie", "radijs", "lente-ui", "doperwten", "aardbeien", "avocado"];
+const SUMMER = ["courgette", "tomaat", "komkommer", "paprika", "mais", "aardbeien", "blauwe bessen", "watermeloen"];
+const AUTUMN = ["pompoen", "paddenstoelen", "zoete aardappel", "broccoli", "appel", "peer", "bramen"];
+const SEASONAL: Record<number, string[]> = { 1: WINTER, 2: WINTER, 3: SPRING, 4: SPRING, 5: SPRING, 6: SUMMER, 7: SUMMER, 8: SUMMER, 9: AUTUMN, 10: AUTUMN, 11: WINTER, 12: WINTER };
 
 function pick<T>(list: T[], n: number, rand: () => number): T[] {
   const copy = [...list];
@@ -210,11 +210,11 @@ export function inspiration(month: number, rand: () => number = Math.random): In
 export function inspirationBlock(i: Inspiration): string {
   return [
     "# Inspiratie voor deze vraag",
-    "Gebruik bij recepten bij voorkeur een combinatie hiervan:",
-    `- Keuken: ${i.cuisines.join(" of ")}`,
+    "Alleen als de vraag vaag is. Kies hooguit één of twee punten, niet alles tegelijk:",
+    `- Stijl: ${i.cuisines.join(" of ")}`,
     `- Bereiding: ${i.methods.join(" of ")}`,
     `- Eiwitbron: ${i.proteins.join(", ")}`,
-    `- Seizoensproduct: ${i.seasonal.join(", ")}`,
+    `- Groente of fruit van nu (optioneel): ${i.seasonal.join(", ")}`,
   ].join("\n");
 }
 

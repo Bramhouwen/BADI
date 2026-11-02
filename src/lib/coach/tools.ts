@@ -13,8 +13,9 @@ export const saveRecipeInput = z.object({
   title: z.string().trim().min(1).max(80),
   description: z.string().trim().max(500).optional(),
   category: z.enum(RECIPE_CATEGORIES),
-  ingredients: z.array(z.string().trim().min(1).max(120)).min(1).max(30),
-  instructions: z.array(z.string().trim().min(1).max(400)).min(1).max(15),
+  // House rule: 10 ingredients and 6 steps; a little slack for salt, pepper and oil.
+  ingredients: z.array(z.string().trim().min(1).max(120)).min(1).max(13),
+  instructions: z.array(z.string().trim().min(1).max(300)).min(1).max(7),
   protein_grams: z.number().int().min(0).max(300).optional(),
 });
 export type SaveRecipeInput = z.infer<typeof saveRecipeInput>;
@@ -54,16 +55,16 @@ export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "save_recipe",
     description:
-      "Zet één recept in de Kitchen van de squad, met Baddy als auteur. Gebruik dit wanneer iemand vraagt om een recept te maken, toe te voegen of op te slaan. Het recept moet voldoen aan de huisregels: geen toegevoegde suikers, whole foods, eiwit bij hoofdmaaltijden.",
+      "Zet één recept in de Kitchen van de squad, met Baddy als auteur. Gebruik dit wanneer iemand vraagt om een recept te maken, toe te voegen of op te slaan. Het recept moet voldoen aan de huisregels: hedendaags en herkenbaar, maximaal 10 ingrediënten en 6 stappen, geen toegevoegde suikers, whole foods, eiwit bij hoofdmaaltijden.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",
       properties: {
         title: { type: "string", description: "Korte naam van het gerecht, maximaal 80 tekens." },
-        description: { type: "string", description: "Eén of twee zinnen: waarom dit lekker of handig is. Maximaal 500 tekens." },
+        description: { type: "string", description: "Eén korte zin: waarom dit lekker of handig is." },
         category: { type: "string", enum: [...RECIPE_CATEGORIES] },
-        ingredients: { type: "array", items: { type: "string" }, description: "Eén ingrediënt per item, met hoeveelheid, bijvoorbeeld '200 g magere kwark'." },
-        instructions: { type: "array", items: { type: "string" }, description: "Bereidingsstappen in volgorde, kort en concreet." },
+        ingredients: { type: "array", items: { type: "string" }, maxItems: 13, description: "Maximaal 10 ingrediënten (zout, peper en olie tellen niet mee). Eén per item, met hoeveelheid, bijvoorbeeld '200 g skyr'." },
+        instructions: { type: "array", items: { type: "string" }, maxItems: 7, description: "Maximaal 6 korte stappen in volgorde." },
         protein_grams: { type: "integer", description: "Geschatte grammen eiwit per portie." },
       },
       required: ["title", "category", "ingredients", "instructions"],
