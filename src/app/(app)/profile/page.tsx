@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, Link2, LogOut, Sparkles } from "lucide-react";
+import { loadSharing } from "@/lib/squad/data";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
@@ -11,6 +12,7 @@ import { SectionTitle } from "@/components/ui/card";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { ProfileForm } from "./profile-form";
 import { AlcoholExceptions } from "./alcohol-exceptions";
+import { SharingSettings } from "./sharing-settings";
 import type { AlcoholException } from "@/lib/types";
 
 export const metadata = { title: "Profiel" };
@@ -31,9 +33,10 @@ function Row({ href, icon: Icon, title, body }: { href: string; icon: typeof Boo
 async function Content() {
   const ctx = await requireContext();
   const supabase = await createClient();
-  const [avatar, { data: exceptionRows }] = await Promise.all([
+  const [avatar, { data: exceptionRows }, sharing] = await Promise.all([
     signedUrl("avatars", ctx.profile.avatar_path),
     supabase.from("alcohol_exceptions").select("*").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id).order("exception_date"),
+    loadSharing(ctx.userId),
   ]);
   const exceptions = (exceptionRows ?? []) as AlcoholException[];
   const wrapped = wrappedStatus(ctx.challenge);
@@ -56,6 +59,12 @@ async function Content() {
             body={wrapped === "final" ? "Jullie definitieve terugblik." : wrapped === "preliminary" ? "Voorlopige terugblik tijdens de finale." : `Beschikbaar vanaf ${formatDateNl(ctx.challenge.end_date, { day: "numeric", month: "long" })}.`}
           />
         </div>
+      </section>
+
+      <section id="zichtbaarheid">
+        <SectionTitle action={<Link href={`/squad/${ctx.userId}`} className="text-[13px] text-muted">Mijn profiel</Link>}>Mijn Squad zichtbaarheid</SectionTitle>
+        <p className="mb-2.5 px-0.5 text-[12.5px] leading-snug text-muted">Squadleden zien alleen wat je hier aanzet. Uitzetten werkt direct.</p>
+        <SharingSettings initial={sharing} />
       </section>
 
       <section>

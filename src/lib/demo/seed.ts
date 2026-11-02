@@ -139,6 +139,14 @@ export function buildSeed(): Store {
     { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "walk", title: "Avondwandeling", workout_date: d(6), started_at: null, completed_at: iso(d(6), 20), duration_seconds: 2700, distance_meters: 4100, notes: null, status: "completed", created_at: iso(d(6), 20), updated_at: iso(d(6), 20) },
     { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "run", title: "Intervallen", workout_date: d(9), started_at: null, completed_at: iso(d(9), 8), duration_seconds: 1500, distance_meters: 4000, notes: null, status: "completed", created_at: iso(d(9), 8), updated_at: iso(d(9), 8) },
   ];
+  workout_sessions.push(
+    { id: demoId(), user_id: SAM, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "run", title: "Tempo run", workout_date: d(1), started_at: null, completed_at: iso(d(1), 7, 40), duration_seconds: 1560, distance_meters: 5100, notes: null, status: "completed", created_at: iso(d(1), 7, 40), updated_at: iso(d(1), 7, 40) },
+    { id: demoId(), user_id: SAM, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "cycle", title: "Rondje", workout_date: d(3), started_at: null, completed_at: iso(d(3), 17), duration_seconds: 3600, distance_meters: 28000, notes: null, status: "completed", created_at: iso(d(3), 17), updated_at: iso(d(3), 17) },
+    { id: demoId(), user_id: SAM, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "run", title: "Lange duurloop", workout_date: d(8), started_at: null, completed_at: iso(d(8), 10), duration_seconds: 3900, distance_meters: 10500, notes: null, status: "completed", created_at: iso(d(8), 10), updated_at: iso(d(8), 10) },
+    { id: demoId(), user_id: NOOR, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "walk", title: "Lunchwandeling", workout_date: d(0), started_at: null, completed_at: iso(d(0), 13), duration_seconds: 2400, distance_meters: 3200, notes: null, status: "completed", created_at: iso(d(0), 13), updated_at: iso(d(0), 13) },
+    { id: demoId(), user_id: NOOR, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "yoga", title: "Yoga", workout_date: d(2), started_at: null, completed_at: iso(d(2), 19), duration_seconds: 2700, distance_meters: null, notes: null, status: "completed", created_at: iso(d(2), 19), updated_at: iso(d(2), 19) },
+    { id: demoId(), user_id: NOOR, challenge_id: DEMO_CHALLENGE_ID, template_id: null, activity_type: "walk", title: "Avondwandeling", workout_date: d(5), started_at: null, completed_at: iso(d(5), 20), duration_seconds: 3000, distance_meters: 4500, notes: null, status: "completed", created_at: iso(d(5), 20), updated_at: iso(d(5), 20) },
+  );
   const strengthSession = workout_sessions[1].id as string;
   const workout_exercises: Row[] = [
     { id: demoId(), session_id: strengthSession, exercise_id: exId("Squat"), sort_order: 0, notes: null },
@@ -148,6 +156,11 @@ export function buildSeed(): Store {
   const exercise_sets: Row[] = [];
   const setPlan: [number, [number, number][]][] = [[0, [[40, 12], [50, 10], [55, 8]]], [1, [[50, 10], [60, 8], [60, 8]]], [2, [[100, 12], [120, 10], [120, 10]]]];
   for (const [wi, sets] of setPlan) sets.forEach(([w, r], i) => exercise_sets.push({ id: demoId(), workout_exercise_id: workout_exercises[wi].id, set_number: i + 1, weight_kg: w, repetitions: r, completed: true }));
+
+  const stat_sharing: Row[] = [
+    { user_id: SAM, share_workout_counts: true, share_minutes_distance: true, share_active_days: true, share_checkins: true, share_records: true, share_recent_workouts: true, updated_at: iso(start) },
+    { user_id: NOOR, share_workout_counts: true, share_minutes_distance: false, share_active_days: true, share_checkins: true, share_records: false, share_recent_workouts: true, updated_at: iso(start) },
+  ];
 
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
@@ -163,6 +176,7 @@ export function buildSeed(): Store {
     workout_exercises,
     exercise_sets,
     checkin_sources,
+    stat_sharing,
     challenges,
     memberships,
     invitations: [],

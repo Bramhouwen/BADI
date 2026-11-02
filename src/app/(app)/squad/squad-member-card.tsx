@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, HandHeart, Minus } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronRight, HandHeart, Minus } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { firstName, cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ export function SquadMemberCard({ member }: { member: SquadCardMember }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="glass rounded-[20px] p-4">
-      <div className="flex items-center gap-3.5">
+      <Link href={`/squad/${member.id}`} className="-m-1 flex items-center gap-3.5 rounded-[16px] p-1 hover:bg-blush/40" aria-label={`Profiel van ${firstName(member.name)}`}>
         <Avatar name={member.name} src={member.avatar} size="lg" ring={member.checkedInToday} className="h-16 w-16 text-lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[21px] leading-tight text-text">
@@ -51,7 +52,8 @@ export function SquadMemberCard({ member }: { member: SquadCardMember }) {
             )}
           </p>
         </div>
-      </div>
+        <ChevronRight className="h-[18px] w-[18px] shrink-0 text-muted" strokeWidth={1.6} />
+      </Link>
 
       <div className="mt-3.5 grid grid-cols-3 gap-2">
         <Stat value={member.streak} label={member.streak === 1 ? "dag streak" : "dagen streak"} />

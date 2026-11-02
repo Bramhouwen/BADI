@@ -215,6 +215,56 @@ function afterInsert(table: string, row: Row) {
 
 const DEMO_TOKEN = "d".repeat(64);
 
+/** Demo twin of the SQL function squad_member_stats: same gating, same shape. */
+function squadMemberStats(s: Store, pUser: string): Result {
+  const isMember = s.memberships.some((m) => m.user_id === pUser && m.challenge_id === DEMO_CHALLENGE_ID);
+  if (!isMember) return { data: null, error: { message: "NOT_A_MEMBER" }, count: null };
+  const self = pUser === DEMO_USER_ID;
+  const row = s.stat_sharing.find((r) => r.user_id === pUser);
+  const flag = (col: string, fallback: boolean) => self || (row ? Boolean(row[col]) : fallback);
+  const counts = flag("share_workout_counts", false);
+  const minutes = flag("share_minutes_distance", false);
+  const active = flag("share_active_days", false);
+  const checkins = flag("share_checkins", true);
+  const records = flag("share_records", false);
+  const recent = flag("share_recent_workouts", false);
+  const done = s.workout_sessions.filter((w) => w.user_id === pUser && w.status === "completed").sort((a, b) => (String(a.workout_date) < String(b.workout_date) ? 1 : -1));
+  const strip = (w: Row) => ({ activity_type: w.activity_type, workout_date: w.workout_date, duration_seconds: minutes ? w.duration_seconds : null, distance_meters: minutes ? w.distance_meters : null });
+  let recordsJson: unknown = null;
+  if (records) {
+    const runs = done.filter((w) => w.activity_type === "run");
+    const fiveK = runs.filter((w) => Number(w.distance_meters) >= 5000 && Number(w.distance_meters) <= 5500 && Number(w.duration_seconds) > 0);
+    const byExercise = new Map<string, number>();
+    for (const we of s.workout_exercises) {
+      const session = done.find((w) => w.id === we.session_id);
+      if (!session) continue;
+      const name = String(s.exercises.find((e) => e.id === we.exercise_id)?.name ?? "");
+      for (const set of s.exercise_sets) {
+        if (set.workout_exercise_id !== we.id || !set.completed || !(Number(set.weight_kg) > 0)) continue;
+        byExercise.set(name, Math.max(byExercise.get(name) ?? 0, Number(set.weight_kg)));
+      }
+    }
+    recordsJson = {
+      longest_run_meters: runs.length ? Math.max(...runs.map((w) => Number(w.distance_meters) || 0)) : null,
+      fastest_5k_seconds: fiveK.length ? Math.min(...fiveK.map((w) => Number(w.duration_seconds))) : null,
+      strength: [...byExercise.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([exercise, max_weight_kg]) => ({ exercise, max_weight_kg })),
+    };
+  }
+  return {
+    data: {
+      user_id: pUser,
+      sharing: { workout_counts: counts, minutes_distance: minutes, active_days: active, checkins, records, recent_workouts: recent },
+      sessions: counts ? done.map(strip) : [],
+      workout_dates: !counts && active ? [...new Set(done.map((w) => String(w.workout_date)))] : [],
+      checkin_dates: checkins ? s.daily_checkins.filter((c) => c.user_id === pUser).map((c) => String(c.checkin_date)).sort() : [],
+      records: recordsJson,
+      recent: recent ? done.slice(0, 10).map(strip) : [],
+    },
+    error: null,
+    count: null,
+  };
+}
+
 function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> {
   const s = store();
   const ok = (data: unknown): Result => ({ data, error: null, count: null });
@@ -235,6 +285,8 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       return Promise.resolve(ok(null));
     case "group_compliment_count":
       return Promise.resolve(ok(s.compliments.length));
+    case "squad_member_stats":
+      return Promise.resolve(squadMemberStats(s, String(args.p_user)));
     default:
       return Promise.resolve({ data: null, error: { message: `unknown rpc ${name}` }, count: null });
   }
