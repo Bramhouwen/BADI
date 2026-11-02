@@ -79,7 +79,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
             {recipe.category ? <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-water-deep">{recipe.category}</p> : null}
             {image && recipe.image_ai ? <AiBadge /> : null}
           </div>
-          <h1 className="text-2xl font-bold leading-tight">{recipe.title}</h1>
+          <h1 className="font-sans text-2xl font-bold leading-tight text-white">{recipe.title}</h1>
         </div>
       </div>
 

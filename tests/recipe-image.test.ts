@@ -11,10 +11,15 @@ describe("AI recipe photo prompt", () => {
 
   it("describes the dish in the house style without text or people", () => {
     const p = recipeImagePrompt({ title: "Kip burrito bowl", category: "Avondeten", ingredients: "150 g kipfilet\n100 g zilvervliesrijst\n1 avocado\nzout" });
-    expect(p).toContain('"Kip burrito bowl"');
+    expect(p).toContain("of Kip burrito bowl,");
+    expect(p).not.toMatch(/"|\btext\b|logo|letter|label/i);
     expect(p).toContain("a dinner dish");
     expect(p).toContain("kipfilet, zilvervliesrijst, avocado, zout");
-    expect(p).toContain("No text");
+
+  });
+
+  it("drops emoji and quotes from the dish name", () => {
+    expect(recipeImagePrompt({ title: 'High Protein Pasta 🍝 "deluxe"' })).toContain("of High Protein Pasta deluxe, a home-cooked dish.");
   });
 
   it("works without ingredients or category", () => {

@@ -27,11 +27,14 @@ export function recipeImagePrompt(r: { title: string; category?: string | null; 
     .filter((n) => n.length > 1)
     .slice(0, 6);
   const kind = (r.category && CATEGORY_HINT[r.category]) || "a home-cooked dish";
+  // The dish name goes in without quotes and without emoji, and the prompt never mentions words,
+  // letters or labels: image models tend to draw exactly those into the picture.
+  const dish = r.title.replace(/[\p{Extended_Pictographic}\uFE0F"“”'‘’]/gu, "").replace(/\s+/g, " ").trim();
   return [
-    `Appetizing modern food photography of "${r.title}", ${kind}${names.length ? ` made with ${names.join(", ")}` : ""}.`,
+    `Appetizing modern food photography of ${dish}, ${kind}${names.length ? ` made with ${names.join(", ")}` : ""}.`,
     "Plated as you would serve it at home in 2026, generous and fresh, visible texture.",
     "Soft natural daylight from the side, 45 degree angle, shallow depth of field.",
     "Simple matte ceramic plate or bowl on a warm light wood or linen surface, one or two subtle props, warm cream and terracotta tones.",
-    "Realistic, true-to-life colours. No text, no logos, no people, no hands.",
+    "Realistic, true-to-life colours, editorial cookbook style, only the food and tableware in frame.",
   ].join(" ");
 }
