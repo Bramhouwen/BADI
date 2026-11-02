@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lock, Settings2 } from "lucide-react";
 import { getSquad, requireContext } from "@/lib/data";
-import { loadMemberStats } from "@/lib/squad/data";
+import { loadMemberHabits, loadMemberStats } from "@/lib/squad/data";
+import { habitWeek } from "@/lib/habits";
+import { weekStartOf } from "@/lib/checkin-plan";
 import { signedUrl } from "@/lib/storage";
-import { formatDateNl, todayKey } from "@/lib/dates";
+import { addDays, formatDateNl, todayKey, weekdayShortNl } from "@/lib/dates";
 import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, paceSecPerKm } from "@/lib/fitness";
 import { activityStatus, compareRows, deriveMemberStats, gridDays, type MemberStats } from "@/lib/squad-stats";
 import { firstName } from "@/lib/utils";
@@ -48,10 +50,12 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
 
   const isMe = userId === ctx.userId;
   const today = todayKey(new Date(), ctx.challenge.timezone);
-  const [payload, minePayload, avatar] = await Promise.all([
+  const weekStart = weekStartOf(today);
+  const [payload, minePayload, avatar, habits] = await Promise.all([
     loadMemberStats(userId),
     isMe ? null : loadMemberStats(ctx.userId),
     signedUrl("avatars", member.profile.avatar_path),
+    loadMemberHabits(userId, weekStart, addDays(weekStart, 6)),
   ]);
   if (!payload) notFound();
 
@@ -59,7 +63,8 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const mine: MemberStats | null = minePayload ? deriveMemberStats(minePayload, today, ctx.challenge) : null;
   const name = firstName(member.profile.display_name);
   const status = activityStatus(stats, today);
-  const sharesAnything = Object.values(stats.sharing).some(Boolean);
+  const showHabits = habits.shared && habits.habits.length > 0;
+  const sharesAnything = Object.values(stats.sharing).some(Boolean) || showHabits;
   const showGrid = Boolean(stats.activeDays) || Boolean(stats.checkin);
   const grids = showGrid ? { week: gridDays(stats, today, "week"), "prev-week": gridDays(stats, today, "prev-week"), month: gridDays(stats, today, "month") } : null;
   const rows = mine ? compareRows(mine, stats) : [];
@@ -168,6 +173,35 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
         <section>
           <SectionTitle>Activiteit</SectionTitle>
           <ActivityGrid grids={grids} showWorkouts={Boolean(stats.activeDays)} showCheckins={Boolean(stats.checkin)} />
+        </section>
+      ) : null}
+
+      {showHabits ? (
+        <section>
+          <SectionTitle>Eigen gewoontes</SectionTitle>
+          <div className="glass rounded-[18px] px-4 py-3">
+            <div className="grid grid-cols-[1fr_repeat(7,18px)] items-center gap-x-1.5 text-[10px] font-medium uppercase text-muted">
+              <span>Deze week</span>
+              {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((d) => (
+                <span key={d} className={d === today ? "text-center text-ink" : "text-center"}>
+                  {weekdayShortNl(d).slice(0, 2)}
+                </span>
+              ))}
+            </div>
+            <ul className="mt-1.5 space-y-1.5">
+              {habits.habits.map((h) => (
+                <li key={h.id} className="grid grid-cols-[1fr_repeat(7,18px)] items-center gap-x-1.5">
+                  <span className="truncate text-[13px] text-text">
+                    {h.emoji ? `${h.emoji} ` : ""}
+                    {h.name}
+                  </span>
+                  {habitWeek(h.dates, weekStart).map((on, i) => (
+                    <span key={i} className={on ? "mx-auto h-3.5 w-3.5 rounded-full bg-sage" : "mx-auto h-3.5 w-3.5 rounded-full bg-ink/10"} aria-label={on ? "afgevinkt" : "niet afgevinkt"} />
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
 

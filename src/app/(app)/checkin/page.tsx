@@ -11,6 +11,7 @@ import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
+import type { Habit } from "@/lib/habits";
 import { CheckinBoard } from "./checkin-board";
 
 export const metadata = { title: "Check-in" };
@@ -25,12 +26,15 @@ async function Content() {
   const weekStart = weekStartOf(today);
   const rangeEnd = addDays(weekStart, 13);
 
-  const [{ data: checkinRows }, { data: sourceRows }, { data: planRows }, { data: jokerRows }, { data: waterRows }] = await Promise.all([
+  const [{ data: checkinRows }, { data: sourceRows }, { data: planRows }, { data: jokerRows }, { data: waterRows }, { data: habitRows }, { data: habitLogRows }, { data: sharingRow }] = await Promise.all([
     supabase.from("daily_checkins").select("checkin_date, activities").eq("challenge_id", ctx.challenge.id).eq("user_id", ctx.userId),
     supabase.from("checkin_sources").select("checkin_date, activity, source").eq("user_id", ctx.userId).in("checkin_date", dates),
     supabase.from("planned_trainings").select("plan_date, kind").eq("user_id", ctx.userId).gte("plan_date", weekStart).lte("plan_date", rangeEnd),
     supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
     supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", ctx.userId).in("log_date", dates),
+    supabase.from("custom_habits").select("id, name, emoji, sort_order").eq("user_id", ctx.userId).order("sort_order"),
+    supabase.from("custom_habit_logs").select("habit_id, log_date").eq("user_id", ctx.userId).in("log_date", dates),
+    supabase.from("stat_sharing").select("share_habits").eq("user_id", ctx.userId).maybeSingle(),
   ]);
   const checkins = (checkinRows ?? []) as { checkin_date: string; activities: ActivityKey[] }[];
   const stats = computeStreakStats(checkins.map((c) => c.checkin_date), today);
@@ -70,6 +74,8 @@ async function Content() {
     auto[s.checkin_date] = { ...(auto[s.checkin_date] ?? {}), [s.activity]: s.source as "workout" | "water" };
   }
   const jokers = ((jokerRows ?? []) as { exception_date: string }[]).map((j) => j.exception_date);
+  const habitLogs: Record<string, string[]> = {};
+  for (const l of (habitLogRows ?? []) as { habit_id: string; log_date: string }[]) habitLogs[l.habit_id] = [...(habitLogs[l.habit_id] ?? []), l.log_date];
 
   return (
     <Page className="space-y-5">
@@ -87,6 +93,9 @@ async function Content() {
         streak={stats.current}
         challengeStart={ctx.challenge.start_date}
         challengeEnd={ctx.challenge.end_date}
+        habits={(habitRows ?? []) as Habit[]}
+        habitLogs={habitLogs}
+        habitsShared={Boolean((sharingRow as { share_habits?: boolean } | null)?.share_habits)}
       />
     </Page>
   );

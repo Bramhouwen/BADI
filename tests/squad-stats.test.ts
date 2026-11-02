@@ -6,7 +6,7 @@ const today = "2026-11-12"; // Thursday; week runs 9 to 15 Nov
 
 const full: MemberStatsPayload = {
   user_id: "u1",
-  sharing: { workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true },
+  sharing: { workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true, habits: true },
   sessions: [
     { activity_type: "run", workout_date: "2026-11-12", duration_seconds: 1500, distance_meters: 5000 },
     { activity_type: "strength", workout_date: "2026-11-12", duration_seconds: 3000, distance_meters: null },

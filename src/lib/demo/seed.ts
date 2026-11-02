@@ -158,7 +158,7 @@ export function buildSeed(): Store {
   for (const [wi, sets] of setPlan) sets.forEach(([w, r], i) => exercise_sets.push({ id: demoId(), workout_exercise_id: workout_exercises[wi].id, set_number: i + 1, weight_kg: w, repetitions: r, completed: true }));
 
   const stat_sharing: Row[] = [
-    { user_id: SAM, share_workout_counts: true, share_minutes_distance: true, share_active_days: true, share_checkins: true, share_records: true, share_recent_workouts: true, updated_at: iso(start) },
+    { user_id: SAM, share_workout_counts: true, share_minutes_distance: true, share_active_days: true, share_checkins: true, share_records: true, share_recent_workouts: true, share_habits: true, updated_at: iso(start) },
     { user_id: NOOR, share_workout_counts: true, share_minutes_distance: false, share_active_days: true, share_checkins: true, share_records: false, share_recent_workouts: true, updated_at: iso(start) },
   ];
 
@@ -183,6 +183,16 @@ export function buildSeed(): Store {
 
   const squad_chat_reads: Row[] = [];
 
+  // Sam shares two own habits; Bram (demo user) starts with one.
+  const custom_habits: Row[] = [
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, name: "10 minuten lezen", emoji: "📖", sort_order: 0, created_at: iso(start) },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, name: "Creatine", emoji: "💊", sort_order: 1, created_at: iso(start) },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: DEMO_USER_ID, name: "Koude douche", emoji: "🚿", sort_order: 0, created_at: iso(start) },
+  ];
+  const custom_habit_logs: Row[] = [];
+  for (const [hi, days] of [[0, [0, 1, 2, 4]], [1, [1, 2, 3, 5, 6]], [2, [1, 2]]] as [number, number[]][])
+    for (const n of days) custom_habit_logs.push({ habit_id: custom_habits[hi].id, user_id: custom_habits[hi].user_id, log_date: d(n), created_at: iso(d(n), 8) });
+
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
 
@@ -200,6 +210,8 @@ export function buildSeed(): Store {
     stat_sharing,
     squad_messages,
     squad_chat_reads,
+    custom_habits,
+    custom_habit_logs,
     coach_messages: [],
     coach_memories: [],
     challenges,

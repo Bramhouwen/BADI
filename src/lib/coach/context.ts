@@ -3,7 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppContext } from "@/lib/data";
 import { ACTIVITIES, WATER_GOAL_ML } from "@/lib/constants";
-import { challengeDay, challengeLengthDays, challengePhase, formatDateNl, todayKey } from "@/lib/dates";
+import { addDays, challengeDay, challengeLengthDays, challengePhase, formatDateNl, todayKey } from "@/lib/dates";
+import { weekStartOf } from "@/lib/checkin-plan";
 import { activityMeta, weekStats, type SessionLike } from "@/lib/fitness";
 import { computeStreakStats } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
@@ -13,12 +14,16 @@ import { snippet, type CoachContext, type FeedbackItem, type KitchenItem, type M
 export async function loadCoachContext(supabase: SupabaseClient, ctx: AppContext): Promise<CoachContext> {
   const now = new Date();
   const today = todayKey(now, ctx.challenge.timezone);
-  const [{ data: checkins }, { data: water }, { data: sessions }, { count: alcohol }] = await Promise.all([
+  const weekStart = weekStartOf(today);
+  const [{ data: checkins }, { data: water }, { data: sessions }, { count: alcohol }, { data: habits }, { data: habitLogs }] = await Promise.all([
     supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
     supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today),
     supabase.from("workout_sessions").select("id, activity_type, workout_date, duration_seconds, distance_meters, status, title").eq("user_id", ctx.userId).eq("status", "completed").order("workout_date", { ascending: false }).limit(60),
     supabase.from("alcohol_exceptions").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId),
+    supabase.from("custom_habits").select("id, name, emoji").eq("user_id", ctx.userId).order("sort_order"),
+    supabase.from("custom_habit_logs").select("habit_id, log_date").eq("user_id", ctx.userId).gte("log_date", weekStart).lte("log_date", addDays(weekStart, 6)),
   ]);
+  const logs = (habitLogs ?? []) as { habit_id: string; log_date: string }[];
   const rows = (checkins ?? []) as { checkin_date: string; activities: string[] }[];
   const streak = computeStreakStats(rows.map((r) => r.checkin_date), today);
   const todayRow = rows.find((r) => r.checkin_date === today);
@@ -50,6 +55,11 @@ export async function loadCoachContext(supabase: SupabaseClient, ctx: AppContext
       km: s.distance_meters ? s.distance_meters / 1000 : null,
     })),
     alcoholExceptionsUsed: alcohol ?? 0,
+    ownHabits: ((habits ?? []) as { id: string; name: string; emoji: string | null }[]).map((h) => ({
+      name: h.emoji ? `${h.emoji} ${h.name}` : h.name,
+      doneToday: logs.some((l) => l.habit_id === h.id && l.log_date === today),
+      daysThisWeek: logs.filter((l) => l.habit_id === h.id).length,
+    })),
   };
 }
 

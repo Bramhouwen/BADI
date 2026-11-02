@@ -229,6 +229,23 @@ function afterInsert(table: string, row: Row) {
 
 const DEMO_TOKEN = "d".repeat(64);
 
+/** Demo twin of the SQL function member_habits: yourself always, others only while they share habits. */
+function memberHabits(s: Store, pUser: string, from: string, to: string) {
+  const row = s.stat_sharing.find((r) => r.user_id === pUser);
+  const shared = pUser === DEMO_USER_ID || Boolean(row?.share_habits);
+  if (!shared) return { shared: false, habits: [] };
+  const habits = s.custom_habits
+    .filter((h) => h.user_id === pUser)
+    .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+    .map((h) => ({
+      id: h.id,
+      name: h.name,
+      emoji: h.emoji ?? null,
+      dates: s.custom_habit_logs.filter((l) => l.habit_id === h.id && String(l.log_date) >= from && String(l.log_date) <= to).map((l) => l.log_date).sort(),
+    }));
+  return { shared: true, habits };
+}
+
 /** Demo twin of the SQL function squad_member_stats: same gating, same shape. */
 function squadMemberStats(s: Store, pUser: string): Result {
   const isMember = s.memberships.some((m) => m.user_id === pUser && m.challenge_id === DEMO_CHALLENGE_ID);
@@ -301,6 +318,8 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       return Promise.resolve(ok(s.compliments.length));
     case "squad_member_stats":
       return Promise.resolve(squadMemberStats(s, String(args.p_user)));
+    case "member_habits":
+      return Promise.resolve(ok(memberHabits(s, String(args.p_user), String(args.p_from), String(args.p_to))));
     default:
       return Promise.resolve({ data: null, error: { message: `unknown rpc ${name}` }, count: null });
   }

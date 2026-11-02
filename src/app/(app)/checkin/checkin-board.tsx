@@ -12,6 +12,8 @@ import { spendJoker, toggleActivity, togglePlan, undoJoker } from "@/app/actions
 import { Ring } from "@/components/ui/ring";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import type { Habit } from "@/lib/habits";
+import { MyHabits } from "./my-habits";
 
 interface Props {
   today: string;
@@ -26,6 +28,9 @@ interface Props {
   streak: number;
   challengeStart: string;
   challengeEnd: string;
+  habits: Habit[];
+  habitLogs: Record<string, string[]>;
+  habitsShared: boolean;
 }
 
 const meta = (key: ActivityKey) => ACTIVITIES.find((a) => a.key === key)!;
@@ -213,6 +218,8 @@ export function CheckinBoard(props: Props) {
           Jokers: {jokers.length} van {maxJokers} ingezet.
         </p>
       </section>
+
+      <MyHabits date={date} initialHabits={props.habits} initialLogs={props.habitLogs} shared={props.habitsShared} />
 
       <section aria-label="Training">
         <h2 className="mb-2.5 px-0.5 font-display text-[19px]">Training {date === today ? "vandaag" : "gisteren"}</h2>

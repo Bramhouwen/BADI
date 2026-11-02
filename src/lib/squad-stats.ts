@@ -21,6 +21,7 @@ export const SHARING_OPTIONS = [
   { key: "checkins", label: "Check-in consistentie en streaks", hint: "Ook gebruikt op het Squad-overzicht, in de tijdlijn en in Wrapped." },
   { key: "records", label: "Persoonlijke records", hint: "Snelste 5 km, langste loop en zwaarste gewicht per oefening." },
   { key: "recent_workouts", label: "Recente trainingen", hint: "Je laatste tien trainingen: type, datum, duur en afstand." },
+  { key: "habits", label: "Eigen gewoontes", hint: "Je eigen gewoontes en op welke dagen je ze deze week afvinkte." },
 ] as const;
 
 export type SharingKey = (typeof SHARING_OPTIONS)[number]["key"];
@@ -33,6 +34,7 @@ export const DEFAULT_SHARING: SharingFlags = {
   checkins: true,
   records: false,
   recent_workouts: false,
+  habits: false,
 };
 
 export const ALL_SHARED: SharingFlags = {
@@ -42,6 +44,7 @@ export const ALL_SHARED: SharingFlags = {
   checkins: true,
   records: true,
   recent_workouts: true,
+  habits: true,
 };
 
 export interface SharedSession {
@@ -100,6 +103,8 @@ export function parseMemberStats(raw: unknown): MemberStatsPayload | null {
     checkins: bool(sh.checkins, false),
     records: bool(sh.records, false),
     recent_workouts: bool(sh.recent_workouts, false),
+    // Habits are read through member_habits(), not through this payload.
+    habits: false,
   };
   let records: SharedRecords | null = null;
   if (sharing.records && o.records && typeof o.records === "object") {
@@ -305,6 +310,7 @@ export function sharingFromRow(row: Record<string, unknown> | null | undefined):
     checkins: bool(row.share_checkins, DEFAULT_SHARING.checkins),
     records: bool(row.share_records, DEFAULT_SHARING.records),
     recent_workouts: bool(row.share_recent_workouts, DEFAULT_SHARING.recent_workouts),
+    habits: bool(row.share_habits, DEFAULT_SHARING.habits),
   };
 }
 
@@ -316,5 +322,6 @@ export function sharingToRow(flags: SharingFlags): Record<`share_${SharingKey}`,
     share_checkins: flags.checkins,
     share_records: flags.records,
     share_recent_workouts: flags.recent_workouts,
+    share_habits: flags.habits,
   };
 }

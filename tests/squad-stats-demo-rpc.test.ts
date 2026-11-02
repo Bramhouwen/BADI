@@ -20,7 +20,8 @@ describe("squad_member_stats gating (demo twin of the SQL function)", () => {
 
   it("returns everything for the caller's own profile", async () => {
     const p = parseMemberStats((await call(ME)).data);
-    expect(p?.sharing).toEqual({ workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true });
+    // Habits are read through member_habits(), so this payload never carries them.
+    expect(p?.sharing).toEqual({ workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true, habits: false });
     expect(p?.sessions.length).toBeGreaterThan(0);
     expect(p?.records?.strength.length).toBeGreaterThan(0);
   });

@@ -82,6 +82,8 @@ export interface CoachContext {
   kmThisWeek: number;
   recentWorkouts: { date: string; type: string; minutes: number | null; km: number | null }[];
   alcoholExceptionsUsed: number;
+  /** Own habits (private chat only); they do not count toward the daily score. */
+  ownHabits?: { name: string; doneToday: boolean; daysThisWeek: number }[];
 }
 
 function nl(n: number, digits = 0): string {
@@ -100,6 +102,13 @@ export function contextBlock(c: CoachContext): string {
     `- Trainingen deze week: ${c.workoutsThisWeek}, samen ${c.minutesThisWeek} minuten en ${nl(c.kmThisWeek, 1)} km`,
     `- Alcohol-uitzonderingen gebruikt: ${c.alcoholExceptionsUsed} van 2`,
   ];
+  if (c.ownHabits?.length) {
+    lines.push(
+      `- Eigen gewoontes (zelf gekozen, tellen niet mee in de dagscore): ${c.ownHabits
+        .map((h) => `${h.name} (vandaag ${h.doneToday ? "gedaan" : "nog niet"}, ${h.daysThisWeek} van 7 dagen deze week)`)
+        .join("; ")}`,
+    );
+  }
   if (c.recentWorkouts.length) {
     lines.push("- Laatste trainingen:");
     for (const w of c.recentWorkouts) {
