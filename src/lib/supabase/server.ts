@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
@@ -8,8 +9,12 @@ import { isDemo } from "@/lib/demo";
 import { createDemoClient } from "@/lib/demo/mock-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Per-request Supabase client for Server Components, Server Actions and Route Handlers. */
-export async function createClient(): Promise<SupabaseClient> {
+/**
+ * Per-request Supabase client for Server Components, Server Actions and Route
+ * Handlers. Memoised per request so the header, the nav badge and the page
+ * share one client and one session lookup.
+ */
+export const createClient = cache(async function createClient(): Promise<SupabaseClient> {
   if (isDemo()) {
     // Demo data lives in memory and changes per request: render at request time.
     await connection();
@@ -37,4 +42,4 @@ export async function createClient(): Promise<SupabaseClient> {
       },
     },
   });
-}
+});

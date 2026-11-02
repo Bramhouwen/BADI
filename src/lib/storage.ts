@@ -1,11 +1,25 @@
 import "server-only";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isStaticMediaPath, staticMediaUrl } from "./media-paths";
 
 export type Bucket = "wall" | "recipes" | "avatars";
 
 const SIGNED_URL_TTL = 60 * 60; // one hour
+
+/** One storage round trip per distinct (bucket, paths) within a request. */
+const signBatch = cache(async (bucket: Bucket, key: string): Promise<Map<string, string>> => {
+  const map = new Map<string, string>();
+  const paths = key ? key.split("\n") : [];
+  if (paths.length === 0) return map;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, SIGNED_URL_TTL);
+  for (const item of data ?? []) {
+    if (item.signedUrl && item.path) map.set(item.path, item.signedUrl);
+  }
+  return map;
+});
 
 /** Signed URLs for private objects, keyed by path. Missing or unauthorized paths are omitted. */
 export async function signedUrlMap(bucket: Bucket, paths: string[]): Promise<Map<string, string>> {
@@ -18,11 +32,8 @@ export async function signedUrlMap(bucket: Bucket, paths: string[]): Promise<Map
     return true;
   });
   if (unique.length === 0) return map;
-  const supabase = await createClient();
-  const { data } = await supabase.storage.from(bucket).createSignedUrls(unique, SIGNED_URL_TTL);
-  for (const item of data ?? []) {
-    if (item.signedUrl && item.path) map.set(item.path, item.signedUrl);
-  }
+  const signed = await signBatch(bucket, [...unique].sort().join("\n"));
+  for (const [path, url] of signed) map.set(path, url);
   return map;
 }
 

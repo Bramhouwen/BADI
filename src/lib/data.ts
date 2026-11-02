@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Challenge, Membership, Profile } from "@/lib/types";
@@ -19,13 +20,17 @@ export interface SquadMember {
   profile: Profile;
 }
 
-export async function getSessionUser() {
+/**
+ * Verified user of this request, shared by every caller. The JWT is verified
+ * locally against the project's public signing key, so no Auth round trip.
+ */
+export const getSessionUser = cache(async function getSessionUser(): Promise<{ id: string; email: string | null } | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-}
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null };
+});
 
 export async function requireUser() {
   const user = await getSessionUser();
@@ -33,25 +38,24 @@ export async function requireUser() {
   return user;
 }
 
-/** Profile, membership and challenge of the signed-in user, or null when not yet in a group. */
-export async function getContext(): Promise<AppContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/**
+ * Profile, membership and challenge of the signed-in user, or null when not
+ * yet in a group. Memoised per request: header, nav badge and page share it.
+ * Two parallel queries after the auth check, the challenge rides along with
+ * the membership.
+ */
+export const getContext = cache(async function getContext(): Promise<AppContext | null> {
+  const user = await getSessionUser();
   if (!user) return null;
+  const supabase = await createClient();
 
-  const [{ data: profile }, { data: membership }] = await Promise.all([
+  const [{ data: profile }, { data: membershipRow }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("memberships").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("memberships").select("*, challenge:challenges(*)").eq("user_id", user.id).maybeSingle(),
   ]);
-  if (!profile || !membership) return null;
-
-  const { data: challenge } = await supabase
-    .from("challenges")
-    .select("*")
-    .eq("id", membership.challenge_id)
-    .maybeSingle();
+  if (!profile || !membershipRow) return null;
+  const { challenge: challengeRaw, ...membership } = membershipRow as Membership & { challenge: Challenge | Challenge[] | null };
+  const challenge = Array.isArray(challengeRaw) ? challengeRaw[0] : challengeRaw;
   if (!challenge) return null;
 
   return {
@@ -59,9 +63,9 @@ export async function getContext(): Promise<AppContext | null> {
     email: user.email ?? null,
     profile: profile as Profile,
     membership: membership as Membership,
-    challenge: challenge as Challenge,
+    challenge,
   };
-}
+});
 
 /** Redirects to login or onboarding when there is no complete context. */
 export async function requireContext(): Promise<AppContext> {

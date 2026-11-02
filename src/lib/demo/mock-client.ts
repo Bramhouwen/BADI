@@ -14,7 +14,7 @@ function store(): Store {
   return g.__winterArcDemoStore;
 }
 
-const FK: Record<string, string> = { profiles: "user_id", exercises: "exercise_id" };
+const FK: Record<string, string> = { profiles: "user_id", exercises: "exercise_id", challenges: "challenge_id" };
 
 type Filter = (row: Row) => boolean;
 
@@ -318,6 +318,7 @@ export function createDemoClient() {
     },
     auth: {
       getUser: async () => ({ data: { user: demoUser }, error: null }),
+      getClaims: async () => ({ data: { claims: { sub: demoUser.id, email: demoUser.email } }, error: null }),
       signOut: async () => ({ error: null }),
       signInWithOtp: async () => ({ data: {}, error: null }),
       signInWithPassword: async () => ({ data: { user: demoUser, session: {} }, error: null }),
