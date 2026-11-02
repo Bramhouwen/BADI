@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { Bell } from "lucide-react";
+import { Activity, Bell } from "lucide-react";
 import { getContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
@@ -26,6 +26,9 @@ async function HeaderStatus() {
   return (
     <div className="flex items-center gap-2">
       {phase === "during" ? <span className="sr-only">Dag {day} van {total}</span> : null}
+      <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="Mijn performance">
+        <Activity className="h-[18px] w-[18px]" strokeWidth={1.7} />
+      </Link>
       <Link
         href="/notifications"
         className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush"

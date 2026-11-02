@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Activity, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -107,6 +108,7 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge, now);
   const finale = daysUntilFinale(ctx.challenge, now);
   const canEditToday = isEditableDate(ctx.challenge, today, now);
+  const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0 };
 
   return (
     <Page className="space-y-4"><div className="h-1" />
@@ -137,6 +139,19 @@ async function Content() {
           </Link>
         </Card>
       )}
+
+      {phase !== "before" ? (
+        <Link href="/dashboard" className="glass flex items-center gap-3 rounded-[20px] px-3.5 py-3 hover:bg-white/80">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(94,154,76,0.14)" }}>
+            <Activity className="h-[18px] w-[18px] text-ink" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14.5px] font-semibold text-text">Mijn performance</span>
+            <span className="block text-[12px] text-muted">Weekscore {Math.round(myWeek.fraction * 100)}% · al je cijfers en grafieken</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.8} />
+        </Link>
+      ) : null}
 
       <BaddyAsk />
       <FeatureCards />
