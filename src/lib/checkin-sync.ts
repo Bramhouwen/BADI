@@ -3,7 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { AppContext } from "@/lib/data";
 import { isEditableDate } from "@/lib/dates";
-import type { ActivityKey } from "@/lib/constants";
+import { WATER_GOAL_ML, type ActivityKey } from "@/lib/constants";
 import { effectiveActivities } from "./checkin-sources";
 
 /**
@@ -84,4 +84,25 @@ export async function clearWorkoutSources(ctx: AppContext, sessionId: string): P
   if (rows.length === 0) return;
   await supabase.from("checkin_sources").delete().in("id", rows.map((r) => r.id));
   for (const d of new Set(rows.map((r) => r.checkin_date))) await recomputeCheckinDay(ctx, d);
+}
+
+/** Water at or above the daily goal ticks hydration automatically; below it the automatic tick goes away. */
+export async function syncWaterSource(ctx: AppContext, date: string, totalMl: number): Promise<void> {
+  const supabase = await createClient();
+  const { data: existing } = await supabase.from("checkin_sources").select("id").eq("user_id", ctx.userId).eq("checkin_date", date).eq("source", "water");
+  const has = (existing ?? []).length > 0;
+  const want = totalMl >= WATER_GOAL_ML;
+  if (want && !has) {
+    await supabase.from("checkin_sources").insert({ user_id: ctx.userId, challenge_id: ctx.challenge.id, checkin_date: date, activity: "hydration", source: "water" });
+  } else if (!want && has) {
+    await supabase.from("checkin_sources").delete().eq("user_id", ctx.userId).eq("checkin_date", date).eq("source", "water");
+  } else return;
+  await recomputeCheckinDay(ctx, date);
+}
+
+/** Manual activities of a day, for toggling one on or off. */
+export async function manualActivities(ctx: AppContext, date: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("checkin_sources").select("activity").eq("user_id", ctx.userId).eq("checkin_date", date).eq("source", "manual");
+  return ((data ?? []) as { activity: string }[]).map((r) => r.activity);
 }

@@ -10,7 +10,7 @@ import { AskField, BADDY_PHOTO, askHref } from "./baddy-ask";
 
 /** Pages where the bubble would cover a composer or duplicate an entry point. */
 function hiddenOn(path: string): boolean {
-  if (path === "/" || path.startsWith("/coach") || path.startsWith("/squad") || path.startsWith("/profile")) return true;
+  if (path === "/" || path.startsWith("/coach") || path.startsWith("/squad") || path.startsWith("/profile") || path.startsWith("/checkin")) return true;
   if (path.endsWith("/new") || path.endsWith("/edit")) return true;
   if (path.startsWith("/fitness/workout") || path.startsWith("/fitness/start/")) return true;
   return false;
@@ -25,7 +25,6 @@ function suggestionsFor(path: string): string[] {
   if (path.startsWith("/fitness")) return ["Maak een krachtschema voor 3 keer per week", "Hoe bouw ik op naar 5 km hardlopen?"];
   if (path.startsWith("/kitchen")) return ["Maak een avondeten zonder toegevoegde suikers", "Snel ontbijt met veel eiwit"];
   if (path.startsWith("/water")) return ["Tips om 3 liter water per dag te drinken"];
-  if (path.startsWith("/checkin")) return ["Hoe houd ik mijn streak vast op drukke dagen?", "Wat kan ik vandaag nog doen?"];
   return ["Wat kan ik vandaag nog doen voor mijn doelen?", "Tips om beter te slapen"];
 }
 

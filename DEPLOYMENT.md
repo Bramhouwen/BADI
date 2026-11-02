@@ -3,7 +3,7 @@
 ## 1. Supabase (productie)
 
 1. Maak een Supabase-project (regio bij voorkeur `eu-central-1`, Frankfurt).
-2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql`, `0010_baddy_coach.sql`, `0011_baddy_memory_feedback.sql` (of `supabase db push` met de CLI).
+2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql`, `0010_baddy_coach.sql`, `0011_baddy_memory_feedback.sql`, `0012_checkin_plan_joker_push.sql` (of `supabase db push` met de CLI).
 3. **Authentication > URL Configuration**:
    - Site URL: `https://<jouw-domein>`
    - Redirect URLs: `https://<jouw-domein>/auth/callback`
@@ -84,3 +84,10 @@ Meldingen zijn in-app (het belletje rechtsboven). Push-notificaties zijn bewust 
 3. Redeploy. Zonder sleutel toont Baddy een melding dat ze nog niet gekoppeld is.
 
 Baddy gebruikt `claude-opus-5-5`. Per lid geldt een limiet van 40 vragen per dag en in de squadchat 15 antwoorden per dag, om kosten te begrenzen.
+
+## Pushmeldingen
+
+1. Maak sleutels met `npx web-push generate-vapid-keys` (of gebruik die uit `.env.local`).
+2. Zet in Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` en `VAPID_SUBJECT` (bijvoorbeeld `https://badi-mu.vercel.app`) voor Production.
+3. Redeploy: de publieke sleutel wordt in de build meegenomen.
+4. Leden zetten meldingen per apparaat aan via Profiel, Meldingen. Op iPhone werkt dit alleen vanaf het beginscherm-icoon (iOS 16.4 of nieuwer).

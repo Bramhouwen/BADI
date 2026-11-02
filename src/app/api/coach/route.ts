@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
 import { getContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { isDemo } from "@/lib/demo";
@@ -90,6 +92,9 @@ export async function POST(request: Request) {
           .select("id")
           .single();
         send({ type: "done", id: (saved as { id: string } | null)?.id ?? null });
+        for (const ref of result.refs.filter((r) => r.type === "recipe")) {
+          after(() => sendPush(supabase, "recipes", { title: "Nieuw recept van Baddy", body: `${ref.name} staat in de Kitchen.`, url: `/kitchen/${ref.id}`, tag: "recipe" }));
+        }
       } catch (err) {
         const message =
           err instanceof Anthropic.RateLimitError

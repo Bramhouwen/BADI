@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
 import { friendlyError } from "@/lib/errors";
 import { isOwnedAvatarPath } from "@/lib/storage";
-import { isValidDateKey } from "@/lib/dates";
 import type { ActionResult } from "@/lib/types";
 
 export async function updateProfile(formData: FormData): Promise<ActionResult> {
@@ -26,28 +25,5 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
     await supabase.storage.from("avatars").remove([ctx.profile.avatar_path]);
   }
   revalidatePath("/", "layout");
-  return { ok: true };
-}
-
-export async function addAlcoholException(formData: FormData): Promise<ActionResult> {
-  const date = String(formData.get("exception_date") ?? "");
-  if (!isValidDateKey(date)) return { ok: false, error: "Kies een geldige datum." };
-  const ctx = await requireContext();
-  if (date < ctx.challenge.start_date || date > ctx.challenge.end_date) return { ok: false, error: "Kies een datum binnen de Winter Arc." };
-  const supabase = await createClient();
-  const { error } = await supabase.from("alcohol_exceptions").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, exception_date: date });
-  if (error) return { ok: false, error: friendlyError(error) };
-  revalidatePath("/profile");
-  return { ok: true };
-}
-
-export async function removeAlcoholException(formData: FormData): Promise<ActionResult> {
-  const id = z.string().uuid().safeParse(formData.get("id"));
-  if (!id.success) return { ok: false, error: "Onbekend moment." };
-  const ctx = await requireContext();
-  const supabase = await createClient();
-  const { error } = await supabase.from("alcohol_exceptions").delete().eq("id", id.data).eq("user_id", ctx.userId);
-  if (error) return { ok: false, error: friendlyError(error) };
-  revalidatePath("/profile");
   return { ok: true };
 }

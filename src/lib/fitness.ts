@@ -18,10 +18,10 @@ export interface ActivityMeta {
 
 /** Central rule for the check-in link. Strength also counts as movement. */
 export const ACTIVITY_TYPES: ActivityMeta[] = [
-  { key: "run", label: "Hardlopen", hint: "Afstand, duur en tempo", icon: Footprints, kind: "cardio", checkin: ["moved"] },
+  { key: "run", label: "Hardlopen", hint: "Afstand, duur en tempo", icon: Footprints, kind: "cardio", checkin: ["run"] },
   { key: "walk", label: "Wandelen", hint: "Afstand en duur", icon: Route, kind: "cardio", checkin: ["moved"] },
   { key: "cycle", label: "Fietsen", hint: "Afstand, duur en snelheid", icon: Bike, kind: "cardio", checkin: ["moved"] },
-  { key: "strength", label: "Krachttraining", hint: "Oefeningen, sets en gewichten", icon: Dumbbell, kind: "strength", checkin: ["strength", "moved"] },
+  { key: "strength", label: "Krachttraining", hint: "Oefeningen, sets en gewichten", icon: Dumbbell, kind: "strength", checkin: ["strength"] },
   { key: "hiit", label: "HIIT", hint: "Intervallen op tijd", icon: Flame, kind: "duration", checkin: ["moved"] },
   { key: "yoga", label: "Yoga en mobiliteit", hint: "Rustig bewegen en rekken", icon: Leaf, kind: "duration", checkin: ["moved"] },
   { key: "other", label: "Overig", hint: "Elke andere training", icon: Activity, kind: "duration", checkin: ["moved"] },

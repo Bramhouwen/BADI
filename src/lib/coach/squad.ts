@@ -8,6 +8,7 @@ import { firstName } from "@/lib/utils";
 import { formatDateNl, todayKey } from "@/lib/dates";
 import { SQUAD_COACH_DAILY_LIMIT, inspiration, inspirationBlock, kitchenBlock, squadBlock } from "./prompt";
 import { loadCoachExtras } from "./context";
+import { sendPush } from "@/lib/push";
 import { COACH_TOOLS } from "./tools";
 import { hasCoachKey, runCoach } from "./run";
 import { runDemoCoach } from "./demo";
@@ -83,6 +84,8 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     const planNote = result.refs.filter((r) => r.type === "plan").map((r) => `Schema "${r.name}" staat in Fitness.`).join(" ");
     const body = [result.text, planNote].filter(Boolean).join("\n\n").slice(0, 1000) || "…";
     await insert(body, recipe?.id, recipe?.name);
+    await sendPush(supabase, "chat", { title: "Baddy in de squad", body: body.slice(0, 160), url: "/squad", tag: "squad-chat" });
+    if (recipe) await sendPush(supabase, "recipes", { title: "Nieuw recept van Baddy", body: `${recipe.name} staat in de Kitchen.`, url: `/kitchen/${recipe.id}`, tag: "recipe" });
   } catch {
     await insert("Ik kon even niet antwoorden. Probeer het zo nog eens.");
   }

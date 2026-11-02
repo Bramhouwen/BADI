@@ -8,6 +8,7 @@ import { friendlyError } from "@/lib/errors";
 import { todayKey } from "@/lib/dates";
 import { WATER_MAX_ENTRY_ML } from "@/lib/constants";
 import type { ActionResult } from "@/lib/types";
+import { syncWaterSource } from "@/lib/checkin-sync";
 
 const amountSchema = z.number().int().min(1).max(WATER_MAX_ENTRY_ML);
 
@@ -26,8 +27,10 @@ export async function addWater(amountMl: number): Promise<ActionResult<{ total: 
   if (error) return { ok: false, error: friendlyError(error) };
   const { data } = await supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today);
   const total = (data ?? []).reduce((s, r) => s + (r.amount_ml as number), 0);
+  await syncWaterSource(ctx, today, total);
   revalidatePath("/");
   revalidatePath("/water");
+  revalidatePath("/checkin");
   return { ok: true, data: { total } };
 }
 
@@ -49,7 +52,9 @@ export async function undoLastWater(): Promise<ActionResult<{ total: number }>> 
   }
   const { data } = await supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today);
   const total = (data ?? []).reduce((s, r) => s + (r.amount_ml as number), 0);
+  await syncWaterSource(ctx, today, total);
   revalidatePath("/");
   revalidatePath("/water");
+  revalidatePath("/checkin");
   return { ok: true, data: { total } };
 }

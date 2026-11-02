@@ -115,9 +115,10 @@ describe("strength records", () => {
 });
 
 describe("check-in link", () => {
-  it("maps activity types to the daily categories (strength also counts as movement)", () => {
-    expect(activityMeta("run").checkin).toEqual(["moved"]);
-    expect(activityMeta("strength").checkin).toEqual(["strength", "moved"]);
+  it("maps runs to run, strength to strength and everything else to other training", () => {
+    expect(activityMeta("run").checkin).toEqual(["run"]);
+    expect(activityMeta("strength").checkin).toEqual(["strength"]);
+    expect(activityMeta("walk").checkin).toEqual(["moved"]);
     expect(activityMeta("unknown").checkin).toEqual(["moved"]);
   });
 
@@ -128,7 +129,7 @@ describe("check-in link", () => {
       { activity: "moved", source: "workout" },
       { activity: "strength", source: "workout" },
     ];
-    expect(effectiveActivities(sources)).toEqual(["moved", "strength"]);
+    expect(effectiveActivities(sources)).toEqual(["strength", "moved"]);
   });
 
   it("keeps a manual tick when the workout support disappears", () => {

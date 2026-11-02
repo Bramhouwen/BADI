@@ -27,6 +27,8 @@ function describe(n: AppNotification, actor: string): { text: string; emoji: str
       return { text: `${actor} deelde een nieuw recept.`, emoji: "🥑", href: n.ref_id ? `/kitchen/${n.ref_id}` : "/kitchen" };
     case "mention":
       return { text: `${actor} noemde je in de squadchat.`, emoji: "💬", href: "/squad" };
+    case "joker":
+      return { text: `${actor} zet een joker in.`, emoji: "🃏", href: "/squad" };
   }
 }
 

@@ -13,6 +13,7 @@ import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
+import { PushPrompt } from "@/components/app/push-prompt";
 import { SquadChat, type ChatMember } from "./squad-chat";
 import type { PostOption, RecipeOption } from "./chat-attach";
 import { cn } from "@/lib/utils";
@@ -130,6 +131,8 @@ async function Content() {
             : null}
         </ul>
       </section>
+
+      <PushPrompt publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
 
       <SquadChat
         initial={messages}

@@ -16,7 +16,7 @@ export function friendlyError(error: unknown): string {
     CHECKIN_DATE_IMMUTABLE: "De datum van een check-in kun je niet wijzigen.",
     COMPLIMENT_TOO_FAST: "Rustig aan, wacht even voor je nog een compliment stuurt.",
     COMPLIMENT_RATE_LIMIT: "Je hebt dit uur al veel complimenten gestuurd. Probeer het straks weer.",
-    ALCOHOL_EXCEPTION_LIMIT: "Je kunt maximaal twee uitzonderingsmomenten vastleggen.",
+    ALCOHOL_EXCEPTION_LIMIT: "Je hebt je twee jokers al ingezet.",
   };
   for (const key of Object.keys(table)) {
     if (message.includes(key)) return table[key];

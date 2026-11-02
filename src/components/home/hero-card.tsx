@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, ListChecks, Pencil, Timer } from "lucide-react";
+import { ArrowRight, ListChecks, Pencil } from "lucide-react";
+import { DAILY_HABITS } from "@/lib/checkin-plan";
 
 interface Props {
   checkedIn: boolean;
@@ -28,21 +29,13 @@ export function HeroCard({ checkedIn, activities, note, canEdit }: Props) {
         </div>
         <div className="mt-4 flex items-end justify-between gap-3">
           <div className="flex items-center gap-3 text-[12px] text-paper/85">
-            {checkedIn ? (
-              <span className="flex items-center gap-1.5">
-                <Check size={14} strokeWidth={1.8} /> {activities} {activities === 1 ? "activiteit" : "activiteiten"}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <Timer size={14} strokeWidth={1.8} /> 10 sec
-              </span>
-            )}
-            {!checkedIn || note ? (
+            <span className="flex items-center gap-1.5">
+              <ListChecks size={14} strokeWidth={1.8} /> {activities} van {DAILY_HABITS.length} punten
+            </span>
+            {checkedIn && note ? (
               <>
                 <span className="h-3 w-px bg-paper/35" aria-hidden />
-                <span className="flex items-center gap-1.5 truncate">
-                  <ListChecks size={14} strokeWidth={1.8} /> {checkedIn ? `“${note}”` : "Eén activiteit telt"}
-                </span>
+                <span className="flex items-center gap-1.5 truncate">“{note}”</span>
               </>
             ) : null}
           </div>

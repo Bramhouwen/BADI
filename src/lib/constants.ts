@@ -23,20 +23,33 @@ export const WATER_QUICK_ADD: { ml: number; label: string; icon: "glass" | "bott
 ];
 
 export type ActivityKey =
-  | "moved"
-  | "strength"
-  | "nutrition"
-  | "recovery"
+  | "steps"
   | "hydration"
-  | "alcohol";
+  | "nutrition"
+  | "protein"
+  | "recovery"
+  | "alcohol"
+  | "run"
+  | "strength"
+  | "moved";
 
-export const ACTIVITIES: { key: ActivityKey; emoji: string; label: string; hint: string }[] = [
-  { key: "moved", emoji: "🚶", label: "Bewogen", hint: "Wandelen, fietsen, sporten" },
-  { key: "strength", emoji: "🏋️", label: "Krachttraining", hint: "Een sessie in de gym of thuis" },
-  { key: "nutrition", emoji: "🥑", label: "Bewust gegeten", hint: "Puur, gevarieerd, genoeg eiwit" },
-  { key: "recovery", emoji: "😴", label: "Goed hersteld", hint: "Rust, slaap of een bewuste rustdag" },
-  { key: "hydration", emoji: "💧", label: "Goed gehydrateerd", hint: "Genoeg water gedronken" },
-  { key: "alcohol", emoji: "🍷", label: "Alcoholbewust", hint: "Geen of bewust weinig alcohol" },
+export type ActivityKind = "daily" | "weekly" | "extra";
+
+/**
+ * Check-in parts. Daily habits are ticked every day; weekly trainings have a
+ * target per week and come from Fitness or a manual tick; "moved" collects
+ * other workouts (walking, cycling, yoga) and older check-ins.
+ */
+export const ACTIVITIES: { key: ActivityKey; emoji: string; label: string; hint: string; kind: ActivityKind }[] = [
+  { key: "steps", emoji: "🚶", label: "10.000 stappen", hint: "Wandelen, de trap, een ommetje", kind: "daily" },
+  { key: "hydration", emoji: "💧", label: "Water", hint: "2,5 tot 3 liter", kind: "daily" },
+  { key: "nutrition", emoji: "🥑", label: "Whole foods", hint: "Vooral onbewerkt gegeten", kind: "daily" },
+  { key: "protein", emoji: "🍳", label: "Genoeg eiwit", hint: "Eiwit bij elke hoofdmaaltijd", kind: "daily" },
+  { key: "recovery", emoji: "😴", label: "7 tot 9 uur slaap", hint: "Vast ritme, weinig scherm", kind: "daily" },
+  { key: "alcohol", emoji: "🍷", label: "Geen alcohol", hint: "Of zet een joker in", kind: "daily" },
+  { key: "run", emoji: "🏃", label: "Hardlopen", hint: "Doel: 3 keer per week", kind: "weekly" },
+  { key: "strength", emoji: "🏋️", label: "Krachttraining", hint: "Doel: 3 keer per week", kind: "weekly" },
+  { key: "moved", emoji: "🚴", label: "Andere training", hint: "Wandelen, fietsen, yoga", kind: "extra" },
 ];
 
 export const ACTIVITY_KEYS = ACTIVITIES.map((a) => a.key) as ActivityKey[];
@@ -110,6 +123,6 @@ export const PRINCIPLES = [
   {
     emoji: "🍷",
     title: "Alcohol awareness",
-    body: "Mik op een alcoholvrije challenge, met maximaal twee vooraf gekozen uitzonderingsmomenten. Die houd je privé bij, niemand anders ziet ze.",
+    body: "Mik op een alcoholvrije challenge, met twee jokers voor een bewust uitzonderingsmoment. Zet je een joker in, dan ziet de squad dat.",
   },
 ] as const;

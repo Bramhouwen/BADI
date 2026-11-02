@@ -21,6 +21,7 @@ import { challengeLengthDays } from "@/lib/dates";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { WeekCard } from "@/components/home/streak-card";
 import { HeroCard } from "@/components/home/hero-card";
+import { dailyScore } from "@/lib/checkin-plan";
 import { FeatureCards, SquadRow } from "@/components/home/feature-cards";
 import { BaddyAsk } from "@/components/coach/baddy-ask";
 import { ProgressCard } from "@/components/home/progress-card";
@@ -44,13 +45,14 @@ async function Content() {
   const phase = challengePhase(ctx.challenge, now);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
     supabase.from("recipes").select("id, user_id, image_path, title, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
     supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today),
     loadSessions(ctx, { status: "completed", limit: 60 }),
+    supabase.from("alcohol_exceptions").select("id").eq("user_id", ctx.userId).eq("exception_date", today).maybeSingle(),
   ]);
   const fitnessWeek = weekStats(workouts, today);
   const lastWorkout = workouts[0] ?? null;
@@ -109,7 +111,7 @@ async function Content() {
       </div>
 
       {phase === "during" ? (
-        <HeroCard checkedIn={Boolean(todayCheckin)} activities={todayCheckin?.activities.length ?? 0} note={todayCheckin?.note ?? null} canEdit={canEditToday} />
+        <HeroCard checkedIn={Boolean(todayCheckin)} activities={dailyScore(todayCheckin?.activities ?? [], Boolean(jokerRow)).done} note={todayCheckin?.note ?? null} canEdit={canEditToday} />
       ) : phase === "before" ? (
         <Card variant="dark" className="rounded-[24px] p-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">Binnenkort</p>

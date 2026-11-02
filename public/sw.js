@@ -1,9 +1,9 @@
-/* Winter Arc service worker.
+/* BADI service worker.
  * Strategy: cache static assets (Next.js chunks, icons, manifest) and show an
  * offline page for navigations when the network is unavailable. Authenticated
  * pages, Supabase requests and other personal data are never cached.
  */
-const VERSION = "badi-v15";
+const VERSION = "badi-v16";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -64,4 +64,43 @@ self.addEventListener("fetch", (event) => {
       }),
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// Push notifications: chat, mentions, new recipes, jokers and compliments.
+// ---------------------------------------------------------------------------
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "BADI", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "BADI";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || "badi",
+      renotify: true,
+      data: { url: data.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
 });

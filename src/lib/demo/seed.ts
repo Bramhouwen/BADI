@@ -212,7 +212,10 @@ export function buildSeed(): Store {
     wall_posts,
     post_reactions,
     compliments,
-    alcohol_exceptions: [],
+    alcohol_exceptions: [{ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, exception_date: d(3), chat_message_id: null, created_at: iso(d(3), 18) }],
+    planned_trainings: [],
+    push_subscriptions: [],
+    notification_settings: [],
     notifications,
   };
 }

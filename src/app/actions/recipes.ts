@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
 import { friendlyError } from "@/lib/errors";
@@ -61,6 +63,9 @@ export async function createRecipe(formData: FormData): Promise<ActionResult> {
     .select("id")
     .single();
   if (error) return { ok: false, error: friendlyError(error) };
+  const sender = firstName(ctx.profile.display_name);
+  const title = parsed.data.title || fallbackTitle(ctx.profile.display_name);
+  after(() => sendPush(supabase, "recipes", { title: "Nieuw recept in de Kitchen", body: `${sender} deelde ${title}.`, url: `/kitchen/${data.id}`, tag: "recipe" }));
   revalidatePath("/kitchen");
   revalidatePath("/");
   redirect(`/kitchen/${data.id}?created=1`);

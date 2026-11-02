@@ -8,7 +8,9 @@ import { replyAsBaddyInSquad } from "@/lib/coach/squad";
 import { getSquad, requireContext } from "@/lib/data";
 import { findMentions, mentionLabels } from "@/lib/mentions";
 import { createClient } from "@/lib/supabase/server";
-import { CHAT_PAGE_SIZE, type ChatMessage } from "@/lib/chat";
+import { CHAT_PAGE_SIZE, attachmentLabel, type ChatMessage } from "@/lib/chat";
+import { sendPush } from "@/lib/push";
+import { firstName } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
 import { isOwnedMediaPath } from "@/lib/media-paths";
 
@@ -62,6 +64,12 @@ export async function sendMessage(input: { body: string; attachment?: MessageAtt
     // Baddy answers after this response is sent; the reply arrives through Realtime.
     after(() => replyAsBaddyInSquad(supabase, ctx, body));
   }
+  const sender = firstName(ctx.profile.display_name);
+  const preview = body || (attachment ? attachmentLabel({ attachment_type: attachment.type, attachment_name: (row.attachment_name as string | null) ?? null }) ?? "Bijlage" : "");
+  after(async () => {
+    for (const id of mentions) await sendPush(supabase, "mentions", { title: `${sender} noemde je`, body: preview.slice(0, 160), url: "/squad", tag: "squad-mention" }, { only: id });
+    await sendPush(supabase, "chat", { title: `${sender} in de squad`, body: preview.slice(0, 160), url: "/squad", tag: "squad-chat" }, { exclude: mentions });
+  });
   await supabase.from("squad_chat_reads").upsert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, last_read_at: new Date().toISOString() }, { onConflict: "challenge_id,user_id" });
   return { ok: true, data: data as ChatMessage };
 }

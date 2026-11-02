@@ -1,52 +1,49 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { Snowflake, Sparkles } from "lucide-react";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
-import { challengePhase, editableDates, todayKey, daysUntilStart } from "@/lib/dates";
+import { addDays, challengePhase, daysUntilStart, editableDates, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
+import { weekStartOf } from "@/lib/checkin-plan";
+import { MAX_ALCOHOL_EXCEPTIONS, type ActivityKey } from "@/lib/constants";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CheckinForm } from "./checkin-form";
-import type { DailyCheckin } from "@/lib/types";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Snowflake, Sparkles } from "lucide-react";
+import { CheckinBoard } from "./checkin-board";
 
 export const metadata = { title: "Check-in" };
 
 async function Content() {
   const ctx = await requireContext();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("daily_checkins")
-    .select("*")
-    .eq("challenge_id", ctx.challenge.id)
-    .eq("user_id", ctx.userId)
-    .order("checkin_date", { ascending: false });
-  const checkins = (data ?? []) as DailyCheckin[];
   const now = new Date();
   const today = todayKey(now, ctx.challenge.timezone);
   const phase = challengePhase(ctx.challenge, now);
   const dates = editableDates(ctx.challenge, now);
-  const stats = computeStreakStats(
-    checkins.map((c) => c.checkin_date),
-    today,
-  );
+  const weekStart = weekStartOf(today);
+  const rangeEnd = addDays(weekStart, 13);
+
+  const [{ data: checkinRows }, { data: sourceRows }, { data: planRows }, { data: jokerRows }, { data: waterRows }] = await Promise.all([
+    supabase.from("daily_checkins").select("checkin_date, activities").eq("challenge_id", ctx.challenge.id).eq("user_id", ctx.userId),
+    supabase.from("checkin_sources").select("checkin_date, activity, source").eq("user_id", ctx.userId).in("checkin_date", dates),
+    supabase.from("planned_trainings").select("plan_date, kind").eq("user_id", ctx.userId).gte("plan_date", weekStart).lte("plan_date", rangeEnd),
+    supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
+    supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", ctx.userId).in("log_date", dates),
+  ]);
+  const checkins = (checkinRows ?? []) as { checkin_date: string; activities: ActivityKey[] }[];
+  const stats = computeStreakStats(checkins.map((c) => c.checkin_date), today);
 
   if (phase === "before") {
     const d = daysUntilStart(ctx.challenge, now);
     return (
       <Page>
-        <PageTitle title="Today I Showed Up." subtitle="Vink aan wat je vandaag hebt gedaan." />
-        <EmptyState
-          icon={Snowflake}
-          title={`De Winter Arc start over ${d} ${d === 1 ? "dag" : "dagen"}`}
-          body="Vanaf de eerste dag kun je hier in een paar seconden inchecken. Tot die tijd: rust lekker uit."
-        />
+        <PageTitle title="Today I Showed Up." subtitle="Je dagelijkse punten en je trainingsweek." />
+        <EmptyState icon={Snowflake} title={`De Winter Arc start over ${d} ${d === 1 ? "dag" : "dagen"}`} body="Vanaf de eerste dag vink je hier je punten af en plan je je trainingen." />
       </Page>
     );
   }
-
   if (phase === "after" || dates.length === 0) {
     return (
       <Page>
@@ -65,14 +62,32 @@ async function Content() {
     );
   }
 
-  const existing = Object.fromEntries(
-    checkins.filter((c) => dates.includes(c.checkin_date)).map((c) => [c.checkin_date, c]),
-  ) as Record<string, DailyCheckin>;
+  const water: Record<string, number> = {};
+  for (const w of (waterRows ?? []) as { log_date: string; amount_ml: number }[]) water[w.log_date] = (water[w.log_date] ?? 0) + w.amount_ml;
+  const auto: Record<string, Record<string, "workout" | "water">> = {};
+  for (const s of (sourceRows ?? []) as { checkin_date: string; activity: string; source: string }[]) {
+    if (s.source === "manual") continue;
+    auto[s.checkin_date] = { ...(auto[s.checkin_date] ?? {}), [s.activity]: s.source as "workout" | "water" };
+  }
+  const jokers = ((jokerRows ?? []) as { exception_date: string }[]).map((j) => j.exception_date);
 
   return (
-    <Page>
-      <PageTitle title="Today I Showed Up." subtitle="Vink aan wat je vandaag hebt gedaan." />
-      <CheckinForm dates={dates} today={today} existing={existing} stats={stats} />
+    <Page className="space-y-5">
+      <PageTitle title="Today I Showed Up." subtitle="Je dagelijkse punten en je trainingsweek." />
+      <CheckinBoard
+        today={today}
+        dates={dates}
+        checkins={checkins.filter((c) => c.checkin_date >= addDays(weekStart, -1))}
+        auto={auto}
+        water={water}
+        planned={(planRows ?? []) as { plan_date: string; kind: "run" | "strength" }[]}
+        jokers={jokers}
+        maxJokers={MAX_ALCOHOL_EXCEPTIONS}
+        weekStart={weekStart}
+        streak={stats.current}
+        challengeStart={ctx.challenge.start_date}
+        challengeEnd={ctx.challenge.end_date}
+      />
     </Page>
   );
 }

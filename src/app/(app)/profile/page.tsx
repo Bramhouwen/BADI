@@ -11,10 +11,14 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { ProfileForm } from "./profile-form";
-import { AlcoholExceptions } from "./alcohol-exceptions";
+
 import { SharingSettings } from "./sharing-settings";
 import { BaddyMemory } from "./baddy-memory";
+import { PushSettings } from "./push-settings";
+import { settingsFromRow } from "@/lib/notification-kinds";
 import type { AlcoholException } from "@/lib/types";
+import { MAX_ALCOHOL_EXCEPTIONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Profiel" };
 
@@ -34,11 +38,12 @@ function Row({ href, icon: Icon, title, body }: { href: string; icon: typeof Boo
 async function Content() {
   const ctx = await requireContext();
   const supabase = await createClient();
-  const [avatar, { data: exceptionRows }, sharing, { data: memoryRows }] = await Promise.all([
+  const [avatar, { data: exceptionRows }, sharing, { data: memoryRows }, { data: notifRow }] = await Promise.all([
     signedUrl("avatars", ctx.profile.avatar_path),
     supabase.from("alcohol_exceptions").select("*").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id).order("exception_date"),
     loadSharing(ctx.userId),
     supabase.from("coach_memories").select("id, content, source").eq("user_id", ctx.userId).order("created_at", { ascending: true }),
+    supabase.from("notification_settings").select("*").eq("user_id", ctx.userId).maybeSingle(),
   ]);
   const exceptions = (exceptionRows ?? []) as AlcoholException[];
   const wrapped = wrappedStatus(ctx.challenge);
@@ -63,6 +68,11 @@ async function Content() {
         </div>
       </section>
 
+      <section id="meldingen">
+        <SectionTitle>Meldingen</SectionTitle>
+        <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} initial={settingsFromRow((notifRow ?? null) as Record<string, unknown> | null)} />
+      </section>
+
       <section id="baddy-geheugen">
         <SectionTitle action={<Link href="/coach" className="text-[13px] text-muted">Naar Baddy</Link>}>Wat Baddy over mij weet</SectionTitle>
         <p className="mb-2.5 px-0.5 text-[12.5px] leading-snug text-muted">Alleen jij en Baddy zien dit. Baddy houdt er bij elk advies rekening mee.</p>
@@ -76,8 +86,23 @@ async function Content() {
       </section>
 
       <section>
-        <SectionTitle>Alcoholbewust (privé)</SectionTitle>
-        <AlcoholExceptions exceptions={exceptions} min={ctx.challenge.start_date} max={ctx.challenge.end_date} />
+        <SectionTitle action={<Link href="/checkin" className="text-[13px] text-muted">Naar check-in</Link>}>Jokers</SectionTitle>
+        <div className="glass rounded-[20px] p-4">
+          <p className="text-[13px] leading-snug text-muted">
+            Je hebt twee jokers voor een bewust alcoholmoment. Je zet ze in via je check-in; de squad ziet dat.
+          </p>
+          <div className="mt-3 flex gap-2">
+            {Array.from({ length: MAX_ALCOHOL_EXCEPTIONS }).map((_, i) => {
+              const used = exceptions[i];
+              return (
+                <span key={i} className={cn("flex flex-1 items-center gap-2 rounded-[14px] px-3 py-2 text-[12.5px]", used ? "bg-blush text-ink" : "border border-dashed border-ink/20 text-muted")}>
+                  <span aria-hidden>🃏</span>
+                  {used ? formatDateNl(used.exception_date, { day: "numeric", month: "short" }) : "Nog beschikbaar"}
+                </span>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <form action="/auth/signout" method="post">

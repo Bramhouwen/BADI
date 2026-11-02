@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
+import { firstName } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
 import { friendlyError } from "@/lib/errors";
@@ -25,6 +28,8 @@ export async function sendCompliment(input: { receiver_id: string; message: stri
     message: parsed.data.message,
   });
   if (error) return { ok: false, error: friendlyError(error) };
+  const sender = firstName(ctx.profile.display_name);
+  after(() => sendPush(supabase, "compliments", { title: `Compliment van ${sender}`, body: parsed.data.message, url: "/squad/compliments", tag: "compliment" }, { only: parsed.data.receiver_id }));
   revalidatePath("/squad");
   return { ok: true };
 }
