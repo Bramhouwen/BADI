@@ -16,16 +16,7 @@ alter table public.squad_messages add constraint squad_messages_not_to_self chec
 
 create index squad_messages_direct_idx on public.squad_messages (challenge_id, recipient_id, user_id, created_at desc) where recipient_id is not null;
 
--- Is p_user a member of the same challenge?
-create or replace function public.is_member_of(p_challenge uuid, p_user uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (select 1 from public.memberships where challenge_id = p_challenge and user_id = p_user);
-$$;
+-- public.is_member_of(p_user, p_challenge) exists since 0008 and is reused here.
 
 drop policy if exists "squad messages: members read" on public.squad_messages;
 create policy "squad messages: members read" on public.squad_messages
@@ -39,7 +30,7 @@ create policy "squad messages: insert own" on public.squad_messages
   for insert to authenticated with check (
     user_id = auth.uid()
     and public.is_member(challenge_id)
-    and (recipient_id is null or (recipient_id <> auth.uid() and public.is_member_of(challenge_id, recipient_id)))
+    and (recipient_id is null or (recipient_id <> auth.uid() and public.is_member_of(recipient_id, challenge_id)))
   );
 
 -- Read state of private conversations ------------------------------------------
@@ -56,7 +47,7 @@ alter table public.direct_reads enable row level security;
 create policy "direct reads: own or about me" on public.direct_reads
   for select to authenticated using (user_id = auth.uid() or peer_id = auth.uid());
 create policy "direct reads: write own" on public.direct_reads
-  for insert to authenticated with check (user_id = auth.uid() and public.is_member(challenge_id) and public.is_member_of(challenge_id, peer_id));
+  for insert to authenticated with check (user_id = auth.uid() and public.is_member(challenge_id) and public.is_member_of(peer_id, challenge_id));
 create policy "direct reads: update own" on public.direct_reads
   for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
