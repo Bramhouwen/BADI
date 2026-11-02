@@ -19,7 +19,7 @@ export function InspirationPreview({ items }: { items: InspirationItem[] }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {items.map((it) => (
-        <Link key={`${it.kind}-${it.id}`} href={it.href} className="group relative aspect-[4/5] overflow-hidden rounded-[22px] bg-blush">
+        <Link key={`${it.kind}-${it.id}`} href={it.href} className="group relative aspect-[4/3] overflow-hidden rounded-[20px] bg-blush">
           {it.src ? (
             <Image src={it.src} alt={it.title} fill sizes="(max-width: 512px) 50vw, 240px" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" unoptimized />
           ) : null}

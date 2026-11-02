@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { Activity, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -14,26 +13,24 @@ import {
   todayKey,
   wrappedStatus,
 } from "@/lib/dates";
-import { computeStreakStats, recentCalendar } from "@/lib/streaks";
+import { computeStreakStats } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
-import { challengeLengthDays } from "@/lib/dates";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { WeekCard } from "@/components/home/streak-card";
 import { HeroCard } from "@/components/home/hero-card";
-import { dailyScore, weekScore, weekStartOf } from "@/lib/checkin-plan";
-import { FeatureCards, SquadRow } from "@/components/home/feature-cards";
-import { BaddyAsk } from "@/components/coach/baddy-ask";
-import { ProgressCard } from "@/components/home/progress-card";
-import { FitnessCard } from "@/components/home/fitness-card";
+import { WEEKLY_TARGETS, dailyScore, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { AskField, BADDY_PHOTO } from "@/components/coach/baddy-ask";
+import { Avatar } from "@/components/ui/avatar";
+import { TodayCarousel, TrainingSlide, WaterSlide, WeekSlide } from "@/components/home/today-slides";
+import { trainingWeeks } from "@/lib/dashboard";
+import { activityMeta } from "@/lib/fitness";
+import { formatDateNl } from "@/lib/dates";
 import { loadSessions } from "@/lib/fitness/data";
-import { weekStats } from "@/lib/fitness";
 import { SquadPreview } from "@/components/home/squad-preview";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
-import { WaterTracker } from "@/components/water/water-tracker";
 import { WATER_GOAL_ML } from "@/lib/constants";
 import type { WaterEntry } from "@/lib/types";
 import type { DailyCheckin, Recipe, WallPost } from "@/lib/types";
@@ -58,7 +55,6 @@ async function Content() {
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
   ]);
   const weekJokers = (weekJokerRows ?? []) as { user_id: string; exception_date: string }[];
-  const fitnessWeek = weekStats(workouts, today);
   const lastWorkout = workouts[0] ?? null;
   const waterTotal = ((waterRows ?? []) as Pick<WaterEntry, "amount_ml">[]).reduce((s, r) => s + r.amount_ml, 0);
 
@@ -67,12 +63,6 @@ async function Content() {
   const myStats = computeStreakStats(
     mine.map((c) => c.checkin_date),
     today,
-  );
-  const calendar = recentCalendar(
-    mine.map((c) => c.checkin_date),
-    today,
-    7,
-    ctx.challenge,
   );
   const todayCheckin = mine.find((c) => c.checkin_date === today) ?? null;
 
@@ -108,20 +98,35 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge, now);
   const finale = daysUntilFinale(ctx.challenge, now);
   const canEditToday = isEditableDate(ctx.challenge, today, now);
-  const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0 };
+  const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, total: 48 };
+  const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
 
   return (
     <Page className="space-y-4"><div className="h-1" />
       <WelcomeToast />
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
-      <div className="px-1">
-        <p className="font-display text-[19px] leading-none text-text/80">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
-        <h1 className="mt-1 font-display text-[36px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
+      <div className="flex items-end justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <p className="font-display text-[19px] leading-none text-text/80">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
+          <h1 className="mt-1 truncate font-display text-[36px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
+        </div>
+        {phase === "during" ? (
+          <span className="mb-1.5 shrink-0 rounded-full bg-white/70 px-3 py-1 shadow-sm ring-1 ring-ink/[0.05]">
+            <span className="text-[12px] font-medium tabular-nums text-ink">
+              Dag {day} · {finale === 0 ? "finale" : `nog ${finale}`}
+            </span>
+          </span>
+        ) : null}
       </div>
 
       {phase === "during" ? (
-        <HeroCard checkedIn={Boolean(todayCheckin)} activities={dailyScore(todayCheckin?.activities ?? [], Boolean(jokerRow)).done} note={todayCheckin?.note ?? null} canEdit={canEditToday} />
+        <TodayCarousel label="Vandaag">
+          <HeroCard checkedIn={Boolean(todayCheckin)} activities={dailyScore(todayCheckin?.activities ?? [], Boolean(jokerRow)).done} note={todayCheckin?.note ?? null} canEdit={canEditToday} />
+          <WeekSlide fraction={myWeek.fraction} earned={myWeek.earned} total={myWeek.total} streak={myStats.current} />
+          <WaterSlide total={waterTotal} goal={WATER_GOAL_ML} />
+          <TrainingSlide run={thisTrainingWeek.run} strength={thisTrainingWeek.strength} runTarget={WEEKLY_TARGETS.run} strengthTarget={WEEKLY_TARGETS.strength} last={lastWorkout ? `${activityMeta(lastWorkout.activity_type).label}, ${formatDateNl(lastWorkout.workout_date, { weekday: "long", day: "numeric", month: "short" })}` : null} />
+        </TodayCarousel>
       ) : phase === "before" ? (
         <Card variant="dark" className="rounded-[24px] p-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">Binnenkort</p>
@@ -140,26 +145,6 @@ async function Content() {
         </Card>
       )}
 
-      {phase !== "before" ? (
-        <Link href="/dashboard" className="glass flex items-center gap-3 rounded-[20px] px-3.5 py-3 hover:bg-white/80">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(94,154,76,0.14)" }}>
-            <Activity className="h-[18px] w-[18px] text-ink" strokeWidth={1.8} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14.5px] font-semibold text-text">Mijn performance</span>
-            <span className="block text-[12px] text-muted">Weekscore {Math.round(myWeek.fraction * 100)}% · al je cijfers en grafieken</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.8} />
-        </Link>
-      ) : null}
-
-      <BaddyAsk />
-      <FeatureCards />
-
-      <FitnessCard weekWorkouts={fitnessWeek.workouts} last={lastWorkout ? { title: lastWorkout.title, date: lastWorkout.workout_date, type: lastWorkout.activity_type } : null} />
-
-      <SquadRow members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, checkedInToday: m.stats.checkedInToday }))} />
-
       {wrapped !== "not_yet" && phase !== "after" ? (
         <Link href="/wrapped" className="block">
           <Card className="ring-1 ring-gold/50">
@@ -169,32 +154,24 @@ async function Content() {
         </Link>
       ) : null}
 
-      <section className="space-y-3">
-        <SectionTitle action={<Link href="/checkin" className="text-[13px] text-muted">Bekijk alles</Link>}>Voortgang</SectionTitle>
-        <ProgressCard calendar={calendar} current={myStats.current} longest={myStats.longest} total={myStats.total} challengeLength={challengeLengthDays(ctx.challenge)} />
-        <WeekCard calendar={calendar} />
-        <WaterTracker total={waterTotal} goal={WATER_GOAL_ML} variant="compact" />
+      <section aria-label="Vraag Baddy" className="flex items-center gap-2.5">
+        <Link href="/coach" aria-label="Open je gesprek met Baddy" className="relative shrink-0">
+          <Avatar name="Baddy" src={BADDY_PHOTO} size="md" className="h-11 w-11 ring-2 ring-sage/50" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <AskField placeholder="Vraag Baddy iets" />
+        </div>
       </section>
 
       <section>
-        <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Bekijk squad</Link>}>Jouw squad</SectionTitle>
+        <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Chats</Link>}>Jouw squad</SectionTitle>
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction }))} today={today} />
       </section>
 
       <section>
-        <SectionTitle action={<Link href="/wall" className="text-[13px] text-muted">Bekijk meer</Link>}>Laatste inspiratie</SectionTitle>
+        <SectionTitle action={<Link href="/wall" className="text-[13px] text-muted">The Wall</Link>}>Nieuw van de squad</SectionTitle>
         <InspirationPreview items={inspiration} />
       </section>
-
-      <p className="text-center text-[13px] text-muted">
-        {phase === "during"
-          ? finale === 0
-            ? "Vandaag is de Winter Arc finale"
-            : `Nog ${finale} ${finale === 1 ? "dag" : "dagen"} tot de Winter Arc finale`
-          : phase === "before"
-            ? `De Winter Arc start op ${ctx.challenge.start_date.split("-").reverse().join("-")}`
-            : "This was our Winter Arc."}
-      </p>
     </Page>
   );
 }
