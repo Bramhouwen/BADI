@@ -21,3 +21,14 @@ describe("AI recipe photo prompt", () => {
     expect(recipeImagePrompt({ title: "Overnight oats" })).toContain("a home-cooked dish.");
   });
 });
+
+describe("AI photo errors", () => {
+  it("turns a gateway error into a short readable reason", async () => {
+    const { gatewayReason, RECIPE_IMAGE_MODELS } = await import("@/lib/recipe-image");
+    expect(gatewayReason({ statusCode: 402, message: "Payment required", responseBody: JSON.stringify({ error: { message: "Insufficient  credits" } }) })).toBe("402: Insufficient credits");
+    expect(gatewayReason(new Error("timeout"))).toBe("timeout");
+    expect(gatewayReason(undefined)).toBe("onbekende fout");
+    expect(RECIPE_IMAGE_MODELS[0]).toBe("bfl/flux-3-image");
+    expect(new Set(RECIPE_IMAGE_MODELS).size).toBe(RECIPE_IMAGE_MODELS.length);
+  });
+});
