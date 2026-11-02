@@ -11,7 +11,10 @@ import { addDays, formatDateNl, todayKey, weekdayShortNl } from "@/lib/dates";
 import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, paceSecPerKm } from "@/lib/fitness";
 import { activityStatus, compareRows, deriveMemberStats, gridDays, type MemberStats } from "@/lib/squad-stats";
 import { firstName } from "@/lib/utils";
-import { Avatar } from "@/components/ui/avatar";
+import { MemberAvatar } from "@/components/ui/member-avatar";
+import { OnlineLine } from "@/components/ui/online-line";
+import { createClient } from "@/lib/supabase/server";
+import { weekScore } from "@/lib/checkin-plan";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
@@ -51,11 +54,15 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const isMe = userId === ctx.userId;
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const weekStart = weekStartOf(today);
-  const [payload, minePayload, avatar, habits] = await Promise.all([
+  const supabase = await createClient();
+  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }] = await Promise.all([
     loadMemberStats(userId),
     isMe ? null : loadMemberStats(ctx.userId),
     signedUrl("avatars", member.profile.avatar_path),
     loadMemberHabits(userId, weekStart, addDays(weekStart, 6)),
+    // RLS only returns check-ins of members who share them.
+    supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", userId).gte("checkin_date", weekStart),
+    supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", userId).gte("exception_date", weekStart),
   ]);
   if (!payload) notFound();
 
@@ -64,6 +71,9 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const name = firstName(member.profile.display_name);
   const status = activityStatus(stats, today);
   const showHabits = habits.shared && habits.habits.length > 0;
+  const week = stats.checkin
+    ? weekScore(weekStart, (weekRows ?? []) as { checkin_date: string; activities: string[] }[], ((weekJokers ?? []) as { exception_date: string }[]).map((j) => j.exception_date))
+    : null;
   const sharesAnything = Object.values(stats.sharing).some(Boolean) || showHabits;
   const showGrid = Boolean(stats.activeDays) || Boolean(stats.checkin);
   const grids = showGrid ? { week: gridDays(stats, today, "week"), "prev-week": gridDays(stats, today, "prev-week"), month: gridDays(stats, today, "month") } : null;
@@ -86,7 +96,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
       />
 
       <section className="glass flex items-center gap-4 rounded-[22px] p-4" aria-label="Lid">
-        <Avatar name={member.profile.display_name} src={avatar} size="lg" ring={Boolean(stats.checkin?.checkedInToday)} className="h-[72px] w-[72px] text-xl" />
+        <MemberAvatar userId={userId} name={member.profile.display_name} src={avatar} size={68} progress={week?.fraction ?? null} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[22px] leading-tight text-text">{member.profile.display_name}</p>
           <p className="mt-0.5 text-[12px] text-muted">
@@ -94,6 +104,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
             Lid sinds {formatDateNl(member.joined_at.slice(0, 10), { day: "numeric", month: "short" })}
           </p>
           <p className="mt-1 text-[12.5px] text-ink/80">{status ?? (isMe ? "Nog geen activiteit" : "Nog geen gedeelde activiteit")}</p>
+          <OnlineLine userId={userId} week={week ? `${week.earned} van ${week.total} weekpunten` : null} />
         </div>
       </section>
 

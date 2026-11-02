@@ -17,12 +17,14 @@ export function Avatar({
   size = "md",
   className,
   ring,
+  style,
 }: {
   name: string;
   src?: string | null;
   size?: keyof typeof sizes;
   className?: string;
   ring?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
@@ -32,6 +34,7 @@ export function Avatar({
         sizes[size],
         className,
       )}
+      style={style}
       aria-label={name}
     >
       {src ? (

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MAX_HABITS, cleanEmoji, cleanHabitName, habitWeek, moveId, parseMemberHabits } from "@/lib/habits";
 import { DEFAULT_SHARING, sharingFromRow, sharingToRow } from "@/lib/squad-stats";
 import { contextBlock, type CoachContext } from "@/lib/coach/prompt";
+import { weekScore } from "@/lib/checkin-plan";
 
 describe("habit names and emoji", () => {
   it("trims and collapses spaces, rejects empty or too long names", () => {
@@ -84,5 +85,29 @@ describe("Baddy context", () => {
 
   it("leaves the line out without habits", () => {
     expect(contextBlock(base)).not.toContain("Eigen gewoontes");
+  });
+});
+
+describe("week score for the avatar ring", () => {
+  it("adds daily points and capped trainings over Monday to Sunday", () => {
+    const s = weekScore(
+      "2026-11-02",
+      [
+        { checkin_date: "2026-11-02", activities: ["steps", "hydration", "run", "strength"] },
+        { checkin_date: "2026-11-03", activities: ["steps", "nutrition", "protein", "recovery", "alcohol", "hydration", "run"] },
+        { checkin_date: "2026-11-04", activities: ["run"] },
+        { checkin_date: "2026-11-05", activities: ["run"] },
+        { checkin_date: "2026-11-09", activities: ["steps"] },
+      ],
+      ["2026-11-04"],
+    );
+    // daily: 2 + 6 + joker 1 = 9; run 4 capped to 3; strength 1
+    expect(s).toEqual({ earned: 13, total: 48, fraction: 13 / 48 });
+  });
+
+  it("is empty at the start of the week and never above full", () => {
+    expect(weekScore("2026-11-02", []).fraction).toBe(0);
+    const all = Array.from({ length: 7 }, (_, i) => ({ checkin_date: `2026-11-0${2 + i}`, activities: ["steps", "hydration", "nutrition", "protein", "recovery", "alcohol", "run", "strength"] }));
+    expect(weekScore("2026-11-02", all)).toEqual({ earned: 48, total: 48, fraction: 1 });
   });
 });

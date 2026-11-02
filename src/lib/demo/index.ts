@@ -5,3 +5,6 @@ export function isDemo(): boolean {
 
 export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_CHALLENGE_ID = "00000000-0000-4000-8000-0000000000c1";
+
+/** In demo mode these members show as online (you and Sam). */
+export const DEMO_ONLINE_IDS = [DEMO_USER_ID, "00000000-0000-4000-8000-000000000002"];

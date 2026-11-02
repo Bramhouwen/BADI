@@ -79,3 +79,30 @@ export function toggledSet(current: readonly string[], key: ActivityKey, on: boo
   else set.delete(key);
   return ACTIVITIES.map((a) => a.key).filter((k) => set.has(k));
 }
+
+/** Points available in one week: the daily habits on seven days plus the run and strength targets. */
+export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_TARGETS.run + WEEKLY_TARGETS.strength;
+
+export interface WeekScore {
+  earned: number;
+  total: number;
+  /** 0 to 1, for the ring around the profile photo. */
+  fraction: number;
+}
+
+/**
+ * How far a member is this week: daily points done (a joker counts as no
+ * alcohol) plus run and strength sessions up to the weekly target. Resets
+ * every Monday; the ring is full when everything for the week is done.
+ */
+export function weekScore(
+  start: DateKey,
+  checkins: { checkin_date: DateKey; activities: readonly string[] }[],
+  jokers: DateKey[] = [],
+): WeekScore {
+  const p = weekProgress(start, checkins, [], jokers);
+  const habits = p.days.reduce((n, d) => n + d.habitsDone, 0);
+  const training = TRAINING_KINDS.reduce((n, k) => n + Math.min(p.totals[k].done, WEEKLY_TARGETS[k]), 0);
+  const earned = habits + training;
+  return { earned, total: WEEK_POINTS, fraction: Math.min(1, earned / WEEK_POINTS) };
+}

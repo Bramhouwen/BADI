@@ -21,7 +21,7 @@ import { challengeLengthDays } from "@/lib/dates";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { WeekCard } from "@/components/home/streak-card";
 import { HeroCard } from "@/components/home/hero-card";
-import { dailyScore } from "@/lib/checkin-plan";
+import { dailyScore, weekScore, weekStartOf } from "@/lib/checkin-plan";
 import { FeatureCards, SquadRow } from "@/components/home/feature-cards";
 import { BaddyAsk } from "@/components/coach/baddy-ask";
 import { ProgressCard } from "@/components/home/progress-card";
@@ -45,7 +45,8 @@ async function Content() {
   const phase = challengePhase(ctx.challenge, now);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }] = await Promise.all([
+  const weekStart = weekStartOf(today);
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }, { data: weekJokerRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
@@ -53,7 +54,9 @@ async function Content() {
     supabase.from("water_entries").select("amount_ml").eq("user_id", ctx.userId).eq("log_date", today),
     loadSessions(ctx, { status: "completed", limit: 60 }),
     supabase.from("alcohol_exceptions").select("id").eq("user_id", ctx.userId).eq("exception_date", today).maybeSingle(),
+    supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
   ]);
+  const weekJokers = (weekJokerRows ?? []) as { user_id: string; exception_date: string }[];
   const fitnessWeek = weekStats(workouts, today);
   const lastWorkout = workouts[0] ?? null;
   const waterTotal = ((waterRows ?? []) as Pick<WaterEntry, "amount_ml">[]).reduce((s, r) => s + r.amount_ml, 0);
@@ -78,7 +81,12 @@ async function Content() {
       theirs.map((c) => c.checkin_date),
       today,
     );
-    return { ...m, stats, isMe: m.user_id === ctx.userId };
+    const week = weekScore(
+      weekStart,
+      theirs.filter((c) => c.checkin_date >= weekStart),
+      weekJokers.filter((j) => j.user_id === m.user_id).map((j) => j.exception_date),
+    );
+    return { ...m, stats, week, isMe: m.user_id === ctx.userId };
   });
 
   const posts = (postRows ?? []) as Pick<WallPost, "id" | "user_id" | "image_path" | "caption" | "created_at">[];
@@ -155,7 +163,7 @@ async function Content() {
 
       <section>
         <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Bekijk squad</Link>}>Jouw squad</SectionTitle>
-        <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe }))} today={today} />
+        <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction }))} today={today} />
       </section>
 
       <section>

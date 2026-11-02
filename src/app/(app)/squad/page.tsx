@@ -12,6 +12,8 @@ import { mentionLabels } from "@/lib/mentions";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
+import { MemberAvatar } from "@/components/ui/member-avatar";
+import { weekScore, weekStartOf } from "@/lib/checkin-plan";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { PushPrompt } from "@/components/app/push-prompt";
 import { SquadChat, type ChatMember } from "./squad-chat";
@@ -27,9 +29,10 @@ async function Content() {
   const today = todayKey(now, ctx.challenge.timezone);
   const day = challengeDay(ctx.challenge, now);
 
-  const [squad, { data: checkinRows }, { data: messageRows }, { count: unreadCount }, { data: recipeRows }, { data: postRows }] = await Promise.all([
+  const weekStart = weekStartOf(today);
+  const [squad, { data: checkinRows }, { data: messageRows }, { count: unreadCount }, { data: recipeRows }, { data: postRows }, { data: jokerRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
-    supabase.from("daily_checkins").select("user_id, checkin_date").eq("challenge_id", ctx.challenge.id),
+    supabase.from("daily_checkins").select("user_id, checkin_date, activities").eq("challenge_id", ctx.challenge.id),
     supabase
       .from("squad_messages")
       .select("id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id, is_coach")
@@ -39,9 +42,11 @@ async function Content() {
     supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
     supabase.from("recipes").select("id, title, image_path").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(40),
     supabase.from("wall_posts").select("id, image_path, caption").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(40),
+    supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
   ]);
 
-  const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string }[];
+  const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string; activities: string[] }[];
+  const jokers = (jokerRows ?? []) as { user_id: string; exception_date: string }[];
   const newestFirst = (messageRows ?? []) as ChatMessage[];
   const messages = [...newestFirst].reverse().map(asSender);
   const recipeRaw = (recipeRows ?? []) as { id: string; title: string; image_path: string | null }[];
@@ -67,6 +72,11 @@ async function Content() {
       streak: stats.current,
       checkedInToday: stats.checkedInToday,
       isMe: m.user_id === ctx.userId,
+      week: weekScore(
+        weekStart,
+        checkins.filter((c) => c.user_id === m.user_id && c.checkin_date >= weekStart),
+        jokers.filter((j) => j.user_id === m.user_id).map((j) => j.exception_date),
+      ),
     };
   });
   const chatMembers: Record<string, ChatMember> = {
@@ -101,7 +111,7 @@ async function Content() {
           {members.map((m) => (
             <li key={m.id}>
               <Link href={`/squad/${m.id}`} className="flex flex-col items-center gap-1.5 rounded-[16px] py-1 hover:bg-blush/40" aria-label={`Profiel van ${firstName(m.name)}`}>
-                <Avatar name={m.name} src={m.avatar} size="lg" ring={m.checkedInToday} className="h-[60px] w-[60px] text-base" />
+                <MemberAvatar userId={m.id} name={m.name} src={m.avatar} size={56} progress={m.week.fraction} />
                 <span className="max-w-full truncate text-[12.5px] font-medium text-text">
                   {firstName(m.name)}
                   {m.isMe ? <span className="text-muted"> (jij)</span> : null}
@@ -117,12 +127,12 @@ async function Content() {
                 <li key={`free-${i}`}>
                   {ctx.membership.role === "admin" ? (
                     <Link href="/profile/invite" className="flex flex-col items-center gap-1.5 rounded-[16px] py-1 hover:bg-blush/40" aria-label="Nodig een vriend uit">
-                      <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-dashed border-ink/25 text-[20px] text-muted">+</span>
+                      <span className="flex h-[66px] w-[66px] items-center justify-center rounded-full border border-dashed border-ink/25 text-[20px] text-muted">+</span>
                       <span className="text-[12.5px] font-medium text-muted">Uitnodigen</span>
                     </Link>
                   ) : (
                     <div className="flex flex-col items-center gap-1.5 py-1">
-                      <span className="h-[60px] w-[60px] rounded-full border border-dashed border-ink/20" />
+                      <span className="h-[66px] w-[66px] rounded-full border border-dashed border-ink/20" />
                       <span className="text-[12.5px] text-muted">Vrij</span>
                     </div>
                   )}

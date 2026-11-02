@@ -1,5 +1,5 @@
 import { Flame } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
+import { MemberAvatar } from "@/components/ui/member-avatar";
 import { firstName } from "@/lib/utils";
 import { diffDays } from "@/lib/dates";
 import { isMilestone } from "@/lib/streaks";
@@ -12,6 +12,8 @@ export interface SquadPreviewMember {
   lastDate: string | null;
   checkedInToday: boolean;
   isMe: boolean;
+  /** This week's progress, 0 to 1. */
+  week: number;
 }
 
 function statusLabel(m: SquadPreviewMember, today: string): string {
@@ -27,7 +29,7 @@ export function SquadPreview({ members, today }: { members: SquadPreviewMember[]
     <ul className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-2">
       {members.map((m) => (
         <li key={m.id} className="glass w-[136px] shrink-0 rounded-[22px] p-3.5">
-          <Avatar name={m.name} src={m.avatar} size="md" ring={m.checkedInToday} className="h-12 w-12" />
+          <MemberAvatar userId={m.id} name={m.name} src={m.avatar} size={46} progress={m.week} />
           <p className="mt-3 truncate text-[14px] font-medium text-text">
             {firstName(m.name)}
             {m.isMe ? <span className="font-normal text-muted"> (jij)</span> : null}
