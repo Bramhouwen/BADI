@@ -30,8 +30,10 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     supabase.from("recipe_favorites").select("id").eq("recipe_id", id).eq("user_id", ctx.userId).maybeSingle(),
     supabase.from("recipe_reactions").select("user_id, reaction").eq("recipe_id", id),
   ]);
-  const author = squad.find((m) => m.user_id === recipe.user_id)?.profile;
-  const authorAvatar = await signedUrl("avatars", author?.avatar_path);
+  const member = squad.find((m) => m.user_id === recipe.user_id)?.profile;
+  const byCoach = Boolean((recipe as { by_coach?: boolean }).by_coach);
+  const author = byCoach ? { display_name: "Baddy", avatar_path: null } : member;
+  const authorAvatar = byCoach ? "/brand/baddy.png" : await signedUrl("avatars", member?.avatar_path);
   const reactions = (reactionRows ?? []) as Pick<PostReaction, "user_id" | "reaction">[];
   const counts: Partial<Record<ReactionKey, number>> = {};
   for (const r of reactions) counts[r.reaction] = (counts[r.reaction] ?? 0) + 1;

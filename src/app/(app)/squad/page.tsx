@@ -7,7 +7,7 @@ import { signedUrlMap } from "@/lib/storage";
 import { challengeDay, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
 import { firstName } from "@/lib/utils";
-import { CHAT_PAGE_SIZE, type ChatMessage } from "@/lib/chat";
+import { BADDY_ID, CHAT_PAGE_SIZE, asSender, type ChatMessage } from "@/lib/chat";
 import { mentionLabels } from "@/lib/mentions";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -31,7 +31,7 @@ async function Content() {
     supabase.from("daily_checkins").select("user_id, checkin_date").eq("challenge_id", ctx.challenge.id),
     supabase
       .from("squad_messages")
-      .select("id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id")
+      .select("id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id, is_coach")
       .eq("challenge_id", ctx.challenge.id)
       .order("created_at", { ascending: false })
       .limit(CHAT_PAGE_SIZE),
@@ -42,7 +42,7 @@ async function Content() {
 
   const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string }[];
   const newestFirst = (messageRows ?? []) as ChatMessage[];
-  const messages = [...newestFirst].reverse();
+  const messages = [...newestFirst].reverse().map(asSender);
   const recipeRaw = (recipeRows ?? []) as { id: string; title: string; image_path: string | null }[];
   const postRaw = (postRows ?? []) as { id: string; image_path: string; caption: string | null }[];
   const attachmentPaths = messages.map((m) => m.attachment_path).filter((p): p is string => Boolean(p));
@@ -55,7 +55,7 @@ async function Content() {
   const recipes: RecipeOption[] = recipeRaw.map((r) => ({ id: r.id, title: r.title, image: r.image_path ? recipeImages.get(r.image_path) ?? null : null }));
   const posts: PostOption[] = postRaw.map((p) => ({ id: p.id, image: postImages.get(p.image_path) ?? null, caption: p.caption }));
   const signed = Object.fromEntries(chatSigned);
-  const mentionMembers = mentionLabels(squad.map((m) => ({ id: m.user_id, display_name: m.profile.display_name })));
+  const mentionMembers = [...mentionLabels(squad.map((m) => ({ id: m.user_id, display_name: m.profile.display_name }))), { id: BADDY_ID, label: "Baddy" }];
 
   const members = rotateMembers(squad, day).map((m) => {
     const stats = computeStreakStats(checkins.filter((c) => c.user_id === m.user_id).map((c) => c.checkin_date), today);
@@ -68,7 +68,10 @@ async function Content() {
       isMe: m.user_id === ctx.userId,
     };
   });
-  const chatMembers: Record<string, ChatMember> = Object.fromEntries(members.map((m) => [m.id, { name: firstName(m.name), avatar: m.avatar }]));
+  const chatMembers: Record<string, ChatMember> = {
+    ...Object.fromEntries(members.map((m) => [m.id, { name: firstName(m.name), avatar: m.avatar }])),
+    [BADDY_ID]: { name: "Baddy", avatar: "/brand/baddy.png" },
+  };
 
   return (
     <Page className="space-y-5">
@@ -77,6 +80,10 @@ async function Content() {
         title="The Squad"
         action={
           <div className="flex items-center gap-2">
+            <Link href="/coach" className="flex h-10 items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-3 text-[12.5px] font-medium text-ink shadow-sm hover:bg-blush" aria-label="Baddy de Coach">
+              <Avatar name="Baddy" src="/brand/baddy.png" size="xs" className="h-8 w-8" />
+              Baddy
+            </Link>
             <Link href="/wall" className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:bg-blush" aria-label="The Wall">
               <Camera className="h-[18px] w-[18px]" strokeWidth={1.6} />
             </Link>

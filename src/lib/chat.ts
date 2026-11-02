@@ -20,8 +20,18 @@ export interface ChatMessage {
   attachment_name?: string | null;
   /** Recipe or wall post id for references. */
   ref_id?: string | null;
+  /** Written by Baddy de Coach (stored under the member who tagged Baddy). */
+  is_coach?: boolean;
   /** True while the optimistic copy waits for the server. */
   pending?: boolean;
+}
+
+/** Pseudo sender id for Baddy's messages in the client. */
+export const BADDY_ID = "baddy";
+
+/** Shows Baddy's messages as their own sender instead of as the member who asked. */
+export function asSender(m: ChatMessage): ChatMessage {
+  return m.is_coach ? { ...m, user_id: BADDY_ID } : m;
 }
 
 /** Short label for an attachment, used in previews and accessibility text. */

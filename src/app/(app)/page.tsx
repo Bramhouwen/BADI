@@ -22,6 +22,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { WeekCard } from "@/components/home/streak-card";
 import { HeroCard } from "@/components/home/hero-card";
 import { FeatureCards, SquadRow } from "@/components/home/feature-cards";
+import { BaddyCard } from "@/components/coach/ask-baddy";
 import { ProgressCard } from "@/components/home/progress-card";
 import { FitnessCard } from "@/components/home/fitness-card";
 import { loadSessions } from "@/lib/fitness/data";
@@ -128,6 +129,7 @@ async function Content() {
       )}
 
       <FeatureCards />
+      <BaddyCard />
 
       <FitnessCard weekWorkouts={fitnessWeek.workouts} last={lastWorkout ? { title: lastWorkout.title, date: lastWorkout.workout_date, type: lastWorkout.activity_type } : null} />
 

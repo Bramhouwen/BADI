@@ -1,0 +1,29 @@
+import { Suspense } from "react";
+import { requireContext } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
+import { isDemo } from "@/lib/demo";
+import { hasCoachKey } from "@/lib/coach/run";
+import { parseRefs } from "@/lib/coach/prompt";
+import { PageSkeleton } from "@/components/ui/skeleton";
+import { CoachChat, type CoachMessage } from "./coach-chat";
+
+export const metadata = { title: "Baddy" };
+
+async function Content({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+  const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
+  const supabase = await createClient();
+  const { data } = await supabase.from("coach_messages").select("id, role, body, refs, created_at").eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(60);
+  const messages: CoachMessage[] = ((data ?? []) as { id: string; role: "user" | "assistant"; body: string; refs: unknown; created_at: string }[])
+    .reverse()
+    .map((m) => ({ id: m.id, role: m.role, body: m.body, refs: parseRefs(m.refs), created_at: m.created_at }));
+  const prefill = typeof sp.q === "string" ? sp.q.slice(0, 400) : "";
+  return <CoachChat initial={messages} prefill={prefill} available={isDemo() || hasCoachKey()} />;
+}
+
+export default function CoachPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Content searchParams={searchParams} />
+    </Suspense>
+  );
+}

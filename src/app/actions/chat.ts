@@ -2,6 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { mentionsBaddy } from "@/lib/coach/prompt";
+import { replyAsBaddyInSquad } from "@/lib/coach/squad";
 import { getSquad, requireContext } from "@/lib/data";
 import { findMentions, mentionLabels } from "@/lib/mentions";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +14,7 @@ import { isOwnedMediaPath } from "@/lib/media-paths";
 
 const uuid = z.string().uuid();
 
-const MESSAGE_COLUMNS = "id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id";
+const MESSAGE_COLUMNS = "id, user_id, body, created_at, attachment_type, attachment_path, attachment_name, ref_id, is_coach";
 
 const attachmentSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("image"), path: z.string().min(1).max(300) }),
@@ -55,6 +58,10 @@ export async function sendMessage(input: { body: string; attachment?: MessageAtt
 
   const { data, error } = await supabase.from("squad_messages").insert(row).select(MESSAGE_COLUMNS).single();
   if (error || !data) return { ok: false, error: "Versturen is niet gelukt." };
+  if (body && mentionsBaddy(body)) {
+    // Baddy answers after this response is sent; the reply arrives through Realtime.
+    after(() => replyAsBaddyInSquad(supabase, ctx, body));
+  }
   await supabase.from("squad_chat_reads").upsert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, last_read_at: new Date().toISOString() }, { onConflict: "challenge_id,user_id" });
   return { ok: true, data: data as ChatMessage };
 }
@@ -91,6 +98,22 @@ export async function loadOlderMessages(before: string): Promise<ActionResult<Ch
     .eq("challenge_id", ctx.challenge.id)
     .lt("created_at", before)
     .order("created_at", { ascending: false })
+    .limit(CHAT_PAGE_SIZE);
+  if (error) return { ok: false, error: "Laden is niet gelukt." };
+  return { ok: true, data: (data ?? []) as ChatMessage[] };
+}
+
+/** Messages newer than a given moment, oldest first. Used while waiting for Baddy's reply. */
+export async function loadNewerMessages(since: string): Promise<ActionResult<ChatMessage[]>> {
+  if (Number.isNaN(Date.parse(since))) return { ok: false, error: "Ongeldig tijdstip." };
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("squad_messages")
+    .select(MESSAGE_COLUMNS)
+    .eq("challenge_id", ctx.challenge.id)
+    .gt("created_at", since)
+    .order("created_at", { ascending: true })
     .limit(CHAT_PAGE_SIZE);
   if (error) return { ok: false, error: "Laden is niet gelukt." };
   return { ok: true, data: (data ?? []) as ChatMessage[] };

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, todayKey, weekdayShortNl } from "@/lib/dates";
 import { WATER_GOAL_ML } from "@/lib/constants";
 import { Page, PageTitle } from "@/components/ui/page";
+import { AskBaddyLink } from "@/components/coach/ask-baddy";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { WaterTracker } from "@/components/water/water-tracker";
@@ -37,6 +38,7 @@ async function Content() {
     <Page className="space-y-6">
       <PageTitle title="Water" subtitle={`Richtlijn: ${formatMl(WATER_GOAL_ML)} per dag. Jouw behoefte kan anders zijn.`} back="/" />
       <WaterTracker total={total} goal={WATER_GOAL_ML} variant="full" />
+      <AskBaddyLink question="Geef me praktische tips om dagelijks 2,5 tot 3 liter water te drinken" label="Tips van Baddy voor meer water" />
 
       <section>
         <SectionTitle>Laatste zeven dagen</SectionTitle>

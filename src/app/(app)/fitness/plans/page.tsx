@@ -8,6 +8,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { FitnessNav } from "@/components/fitness/fitness-nav";
+import { AskBaddyLink } from "@/components/coach/ask-baddy";
 
 export const metadata = { title: "Mijn schema's" };
 
@@ -18,6 +19,7 @@ async function Content() {
     <Page className="space-y-4">
       <PageTitle title="Mijn schema's" subtitle="Templates die je steeds opnieuw kunt starten." />
       <FitnessNav active="/fitness/plans" />
+      <AskBaddyLink question="Maak een krachtschema voor 3 keer per week, ik train ongeveer 45 minuten per keer" label="Laat Baddy een schema maken" />
       {plans.length === 0 ? (
         <EmptyState
           icon={ClipboardList}

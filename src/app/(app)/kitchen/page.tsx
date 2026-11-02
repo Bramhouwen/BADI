@@ -4,6 +4,7 @@ import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
 import { Page, PageTitle } from "@/components/ui/page";
+import { AskBaddyLink, BADDY_AVATAR_SRC } from "@/components/coach/ask-baddy";
 import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABELS, type RecipeCategory } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { ChefHat, Heart } from "lucide-react";
@@ -43,6 +44,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
       <PageTitle title="Kitchen" subtitle="Recepten van de squad." />
+      <div className="-mt-2 mb-4">
+        <AskBaddyLink question="Maak een recept zonder toegevoegde suikers voor " label="Laat Baddy een recept maken" />
+      </div>
       <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1" role="tablist" aria-label="Filter">
         {(
           [
@@ -95,7 +99,11 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
                 <RecipeCard
                   recipe={{ id: r.id, title: r.title, category: r.category }}
                   imageUrl={r.image_path ? images.get(r.image_path) ?? null : null}
-                  author={{ name: author?.display_name ?? "Lid", avatar: author?.avatar_path ? avatars.get(author.avatar_path) ?? null : null }}
+                  author={
+                    r.by_coach
+                      ? { name: "Baddy", avatar: BADDY_AVATAR_SRC }
+                      : { name: author?.display_name ?? "Lid", avatar: author?.avatar_path ? avatars.get(author.avatar_path) ?? null : null }
+                  }
                   favorite={favorites.has(r.id)}
                 />
               </li>

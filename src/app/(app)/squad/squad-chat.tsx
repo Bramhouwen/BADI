@@ -5,9 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUp, ChefHat, FileText, Plus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { CHAT_PAGE_SIZE, attachmentHref, attachmentLabel, formatTime, groupMessages, type ChatMessage } from "@/lib/chat";
+import { BADDY_ID, CHAT_PAGE_SIZE, asSender, attachmentHref, attachmentLabel, formatTime, groupMessages, type ChatMessage } from "@/lib/chat";
+import { mentionsBaddy } from "@/lib/coach/prompt";
 import type { DateKey } from "@/lib/dates";
-import { deleteMessage, loadOlderMessages, markChatRead, sendMessage, type MessageAttachment } from "@/app/actions/chat";
+import { deleteMessage, loadNewerMessages, loadOlderMessages, markChatRead, sendMessage, type MessageAttachment } from "@/app/actions/chat";
 import { ChatAttach, type PostOption, type RecipeOption } from "./chat-attach";
 import { applyMention, mentionQuery, mentionSuggestions, splitMentions, type MentionMember } from "@/lib/mentions";
 import { Avatar } from "@/components/ui/avatar";
@@ -48,6 +49,8 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
   const [selected, setSelected] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  /** Set while waiting for Baddy's answer to an @Baddy message: the moment of sending. */
+  const [baddySince, setBaddySince] = useState<string | null>(null);
   const [signed, setSigned] = useState<Record<string, string>>(initialSigned);
   const [caret, setCaret] = useState(0);
   const mention = mentionQuery(draft, caret);
@@ -80,9 +83,10 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
     const ch = supabase
       .channel(`squad-chat:${challengeId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "squad_messages", filter: `challenge_id=eq.${challengeId}` }, (payload) => {
-        const row = payload.new as ChatMessage;
+        const row = asSender(payload.new as ChatMessage);
         if (!row?.id) return;
         setMessages((list) => mergeById(list, [row]));
+        if (row.user_id === BADDY_ID) setBaddySince(null);
         if (row.user_id !== me) void markChatRead();
         setTimeout(() => scrollToEnd(), 50);
       })
@@ -117,6 +121,27 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
     };
   }, [messages, signed]);
 
+  // Fallback for Realtime: poll for Baddy's reply for up to 90 seconds.
+  useEffect(() => {
+    if (!baddySince) return;
+    const started = Date.now();
+    const id = setInterval(async () => {
+      if (Date.now() - started > 90_000) {
+        setBaddySince(null);
+        return;
+      }
+      const r = await loadNewerMessages(baddySince);
+      if (!r.ok || !r.data?.length) return;
+      const rows = r.data.map(asSender);
+      setMessages((list) => mergeById(list, rows));
+      if (rows.some((m) => m.user_id === BADDY_ID)) {
+        setBaddySince(null);
+        setTimeout(() => scrollToEnd(), 50);
+      }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [baddySince, scrollToEnd]);
+
   function send(body: string, attachment?: MessageAttachment) {
     const temp: ChatMessage = {
       id: `temp-${Date.now()}`,
@@ -142,7 +167,8 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
         toast(r.error, "error");
         return;
       }
-      const saved = r.data!;
+      const saved = asSender(r.data!);
+      if (body && mentionsBaddy(body)) setBaddySince(saved.created_at);
       setMessages((list) => {
         const withoutTemp = list.filter((m) => m.id !== temp.id);
         return withoutTemp.some((m) => m.id === saved.id) ? withoutTemp : [...withoutTemp, saved];
@@ -179,7 +205,7 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
     startOlder(async () => {
       const r = await loadOlderMessages(before);
       if (!r.ok) return;
-      const rows = [...r.data!].reverse();
+      const rows = [...r.data!].reverse().map(asSender);
       setMessages((list) => mergeById(rows, list));
       setHasMore(r.data!.length === CHAT_PAGE_SIZE);
     });
@@ -317,6 +343,16 @@ export function SquadChat({ initial, hasMore: initialHasMore, members, me, chall
             </div>
           </section>
         ))}
+        {baddySince ? (
+          <div className="flex items-end gap-2" aria-label="Baddy typt">
+            <Avatar name="Baddy" src={members[BADDY_ID]?.avatar} size="xs" className="mb-1" />
+            <span className="glass flex items-center gap-1 rounded-[18px] rounded-bl-[6px] px-3.5 py-3">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted" style={{ animationDelay: `${i * 160}ms` }} />
+              ))}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <form

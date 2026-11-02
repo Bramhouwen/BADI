@@ -3,7 +3,7 @@
 ## 1. Supabase (productie)
 
 1. Maak een Supabase-project (regio bij voorkeur `eu-central-1`, Frankfurt).
-2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql` (of `supabase db push` met de CLI).
+2. Voer de migraties uit in de SQL Editor, in volgorde: `0001_winter_arc_schema.sql`, `0002_fix_pgcrypto_search_path.sql`, `0003_water_entries.sql`, `0004_fitness_tracker.sql`, `0005_squad_stats.sql`, `0006_squad_chat.sql`, `0007_chat_attachments.sql`, `0008_chat_mentions.sql`, `0009_recipes_optional_fields.sql`, `0010_baddy_coach.sql` (of `supabase db push` met de CLI).
 3. **Authentication > URL Configuration**:
    - Site URL: `https://<jouw-domein>`
    - Redirect URLs: `https://<jouw-domein>/auth/callback`
@@ -76,3 +76,11 @@ Meldingen zijn in-app (het belletje rechtsboven). Push-notificaties zijn bewust 
 - Foto's staan in private buckets met per-map policies; de app serveert ze met signed URLs van een uur.
 - Uitnodigingstokens worden gehasht opgeslagen (SHA-256), zijn eenmalig en verlopen na zeven dagen.
 - De service worker cachet alleen statische bestanden en de offline-pagina, nooit persoonlijke data.
+
+## Baddy de Coach
+
+1. Maak een API-sleutel aan op console.anthropic.com en zet een tegoed of betaalmethode klaar.
+2. Voeg in Vercel onder Settings, Environment Variables `ANTHROPIC_API_KEY` toe voor Production (en Preview als je wilt), zonder `NEXT_PUBLIC_`.
+3. Redeploy. Zonder sleutel toont Baddy een melding dat hij nog niet gekoppeld is.
+
+Baddy gebruikt `claude-opus-5-5`. Per lid geldt een limiet van 40 vragen per dag en in de squadchat 15 antwoorden per dag, om kosten te begrenzen.
