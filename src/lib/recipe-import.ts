@@ -42,6 +42,29 @@ export function isTikTok(url: URL): boolean {
   return host === "tiktok.com" || host.endsWith(".tiktok.com");
 }
 
+/**
+ * The caption of a TikTok video from its page: TikTok sends the video data
+ * along as JSON. oEmbed no longer includes the caption.
+ */
+export function tiktokDescFromHtml(html: string): string {
+  const m = html.match(/<script[^>]*id=["']__UNIVERSAL_DATA_FOR_REHYDRATION__["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (m) {
+    try {
+      const data = JSON.parse(m[1]) as { __DEFAULT_SCOPE__?: Record<string, { itemInfo?: { itemStruct?: { desc?: unknown } } }> };
+      const desc = data.__DEFAULT_SCOPE__?.["webapp.video-detail"]?.itemInfo?.itemStruct?.desc;
+      if (typeof desc === "string" && desc.trim()) return desc.trim();
+    } catch {}
+  }
+  // Older page layout: the first "desc" string anywhere in the page data.
+  const loose = html.match(/"desc":("(?:[^"\\]|\\.)*")/);
+  if (loose) {
+    try {
+      return String(JSON.parse(loose[1])).trim();
+    } catch {}
+  }
+  return "";
+}
+
 /** Readable site name for the source line, for example "leukerecepten.nl". */
 export function sourceLabel(url: string): string {
   try {

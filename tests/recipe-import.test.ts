@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryFrom, decodeEntities, draftFromRead, firstUrl, isTikTok, pageText, publicUrl, recipeFromHtml, sourceLabel } from "@/lib/recipe-import";
+import { categoryFrom, decodeEntities, draftFromRead, firstUrl, isTikTok, pageText, publicUrl, recipeFromHtml, sourceLabel, tiktokDescFromHtml } from "@/lib/recipe-import";
 
 const ld = (data: unknown) => `<html><head><script type="application/ld+json">${JSON.stringify(data)}</script></head><body></body></html>`;
 
@@ -78,5 +78,13 @@ describe("recipe import", () => {
     expect(draftFromRead({ found: true, title: "Pasta", ingredients: [], instructions: [] }, null)).toBeNull();
     const d = draftFromRead({ found: true, title: "Pasta pesto 🍝", category: "Diner", ingredients: ["200 g pasta"], instructions: ["1. Kook de pasta.", "Meng met pesto."], protein_grams: 999 }, "https://www.tiktok.com/@a/video/1");
     expect(d).toMatchObject({ ingredients: "200 g pasta", instructions: "1. Kook de pasta.\n2. Meng met pesto.", category: "", protein_grams: null, source_url: "https://www.tiktok.com/@a/video/1" });
+  });
+
+  it("reads the caption from a TikTok video page", () => {
+    const data = { __DEFAULT_SCOPE__: { "webapp.video-detail": { itemInfo: { itemStruct: { id: "1", desc: "Quesadilla 🌯 Ingredients: 3 eggs, 1 wrap </script>" } } } } };
+    const page = `<html><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">${JSON.stringify(data).replace(/<\//g, "\\u003c/")}</script></html>`;
+    expect(tiktokDescFromHtml(page)).toBe("Quesadilla 🌯 Ingredients: 3 eggs, 1 wrap </script>");
+    expect(tiktokDescFromHtml('<script>{"desc":"Pasta \\"pesto\\" 200 g"}</script>')).toBe('Pasta "pesto" 200 g');
+    expect(tiktokDescFromHtml("<html></html>")).toBe("");
   });
 });

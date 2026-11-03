@@ -2,7 +2,7 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { RECIPE_CATEGORIES } from "@/lib/constants";
-import { draftFromRead, publicUrl, type ReadRecipe, type RecipeDraft } from "@/lib/recipe-import";
+import { draftFromRead, publicUrl, tiktokDescFromHtml, type ReadRecipe, type RecipeDraft } from "@/lib/recipe-import";
 
 /** Reading text and screenshots is plain extraction; Sonnet does that well for less. */
 const IMPORT_MODEL = "claude-sonnet-5-5";
@@ -54,21 +54,23 @@ async function readCapped(res: Response): Promise<string> {
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-/** The caption of a TikTok video via TikTok's public oEmbed endpoint. */
+/** The caption of a TikTok video: from the video page, with TikTok's oEmbed as fallback. */
 export async function tiktokCaption(raw: string): Promise<{ url: string; caption: string }> {
   let url = raw;
-  // Short share links (vm./vt.tiktok.com) first resolve to the video address.
-  if (!/\/video\/\d+/.test(url)) {
+  let caption = "";
+  // The page also resolves short share links (vm.tiktok.com, tiktok.com/t/) to the video address.
+  try {
+    const page = await fetchPublic(raw);
+    url = page.url;
+    if (page.status === 200) caption = tiktokDescFromHtml(page.body);
+  } catch {}
+  if (!caption) {
+    const { status, body } = await fetchPublic(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, "application/json");
+    if (status !== 200) throw new ImportError("TikTok gaf deze video niet vrij. Maak een screenshot van het recept of plak de tekst.");
     try {
-      url = (await fetchPublic(url)).url;
+      caption = String((JSON.parse(body) as { title?: unknown }).title ?? "");
     } catch {}
   }
-  const { status, body } = await fetchPublic(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, "application/json");
-  if (status !== 200) throw new ImportError("TikTok gaf deze video niet vrij. Maak een screenshot van het recept of plak de tekst.");
-  let caption = "";
-  try {
-    caption = String((JSON.parse(body) as { title?: unknown }).title ?? "");
-  } catch {}
   return { url: url.split("?")[0], caption: caption.trim() };
 }
 
