@@ -14,10 +14,11 @@ async function fromLink(raw: string): Promise<RecipeDraft> {
   if (!url) throw new ImportError("Dit is geen geldige link.");
 
   if (isTikTok(url)) {
-    const { url: video, caption } = await tiktokCaption(url.toString());
-    if (caption.length < 30) throw new ImportError("In de beschrijving van deze TikTok staat geen recept. Maak een screenshot van het recept in de video of plak de tekst.");
+    const { url: video, caption, trace } = await tiktokCaption(url.toString());
+    if (!caption) throw new ImportError(`TikTok gaf de beschrijving van deze video niet door (${trace}). Maak een screenshot van het recept of plak de tekst.`);
+    if (caption.length < 30) throw new ImportError("De beschrijving van deze TikTok is te kort voor een recept. Maak een screenshot van het recept in de video.");
     const draft = await readRecipe({ text: caption }, video);
-    if (!draft) throw new ImportError("In de beschrijving van deze TikTok staat geen recept. Maak een screenshot van het recept in de video of plak de tekst.");
+    if (!draft) throw new ImportError("In de beschrijving van deze TikTok staan geen ingrediënten of stappen. Maak een screenshot van het recept in de video.");
     return draft;
   }
 

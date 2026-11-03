@@ -54,24 +54,34 @@ async function readCapped(res: Response): Promise<string> {
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-/** The caption of a TikTok video: from the video page, with TikTok's oEmbed as fallback. */
-export async function tiktokCaption(raw: string): Promise<{ url: string; caption: string }> {
+/**
+ * The caption of a TikTok video: from the video page, with TikTok's oEmbed as
+ * fallback. `trace` says what each source gave, for the error message.
+ */
+export async function tiktokCaption(raw: string): Promise<{ url: string; caption: string; trace: string }> {
   let url = raw;
   let caption = "";
+  const trace: string[] = [];
   // The page also resolves short share links (vm.tiktok.com, tiktok.com/t/) to the video address.
   try {
     const page = await fetchPublic(raw);
     url = page.url;
-    if (page.status === 200) caption = tiktokDescFromHtml(page.body);
-  } catch {}
-  if (!caption) {
-    const { status, body } = await fetchPublic(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, "application/json");
-    if (status !== 200) throw new ImportError("TikTok gaf deze video niet vrij. Maak een screenshot van het recept of plak de tekst.");
-    try {
-      caption = String((JSON.parse(body) as { title?: unknown }).title ?? "");
-    } catch {}
+    caption = page.status === 200 ? tiktokDescFromHtml(page.body) : "";
+    trace.push(page.status !== 200 ? `pagina ${page.status}` : caption ? "pagina ok" : page.body.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__") ? "pagina zonder beschrijving" : "pagina zonder videodata");
+  } catch {
+    trace.push("pagina onbereikbaar");
   }
-  return { url: url.split("?")[0], caption: caption.trim() };
+  if (!caption) {
+    try {
+      const { status, body } = await fetchPublic(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url.split("?")[0])}`, "application/json");
+      if (status === 200) caption = String((JSON.parse(body) as { title?: unknown }).title ?? "");
+      trace.push(status !== 200 ? `oEmbed ${status}` : caption ? "oEmbed ok" : "oEmbed zonder beschrijving");
+    } catch {
+      trace.push("oEmbed onbereikbaar");
+    }
+  }
+  if (!caption) console.warn("tiktok import:", url, trace.join(", "));
+  return { url: url.split("?")[0], caption: caption.trim(), trace: trace.join(", ") };
 }
 
 const READ_TOOL: Anthropic.Tool = {
