@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ErrorText, Hint, Input, Label, Textarea, inputClass } from "@/components/ui/field";
 import { ImagePicker } from "@/components/app/image-picker";
 import { RECIPE_CATEGORIES } from "@/lib/constants";
-import type { Recipe } from "@/lib/types";
-import type { ActionResult } from "@/lib/types";
+import type { ActionResult, Recipe } from "@/lib/types";
+
+type RecipeValues = Pick<Recipe, "title" | "description" | "ingredients" | "instructions" | "category" | "protein_grams" | "source_url"> & { image_path?: string | null };
 
 export function RecipeForm({
   action,
@@ -17,7 +18,7 @@ export function RecipeForm({
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   pathPrefix: string;
-  recipe?: Recipe;
+  recipe?: RecipeValues;
   imageUrl?: string | null;
   submitLabel: string;
 }) {
@@ -78,6 +79,11 @@ export function RecipeForm({
           <Label htmlFor="protein_grams">Eiwit (g, optioneel)</Label>
           <Input id="protein_grams" name="protein_grams" type="number" inputMode="numeric" min={0} max={300} defaultValue={recipe?.protein_grams ?? ""} placeholder="±30" />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="source_url">Link naar het origineel (optioneel)</Label>
+        <Input id="source_url" name="source_url" type="url" inputMode="url" defaultValue={recipe?.source_url ?? ""} placeholder="https://" maxLength={500} />
       </div>
 
       <ErrorText>{error}</ErrorText>

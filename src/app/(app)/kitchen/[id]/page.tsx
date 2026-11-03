@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
-import { Pencil, ChefHat } from "lucide-react";
+import { Pencil, ChefHat, ExternalLink } from "lucide-react";
+import { sourceLabel } from "@/lib/recipe-import";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
@@ -126,6 +127,13 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
               <p className="whitespace-pre-line text-[15px] leading-relaxed">{recipe.instructions}</p>
             </Card>
           </section>
+        ) : null}
+
+        {recipe.source_url ? (
+          <a href={recipe.source_url} target="_blank" rel="noopener noreferrer nofollow" className="soft flex items-center gap-2 rounded-full px-4 py-2.5">
+            <ExternalLink className="h-4 w-4 shrink-0 text-ink" strokeWidth={1.7} aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">Origineel op {sourceLabel(recipe.source_url)}</span>
+          </a>
         ) : null}
 
         {isOwner ? <DeleteRecipeButton recipeId={recipe.id} /> : null}

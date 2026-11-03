@@ -9,7 +9,7 @@ import { Page, PageTitle } from "@/components/ui/page";
 import { AskBaddyLink, BADDY_AVATAR_SRC } from "@/components/coach/ask-baddy";
 import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABELS, type RecipeCategory } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { ChefHat, Heart } from "lucide-react";
+import { ArrowRight, ChefHat, Heart, Link2 } from "lucide-react";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -46,8 +46,15 @@ async function Content({ searchParams }: { searchParams: Promise<{ filter?: stri
     <Page>
       <RealtimeRefresher channel={`kitchen:${ctx.challenge.id}`} tables={["recipes"]} />
       <PageTitle title="Kitchen" subtitle="Recepten van de squad." />
-      <div className="-mt-2 mb-4">
+      <div className="-mt-2 mb-4 space-y-2">
         <AskBaddyLink question="Maak een recept zonder toegevoegde suikers voor " label="Laat Baddy een recept maken" />
+        <Link href="/kitchen/import" className="glass flex items-center gap-3 rounded-[18px] py-2 pl-2 pr-3.5 hover:bg-blush/40">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blush">
+            <Link2 className="h-4 w-4 text-ink" strokeWidth={1.7} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1 text-[13.5px] font-medium text-text">Recept importeren van link of screenshot</span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.7} />
+        </Link>
       </div>
       {aiImagesAvailable() ? <MissingPhotos count={all.filter((r) => !r.image_path).length} /> : null}
       <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1" role="tablist" aria-label="Filter">

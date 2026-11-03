@@ -34,6 +34,13 @@ const recipeSchema = z.object({
     .transform((v) => (v === "" ? null : Number(v)))
     .refine((v) => v === null || (Number.isInteger(v) && v >= 0 && v <= 300), "Eiwit in hele grammen, maximaal 300."),
   image_path: z.string().optional().default(""),
+  source_url: z
+    .string()
+    .trim()
+    .max(500, "Link is te lang.")
+    .optional()
+    .default("")
+    .refine((v) => v === "" || /^https?:\/\/\S+$/i.test(v), "Dat is geen geldige link."),
 });
 
 function toRow(data: z.infer<typeof recipeSchema>, fallbackTitle: string) {
@@ -45,6 +52,7 @@ function toRow(data: z.infer<typeof recipeSchema>, fallbackTitle: string) {
     category: data.category || null,
     protein_grams: data.protein_grams,
     image_path: data.image_path || null,
+    source_url: data.source_url || null,
   };
 }
 
