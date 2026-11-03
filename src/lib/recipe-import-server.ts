@@ -1,9 +1,11 @@
 import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import * as z from "zod/v4";
 import { RECIPE_CATEGORIES } from "@/lib/constants";
 import { BADDY_MODEL } from "@/lib/coach/prompt";
-import { draftFromRead, publicUrl, tiktokDescFromHtml, type ReadRecipe, type RecipeDraft } from "@/lib/recipe-import";
+import { draftFromRead, publicUrl, tiktokDescFromHtml, type RecipeDraft } from "@/lib/recipe-import";
 
 /**
  * Reading text and screenshots is plain extraction; Sonnet does that well for
@@ -101,25 +103,18 @@ export function apiReason(err: unknown): string {
   return "Het uitlezen lukte nu niet. Probeer het zo nog eens.";
 }
 
-const READ_TOOL: Anthropic.Tool = {
-  name: "recipe",
-  description: "Geeft het recept terug dat in de bron staat.",
-  input_schema: {
-    type: "object",
-    properties: {
-      found: { type: "boolean", description: "true als de bron een recept bevat met ingrediënten of stappen; false als er alleen een gerechtnaam, reclame of iets anders staat." },
-      title: { type: "string", description: "Korte naam van het gerecht, zonder emoji en hashtags, maximaal 80 tekens." },
-      description: { type: "string", description: "Eén korte zin over het gerecht als de bron die geeft, anders leeg." },
-      category: { type: "string", enum: [...RECIPE_CATEGORIES, ""] },
-      ingredients: { type: "array", items: { type: "string" }, maxItems: 40, description: "Eén ingrediënt per item, met de hoeveelheid zoals in de bron." },
-      instructions: { type: "array", items: { type: "string" }, maxItems: 25, description: "De bereidingsstappen in volgorde, kort, zonder nummer." },
-      protein_grams: { type: ["integer", "null"], description: "Geschatte grammen eiwit per portie, alleen als de hoeveelheden bekend zijn; anders null." },
-    },
-    required: ["found"],
-  },
-};
+/** The answer format; structured outputs guarantee JSON in this shape. */
+const READ_FORMAT = z.object({
+  found: z.boolean().describe("true als de bron een recept bevat met ingrediënten of stappen; false als er alleen een gerechtnaam, reclame of iets anders staat."),
+  title: z.string().describe("Korte naam van het gerecht, zonder emoji en hashtags, maximaal 80 tekens."),
+  description: z.string().describe("Eén korte zin over het gerecht als de bron die geeft, anders leeg."),
+  category: z.enum([...RECIPE_CATEGORIES, "geen"]).describe("De maaltijd waar het recept bij past, of geen."),
+  ingredients: z.array(z.string()).describe("Eén ingrediënt per item, met de hoeveelheid zoals in de bron."),
+  instructions: z.array(z.string()).describe("De bereidingsstappen in volgorde, kort, zonder nummer. Leeg als de bron geen stappen geeft."),
+  protein_grams: z.number().int().nullable().describe("Geschatte grammen eiwit per portie, alleen als de hoeveelheden bekend zijn; anders null."),
+});
 
-const READ_SYSTEM = `Je leest een recept uit een tekst of afbeelding en geeft het terug met de tool recipe.
+const READ_SYSTEM = `Je leest een recept uit een tekst of afbeelding en geeft het terug in het gevraagde JSON-formaat.
 
 Regels:
 - Neem alleen over wat er echt staat. Verzin geen ingrediënten, hoeveelheden of stappen. Ontbreekt iets, laat het dan leeg.
@@ -141,28 +136,28 @@ export async function readRecipe(source: ReadSource, sourceUrl: string | null): 
           { type: "image", source: { type: "base64", media_type: source.image.mediaType, data: source.image.data } },
           { type: "text", text: "Lees het recept uit deze screenshot." },
         ];
-  let message: Anthropic.Message | null = null;
+  // Forced tool use returns a 400 on Sonnet 5.5 and Opus 5.5; structured outputs replace it.
+  let parsed: z.infer<typeof READ_FORMAT> | null = null;
   for (const model of IMPORT_MODELS) {
     try {
-      message = await client.messages.create({
+      const message = await client.messages.parse({
         model,
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: READ_SYSTEM,
-        tools: [READ_TOOL],
-        tool_choice: { type: "tool", name: "recipe" },
+        output_config: { effort: "low", format: zodOutputFormat(READ_FORMAT) },
         messages: [{ role: "user", content }],
       });
+      if (message.stop_reason === "refusal") throw new ImportError("Dit kan ik niet uitlezen.");
+      if (message.stop_reason === "max_tokens") throw new ImportError("Dit recept is te lang om in één keer uit te lezen.");
+      parsed = message.parsed_output ?? null;
       break;
     } catch (err) {
+      if (err instanceof ImportError) throw err;
       console.error("recipe import:", model, err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
-      const modelMissing = err instanceof Anthropic.NotFoundError || (err instanceof Anthropic.BadRequestError && /model/i.test(err.message));
-      if (!modelMissing || model === IMPORT_MODELS.at(-1)) throw new ImportError(apiReason(err));
+      // Only an unknown model on this key moves on to the next model.
+      if (!(err instanceof Anthropic.NotFoundError) || model === IMPORT_MODELS.at(-1)) throw new ImportError(apiReason(err));
     }
   }
-  if (!message) throw new ImportError("Het uitlezen lukte nu niet. Probeer het zo nog eens.");
-  if (message.stop_reason === "refusal") throw new ImportError("Dit kan ik niet uitlezen.");
-  if (message.stop_reason === "max_tokens") throw new ImportError("Dit recept is te lang om in één keer uit te lezen.");
-  const use = message.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
-  if (!use || typeof use.input !== "object" || use.input === null) return null;
-  return draftFromRead(use.input as ReadRecipe, sourceUrl);
+  if (!parsed) throw new ImportError("Het uitlezen lukte nu niet. Probeer het zo nog eens.");
+  return draftFromRead(parsed, sourceUrl);
 }
