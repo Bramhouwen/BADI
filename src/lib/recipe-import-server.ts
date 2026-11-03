@@ -2,10 +2,14 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { RECIPE_CATEGORIES } from "@/lib/constants";
+import { BADDY_MODEL } from "@/lib/coach/prompt";
 import { draftFromRead, publicUrl, tiktokDescFromHtml, type ReadRecipe, type RecipeDraft } from "@/lib/recipe-import";
 
-/** Reading text and screenshots is plain extraction; Sonnet does that well for less. */
-const IMPORT_MODEL = "claude-sonnet-5-5";
+/**
+ * Reading text and screenshots is plain extraction; Sonnet does that well for
+ * less. Baddy's model is the fallback when Sonnet is not available on the key.
+ */
+const IMPORT_MODELS = ["claude-sonnet-5-5", BADDY_MODEL];
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_PAGE_BYTES = 3_000_000;
 const USER_AGENT = "BADI-recipe-import/1.0 (+https://badi-mu.vercel.app)";
@@ -84,6 +88,19 @@ export async function tiktokCaption(raw: string): Promise<{ url: string; caption
   return { url: url.split("?")[0], caption: caption.trim(), trace: trace.join(", ") };
 }
 
+/** Readable reason for a failed Claude call; the API's own words when it is something unexpected. */
+export function apiReason(err: unknown): string {
+  if (err instanceof Anthropic.APIError) {
+    const text = (err.message ?? "").replace(/\s+/g, " ").trim();
+    if (/credit balance/i.test(text)) return "Het uitlezen lukte niet: het API-tegoed bij Anthropic is op.";
+    if (err instanceof Anthropic.AuthenticationError) return "Het uitlezen lukte niet: de API-sleutel klopt niet.";
+    if (err instanceof Anthropic.RateLimitError) return "Het uitlezen lukte niet: te veel verzoeken tegelijk. Probeer het over een minuut opnieuw.";
+    if (err.status === 529 || /overloaded/i.test(text)) return "Het uitlezen lukte niet: Claude is even overbelast. Probeer het zo nog eens.";
+    return `Het uitlezen lukte niet (${err.status ?? "fout"}: ${text.slice(0, 160)}).`;
+  }
+  return "Het uitlezen lukte nu niet. Probeer het zo nog eens.";
+}
+
 const READ_TOOL: Anthropic.Tool = {
   name: "recipe",
   description: "Geeft het recept terug dat in de bron staat.",
@@ -124,20 +141,25 @@ export async function readRecipe(source: ReadSource, sourceUrl: string | null): 
           { type: "image", source: { type: "base64", media_type: source.image.mediaType, data: source.image.data } },
           { type: "text", text: "Lees het recept uit deze screenshot." },
         ];
-  let message: Anthropic.Message;
-  try {
-    message = await client.messages.create({
-      model: IMPORT_MODEL,
-      max_tokens: 4000,
-      system: READ_SYSTEM,
-      tools: [READ_TOOL],
-      tool_choice: { type: "tool", name: "recipe" },
-      messages: [{ role: "user", content }],
-    });
-  } catch (err) {
-    console.error("recipe import:", err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
-    throw new ImportError("Het uitlezen lukte nu niet. Probeer het zo nog eens.");
+  let message: Anthropic.Message | null = null;
+  for (const model of IMPORT_MODELS) {
+    try {
+      message = await client.messages.create({
+        model,
+        max_tokens: 4000,
+        system: READ_SYSTEM,
+        tools: [READ_TOOL],
+        tool_choice: { type: "tool", name: "recipe" },
+        messages: [{ role: "user", content }],
+      });
+      break;
+    } catch (err) {
+      console.error("recipe import:", model, err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
+      const modelMissing = err instanceof Anthropic.NotFoundError || (err instanceof Anthropic.BadRequestError && /model/i.test(err.message));
+      if (!modelMissing || model === IMPORT_MODELS.at(-1)) throw new ImportError(apiReason(err));
+    }
   }
+  if (!message) throw new ImportError("Het uitlezen lukte nu niet. Probeer het zo nog eens.");
   if (message.stop_reason === "refusal") throw new ImportError("Dit kan ik niet uitlezen.");
   if (message.stop_reason === "max_tokens") throw new ImportError("Dit recept is te lang om in één keer uit te lezen.");
   const use = message.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
