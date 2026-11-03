@@ -55,7 +55,7 @@ export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "save_recipe",
     description:
-      "Zet één recept in de Kitchen van de squad, met Baddy als auteur. Gebruik dit wanneer iemand vraagt om een recept te maken, toe te voegen of op te slaan. Het recept moet voldoen aan de huisregels: hedendaags en herkenbaar, maximaal 10 ingrediënten en 6 stappen, geen toegevoegde suikers, whole foods, eiwit bij hoofdmaaltijden.",
+      "Zet één recept in de Kitchen van de squad, met Baddy als auteur. Alleen gebruiken nadat de persoon ja heeft gezegd op je voorstel in de chat of zelf uitdrukkelijk vraagt om het in de Kitchen te zetten; bij een vraag om een recept stel je het eerst voor. Het recept moet voldoen aan de huisregels: hedendaags en herkenbaar, maximaal 10 ingrediënten en 6 stappen, geen toegevoegde suikers, whole foods, eiwit bij hoofdmaaltijden.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",
@@ -73,7 +73,7 @@ export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "create_workout_plan",
     description:
-      "Maakt een trainingsschema in Fitness voor degene met wie je praat, met één of meer workouts (bijvoorbeeld Full Body A en B). Gebruik dit wanneer iemand vraagt om een schema te maken of op te slaan.",
+      "Maakt een trainingsschema in Fitness voor degene met wie je praat, met één of meer workouts (bijvoorbeeld Full Body A en B). Alleen gebruiken nadat de persoon ja heeft gezegd op je voorstel in de chat of zelf uitdrukkelijk vraagt om het in Fitness te zetten; bij een vraag om een schema stel je het eerst voor.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",

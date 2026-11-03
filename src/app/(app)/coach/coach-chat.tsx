@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUp, Bookmark, Brain, ChefHat, Dumbbell, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ArrowLeft, ArrowUp, Bookmark, Brain, Check, ChefHat, Dumbbell, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/toast";
 import { RichText } from "@/components/coach/rich-text";
 import { clearCoachConversation, rateCoachMessage } from "@/app/actions/coach";
 import type { StoredRef } from "@/lib/coach/prompt";
+import { OFFERS, saveOffer } from "@/lib/coach/offer";
 import { cn } from "@/lib/utils";
 
 export interface CoachMessage {
@@ -236,7 +237,7 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
           </div>
         ) : null}
 
-        {messages.map((m) =>
+        {messages.map((m, i) =>
           m.role === "user" ? (
             <div key={m.id} className="flex justify-end">
               <p className="espresso max-w-[82%] whitespace-pre-wrap break-words rounded-[18px] rounded-br-[6px] px-3.5 py-2 text-[14px] leading-snug shadow-none">{m.body}</p>
@@ -264,6 +265,16 @@ export function CoachChat({ initial, prefill, autoSend = false, available }: { i
                 {m.refs.map((r) => (
                   <RefCard key={`${r.type}-${r.id}`} refItem={r} />
                 ))}
+                {(() => {
+                  // Baddy proposes first; on her latest reply a one-tap yes saves the proposal.
+                  const kind = i === messages.length - 1 && !m.streaming && m.refs.length === 0 ? saveOffer(m.body) : null;
+                  return kind ? (
+                    <button type="button" disabled={busy} onClick={() => ask(OFFERS[kind].confirm)} className="espresso flex h-9 items-center gap-1.5 rounded-full px-3.5 shadow-none disabled:opacity-60">
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.2} />
+                      <span className="text-[13px] font-medium">{OFFERS[kind].label}</span>
+                    </button>
+                  ) : null;
+                })()}
                 {!m.streaming && m.body && UUID.test(m.id) ? (
                   <div className="flex items-center gap-1 px-1" role="group" aria-label="Was dit nuttig?">
                     <button

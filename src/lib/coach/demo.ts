@@ -5,12 +5,13 @@ import type { AppContext } from "@/lib/data";
 import type { CoachResult } from "./run";
 import type { StoredRef } from "./prompt";
 import { executeCoachTool } from "./execute";
+import { OFFERS } from "./offer";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Scripted Baddy for demo mode and local testing without an API key. It goes
- * through the real tool executor, so saving recipes and plans is exercised.
+ * Scripted Baddy for demo mode and local testing without an API key. Like the real
+ * Baddy it proposes first and saves after a yes, through the real tool executor.
  */
 export async function runDemoCoach(opts: {
   supabase: SupabaseClient;
@@ -32,7 +33,7 @@ export async function runDemoCoach(opts: {
       opts.onRef?.(outcome.ref);
     }
     reply = "Genoteerd, daar houd ik voortaan rekening mee. Je ziet al mijn notities over jou op je profiel onder **Wat Baddy over mij weet**.";
-  } else if (/recept|ontbijt|lunch|avondeten|maaltijd/.test(q)) {
+  } else if (/\bkitchen\b/.test(q) && /^(ja|zet|sla)/.test(q)) {
     const outcome = await executeCoachTool(
       "save_recipe",
       {
@@ -50,8 +51,8 @@ export async function runDemoCoach(opts: {
       refs.push(outcome.ref);
       opts.onRef?.(outcome.ref);
     }
-    reply = "Ik heb een ontbijt zonder toegevoegde suikers in de Kitchen gezet: **Kwarkbowl met appel en kaneel**.\n\n- Ruim 30 gram eiwit per portie\n- Zoet door de appel, niet door suiker of honing\n- Klaar in vijf minuten";
-  } else if (/schema|training|kracht|workout/.test(q)) {
+    reply = "Staat in de Kitchen: **Kwarkbowl met appel en kaneel**.";
+  } else if (/\bfitness\b/.test(q) && /^(ja|zet|sla)/.test(q)) {
     const outcome = await executeCoachTool(
       "create_workout_plan",
       {
@@ -69,7 +70,11 @@ export async function runDemoCoach(opts: {
       refs.push(outcome.ref);
       opts.onRef?.(outcome.ref);
     }
-    reply = "Je schema staat in Fitness: **Full Body 2x per week**.\n\n- Workout A en B wisselen elkaar af\n- Drie sets per oefening, rust 90 seconden\n- Gaat het makkelijk, verhoog dan volgende keer het gewicht een stap";
+    reply = "Je schema staat in Fitness: **Full Body 2x per week**. Workout A en B wissel je af, met 90 seconden rust tussen de sets.";
+  } else if (/recept|ontbijt|lunch|avondeten|maaltijd/.test(q)) {
+    reply = `Voorstel voor een ontbijt zonder toegevoegde suikers: **Kwarkbowl met appel en kaneel**, ruim 30 gram eiwit.\n\n- 250 g magere kwark\n- 1 appel\n- 30 g havermout\n- 15 g walnoten\n- Kaneel\n\nSnijd de appel in blokjes, meng de havermout door de kwark en top met appel, walnoten en kaneel.\n\n${OFFERS.recipe.question}`;
+  } else if (/schema|training|kracht|workout/.test(q)) {
+    reply = `Voorstel: **Full Body 2x per week**.\n\n**Full Body A**\n- Squat 3 × 10\n- Bench Press 3 × 10\n- Seated Row 3 × 12\n- Plank 3 × 40 sec\n\n**Full Body B**\n- Romanian Deadlift 3 × 10\n- Shoulder Press 3 × 10\n- Lat Pulldown 3 × 12\n- Lunges 3 × 10\n\n${OFFERS.plan.question}`;
   } else if (/water|drinken|liter/.test(q)) {
     reply = "Drie dingen die het makkelijker maken:\n\n- Zet bij het opstaan direct een groot glas klaar en drink het leeg\n- Koppel een glas aan vaste momenten: bij elke maaltijd en na elke training\n- Houd een fles van 750 ml bij je, dan zit je met vier vullingen op 3 liter";
   } else {
