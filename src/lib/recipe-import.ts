@@ -174,7 +174,12 @@ export function recipeFromHtml(html: string, sourceUrl: string): RecipeDraft | n
     }
     const r = findRecipe(data);
     if (!r) continue;
-    const ingredients = (Array.isArray(r.recipeIngredient) ? r.recipeIngredient : Array.isArray(r.ingredients) ? r.ingredients : []).map(clean).filter(Boolean);
+    // Some sites nest the list once more ([[...]]) or give one string per line.
+    const ingredients = [r.recipeIngredient ?? r.ingredients]
+      .flat(3)
+      .flatMap((i) => (typeof i === "string" ? i.split(/\n+/) : []))
+      .map(clean)
+      .filter(Boolean);
     const instructions = steps(r.recipeInstructions);
     const title = clean(r.name);
     if (!title && ingredients.length === 0) continue;

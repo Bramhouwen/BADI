@@ -49,6 +49,12 @@ describe("recipe import", () => {
     });
   });
 
+  it("reads ingredient lists that are nested once more (puurfiguur.nl)", () => {
+    const r = recipeFromHtml(ld({ "@type": "Recipe", name: "Eiwrap", recipeCategory: "Lunch", recipeIngredient: [["2 eieren", "30 gram hüttenkäse"]], recipeInstructions: [[{ "@type": "HowToStep", text: "Kluts de eieren." }]] }), "https://x.nl");
+    expect(r).toMatchObject({ ingredients: "2 eieren\n30 gram hüttenkäse", instructions: "1. Kluts de eieren.", category: "Middageten" });
+    expect(recipeFromHtml(ld({ "@type": "Recipe", name: "Wrap", recipeIngredient: "1 wrap\n2 eieren" }), "https://x.nl")?.ingredients).toBe("1 wrap\n2 eieren");
+  });
+
   it("handles instructions as one string and skips pages without a recipe", () => {
     const r = recipeFromHtml(ld({ "@type": "Recipe", name: "Wrap", recipeIngredient: ["1 wrap"], recipeInstructions: "Beleg de wrap.\nRol op." }), "https://x.nl");
     expect(r?.instructions).toBe("1. Beleg de wrap.\n2. Rol op.");
