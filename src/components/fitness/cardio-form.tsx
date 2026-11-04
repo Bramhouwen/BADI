@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorText, Hint, Input, Label, Textarea } from "@/components/ui/field";
 import { IconBadge } from "@/components/ui/icon-badge";
-import { activityMeta, CARDIO_TIMER_KEY, formatDuration, formatPace, formatSpeed, paceSecPerKm, speedKmh, timerElapsed, type ActivityType, type TimerState } from "@/lib/fitness";
+import { activityMeta, CARDIO_TIMER_KEY, decimalText, formatDuration, formatPace, formatSpeed, paceSecPerKm, speedKmh, timerElapsed, type ActivityType, type TimerState } from "@/lib/fitness";
 import { createCardioSession, updateCardioSession } from "@/app/actions/fitness";
 import type { ActionResult } from "@/lib/types";
 import { useMounted } from "@/lib/use-mounted";
@@ -34,7 +34,7 @@ export function CardioForm({ type, today, initial, sessionId, after = false }: {
   const [hours, setHours] = useState(init.h);
   const [minutes, setMinutes] = useState(init.m);
   const [seconds, setSeconds] = useState(init.s);
-  const [distanceKm, setDistanceKm] = useState(initial?.distance_meters ? String(initial.distance_meters / 1000) : "");
+  const [distanceKm, setDistanceKm] = useState(initial?.distance_meters ? decimalText(initial.distance_meters / 1000) : "");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [dirty, setDirty] = useState(false);

@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorText, Input, Label, Textarea } from "@/components/ui/field";
+import { DecimalInput } from "./decimal-input";
 import { useToast } from "@/components/ui/toast";
 import { formatDuration, formatKg, formatVolume, muscleLabel, sessionVolumeKg, timerElapsed, type TimerState } from "@/lib/fitness";
 import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/data";
@@ -295,18 +296,12 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                 {ex.sets.map((s, n) => (
                   <div key={n} className={cn("grid items-center gap-2 rounded-[14px] px-1 py-1", after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]", !after && s.completed && "bg-sage/15")}>
                     <span className="text-center text-[13px] font-medium text-muted">{n + 1}</span>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      value={s.weight_kg ?? ""}
+                    <DecimalInput
+                      value={s.weight_kg}
                       placeholder="–"
                       aria-label={`Gewicht set ${n + 1}`}
                       className="h-10 rounded-[12px] px-3 py-0 text-center"
-                      onChange={(e) => {
-                        const v = e.target.value.replace(",", ".");
-                        const num = v === "" ? null : Math.max(0, Math.min(1000, Number(v)));
-                        update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, weight_kg: num === null || Number.isNaN(num) ? null : num } : x)) });
-                      }}
+                      onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, weight_kg: num } : x)) })}
                     />
                     <Input
                       type="number"

@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ErrorText, Input, Label, Textarea, inputClass } from "@/components/ui/field";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { useToast } from "@/components/ui/toast";
-import { ACTIVITY_TYPES, activityMeta, formatKg, muscleLabel, type ActivityType } from "@/lib/fitness";
+import { ACTIVITY_TYPES, activityMeta, decimalText, formatKg, muscleLabel, parseDecimal, type ActivityType } from "@/lib/fitness";
 import type { ExerciseRow, PlanDetail, TemplateRow } from "@/lib/fitness/data";
 import {
   addTemplate,
@@ -252,7 +252,7 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
   const [editing, setEditing] = useState(false);
   const [sets, setSets] = useState(row.target_sets);
   const [reps, setReps] = useState<string>(row.target_reps?.toString() ?? "");
-  const [weight, setWeight] = useState<string>(row.target_weight_kg?.toString() ?? "");
+  const [weight, setWeight] = useState<string>(decimalText(row.target_weight_kg));
   return (
     <li className="rounded-[14px] bg-blush/60 px-3 py-2">
       <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
                 const r = await updateTemplateExercise(row.id, {
                   target_sets: sets,
                   target_reps: reps === "" ? null : Math.round(Number(reps)),
-                  target_weight_kg: weight === "" ? null : Number(weight.replace(",", ".")),
+                  target_weight_kg: parseDecimal(weight),
                 });
                 if (r.ok) setEditing(false);
                 return r;

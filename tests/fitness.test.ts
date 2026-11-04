@@ -155,3 +155,19 @@ describe("draft status", () => {
     expect(draftStatus({ started_at: null, workout_date: "2026-11-02" }, "2026-11-02", tz)).toBe("Achteraf invullen, nog niet opgeslagen");
   });
 });
+
+describe("decimal input", () => {
+  it("reads numbers typed with a comma or a dot", async () => {
+    const { decimalText, parseDecimal, formatKg } = await import("@/lib/fitness");
+    expect(parseDecimal("22,5")).toBe(22.5);
+    expect(parseDecimal("22.5")).toBe(22.5);
+    expect(parseDecimal("22,")).toBe(22);
+    expect(parseDecimal(",")).toBeNull();
+    expect(parseDecimal("")).toBeNull();
+    expect(parseDecimal("abc")).toBeNull();
+    expect(decimalText(22.5)).toBe("22,5");
+    expect(decimalText(1250)).toBe("1250");
+    expect(decimalText(null)).toBe("");
+    expect(formatKg(1.25)).toBe("1,25 kg");
+  });
+});

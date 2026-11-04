@@ -98,7 +98,20 @@ export function formatDistance(meters: number | null | undefined): string {
 
 export function formatKg(kg: number | null | undefined): string {
   if (kg === null || kg === undefined) return "–";
-  return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(kg)} kg`;
+  return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 2 }).format(kg)} kg`;
+}
+
+/** A typed number with a comma or a dot ("22,5", "22.5", "22,") as a number; null when empty or not a number. */
+export function parseDecimal(text: string): number | null {
+  const t = text.trim().replace(",", ".");
+  if (t === "" || t === ".") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** A number as it is typed in the Netherlands: "22,5", without thousands separator. */
+export function decimalText(n: number | null | undefined): string {
+  return n === null || n === undefined ? "" : String(n).replace(".", ",");
 }
 
 export interface SetLike {
