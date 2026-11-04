@@ -188,7 +188,7 @@ async function Content() {
         <SuperBadiCard
           members={members
             .filter((m) => crowned.has(m.user_id))
-            .map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, weekPoints: m.week.earned, isMe: m.isMe }))}
+            .map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, weekPoints: m.week.earned, week: m.week.fraction, isMe: m.isMe }))}
         />
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction, superBadi: crowned.has(m.user_id) }))} today={today} />
       </section>

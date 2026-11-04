@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/ui/avatar";
-import { SuperBadiFrame } from "@/components/ui/super-badi";
+import { SuperBadiCrown } from "@/components/ui/super-badi";
 import { GOLD } from "@/lib/super-badi";
 import { useIsOnline } from "@/lib/presence";
 import { cn } from "@/lib/utils";
@@ -42,14 +42,14 @@ export function MemberAvatar({
     <div className={cn("relative shrink-0", className)} style={{ width: outer, height: outer }} role="img" aria-label={label}>
       {p !== null ? (
         <svg width={outer} height={outer} className="absolute inset-0 -rotate-90" aria-hidden>
-          <circle cx={outer / 2} cy={outer / 2} r={r} fill="none" stroke={crown ? "transparent" : "rgba(95,53,41,0.12)"} strokeWidth={stroke} />
+          <circle cx={outer / 2} cy={outer / 2} r={r} fill="none" stroke={crown ? "rgba(217,166,60,0.25)" : "rgba(95,53,41,0.12)"} strokeWidth={stroke} />
           {p > 0 ? (
             <circle
               cx={outer / 2}
               cy={outer / 2}
               r={r}
               fill="none"
-              stroke={crown ? GOLD.light : "var(--sage)"}
+              stroke={crown ? GOLD.mid : "var(--sage)"}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={`${c * p} ${c}`}
@@ -61,7 +61,7 @@ export function MemberAvatar({
       <div className="absolute inset-[5px]">
         <Avatar name={name} src={src} className="h-full w-full ring-0" style={{ fontSize: Math.round(size * 0.3) }} />
       </div>
-      {crown ? <SuperBadiFrame outer={outer} /> : null}
+      {crown ? <SuperBadiCrown outer={outer} /> : null}
       {online ? (
         <span
           className="absolute rounded-full bg-[#4caf6a] ring-2 ring-white"
