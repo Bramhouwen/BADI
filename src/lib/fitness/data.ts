@@ -2,12 +2,13 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { AppContext } from "@/lib/data";
-import type { ActivityType, MuscleGroup, StrengthInput } from "@/lib/fitness";
+import type { ActivityType, ExerciseMeasure, MuscleGroup, StrengthInput } from "@/lib/fitness";
 
 export interface ExerciseRow {
   id: string;
   name: string;
   muscle_group: MuscleGroup;
+  measure: ExerciseMeasure;
   is_custom: boolean;
   owner_user_id: string | null;
 }
@@ -34,6 +35,7 @@ export interface SetRow {
   set_number: number;
   weight_kg: number | null;
   repetitions: number | null;
+  duration_seconds: number | null;
   completed: boolean;
 }
 
@@ -42,6 +44,7 @@ export interface SessionExercise {
   exercise_id: string;
   name: string;
   muscle_group: MuscleGroup;
+  measure: ExerciseMeasure;
   sort_order: number;
   notes: string | null;
   sets: SetRow[];
@@ -55,7 +58,7 @@ export async function loadExercises(ctx: AppContext): Promise<ExerciseRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("exercises")
-    .select("id, name, muscle_group, is_custom, owner_user_id")
+    .select("id, name, muscle_group, measure, is_custom, owner_user_id")
     .or(`owner_user_id.is.null,owner_user_id.eq.${ctx.userId}`)
     .order("name", { ascending: true });
   return (data ?? []) as ExerciseRow[];
@@ -80,9 +83,9 @@ async function attachExercises(sessions: SessionRow[]): Promise<SessionDetail[]>
   const weIds = wes.map((w) => w.id);
   const exIds = [...new Set(wes.map((w) => w.exercise_id))];
   const { data: setRows } = weIds.length ? await supabase.from("exercise_sets").select("*").in("workout_exercise_id", weIds).order("set_number", { ascending: true }) : { data: [] };
-  const { data: exRows } = exIds.length ? await supabase.from("exercises").select("id, name, muscle_group").in("id", exIds) : { data: [] };
+  const { data: exRows } = exIds.length ? await supabase.from("exercises").select("id, name, muscle_group, measure").in("id", exIds) : { data: [] };
   const sets = (setRows ?? []) as SetRow[];
-  const exMap = new Map(((exRows ?? []) as Pick<ExerciseRow, "id" | "name" | "muscle_group">[]).map((e) => [e.id, e]));
+  const exMap = new Map(((exRows ?? []) as Pick<ExerciseRow, "id" | "name" | "muscle_group" | "measure">[]).map((e) => [e.id, e]));
   return sessions.map((s) => ({
     ...s,
     exercises: wes
@@ -92,9 +95,10 @@ async function attachExercises(sessions: SessionRow[]): Promise<SessionDetail[]>
         exercise_id: w.exercise_id,
         name: exMap.get(w.exercise_id)?.name ?? "Oefening",
         muscle_group: exMap.get(w.exercise_id)?.muscle_group ?? "other",
+        measure: exMap.get(w.exercise_id)?.measure ?? "reps",
         sort_order: w.sort_order,
         notes: w.notes,
-        sets: sets.filter((x) => x.workout_exercise_id === w.id).map((x) => ({ ...x, weight_kg: x.weight_kg === null ? null : Number(x.weight_kg) })),
+        sets: sets.filter((x) => x.workout_exercise_id === w.id).map((x) => ({ ...x, weight_kg: x.weight_kg === null ? null : Number(x.weight_kg), duration_seconds: x.duration_seconds ?? null })),
       })),
   }));
 }
@@ -116,7 +120,7 @@ export async function loadStrengthHistory(ctx: AppContext): Promise<{ sessions: 
   return { sessions: details, rows };
 }
 
-export type LastPerformance = Record<string, { date: string; sets: { weight_kg: number | null; repetitions: number | null }[] }>;
+export type LastPerformance = Record<string, { date: string; sets: { weight_kg: number | null; repetitions: number | null; duration_seconds: number | null }[] }>;
 
 /** The most recent completed sets of each exercise. */
 export async function loadLastPerformance(ctx: AppContext): Promise<LastPerformance> {
@@ -127,7 +131,7 @@ export async function loadLastPerformance(ctx: AppContext): Promise<LastPerforma
       if (out[e.exercise_id]) continue; // newest first
       const done = e.sets.filter((x) => x.completed);
       if (done.length === 0) continue;
-      out[e.exercise_id] = { date: s.workout_date, sets: done.map((x) => ({ weight_kg: x.weight_kg, repetitions: x.repetitions })) };
+      out[e.exercise_id] = { date: s.workout_date, sets: done.map((x) => ({ weight_kg: x.weight_kg, repetitions: x.repetitions, duration_seconds: x.duration_seconds })) };
     }
   }
   return out;
@@ -152,6 +156,8 @@ export interface TemplateExerciseRow {
   target_sets: number;
   target_reps: number | null;
   target_weight_kg: number | null;
+  target_seconds: number | null;
+  measure: ExerciseMeasure;
 }
 
 export interface TemplateRow {
@@ -177,10 +183,10 @@ export async function loadPlans(ctx: AppContext): Promise<PlanDetail[]> {
   const { data: teRows } = templates.length
     ? await supabase.from("template_exercises").select("*").in("template_id", templates.map((t) => t.id)).order("sort_order", { ascending: true })
     : { data: [] };
-  const tes = (teRows ?? []) as Omit<TemplateExerciseRow, "name" | "muscle_group">[];
+  const tes = (teRows ?? []) as Omit<TemplateExerciseRow, "name" | "muscle_group" | "measure">[];
   const exIds = [...new Set(tes.map((t) => t.exercise_id))];
-  const { data: exRows } = exIds.length ? await supabase.from("exercises").select("id, name, muscle_group").in("id", exIds) : { data: [] };
-  const exMap = new Map(((exRows ?? []) as Pick<ExerciseRow, "id" | "name" | "muscle_group">[]).map((e) => [e.id, e]));
+  const { data: exRows } = exIds.length ? await supabase.from("exercises").select("id, name, muscle_group, measure").in("id", exIds) : { data: [] };
+  const exMap = new Map(((exRows ?? []) as Pick<ExerciseRow, "id" | "name" | "muscle_group" | "measure">[]).map((e) => [e.id, e]));
   return plans.map((p) => ({
     ...p,
     templates: templates
@@ -194,6 +200,8 @@ export async function loadPlans(ctx: AppContext): Promise<PlanDetail[]> {
             target_weight_kg: te.target_weight_kg === null ? null : Number(te.target_weight_kg),
             name: exMap.get(te.exercise_id)?.name ?? "Oefening",
             muscle_group: exMap.get(te.exercise_id)?.muscle_group ?? "other",
+            measure: exMap.get(te.exercise_id)?.measure ?? "reps",
+            target_seconds: te.target_seconds ?? null,
           })),
       })),
   }));

@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { ErrorText, Input, Label, Textarea } from "@/components/ui/field";
 import { DecimalInput } from "./decimal-input";
 import { useToast } from "@/components/ui/toast";
-import { formatDuration, formatKg, formatVolume, muscleLabel, sessionVolumeKg, timerElapsed, type TimerState } from "@/lib/fitness";
+import { formatDuration, formatVolume, muscleLabel, sessionVolumeKg, setLabel, timerElapsed, type ExerciseMeasure, type TimerState } from "@/lib/fitness";
 import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/data";
 import { finishStrengthSession, saveStrengthDraft, type DraftExercise, type DraftSet, type StrengthDraft } from "@/app/actions/fitness";
 import { ExercisePicker } from "./exercise-picker";
@@ -23,7 +23,10 @@ interface LocalExercise extends DraftExercise {
   key: string;
   name: string;
   muscle_group: string;
+  measure: ExerciseMeasure;
 }
+
+const EMPTY_SET: DraftSet = { weight_kg: null, repetitions: null, duration_seconds: null, completed: false };
 
 function toLocal(session: SessionDetail): LocalExercise[] {
   return session.exercises.map((e) => ({
@@ -31,14 +34,15 @@ function toLocal(session: SessionDetail): LocalExercise[] {
     exercise_id: e.exercise_id,
     name: e.name,
     muscle_group: e.muscle_group,
+    measure: e.measure,
     notes: e.notes ?? "",
-    sets: e.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, completed: s.completed })),
+    sets: e.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, duration_seconds: s.duration_seconds, completed: s.completed })),
   }));
 }
 
-/** Logging afterwards: a set counts as done as soon as it has a weight or a number of reps. */
+/** Logging afterwards: a set counts as done as soon as it has a weight, a number of reps or a time. */
 function filled(s: DraftSet): boolean {
-  return s.weight_kg !== null || s.repetitions !== null;
+  return s.weight_kg !== null || s.repetitions !== null || s.duration_seconds !== null;
 }
 
 /**
@@ -131,10 +135,10 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
 
   function addExercise(e: ExerciseRow) {
     const prev = last[e.id];
-    const sets = prev ? prev.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, completed: false })) : [{ weight_kg: null, repetitions: null, completed: false }];
+    const sets = prev ? prev.sets.map((s) => ({ ...s, completed: false })) : [EMPTY_SET];
     setItems((l) => {
       if (view === "player") setCurrent(l.length);
-      return [...l, { key: `${e.id}-${Date.now()}`, exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, notes: "", sets }];
+      return [...l, { key: `${e.id}-${Date.now()}`, exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, measure: e.measure, notes: "", sets }];
     });
     mark();
   }
@@ -149,9 +153,9 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     mark();
   }
 
-  const prevLabel = (exerciseId: string) => {
+  const prevLabel = (exerciseId: string, measure: ExerciseMeasure) => {
     const prev = last[exerciseId];
-    return prev ? prev.sets.map((s) => `${s.weight_kg !== null ? formatKg(s.weight_kg) : "lichaam"} × ${s.repetitions ?? "–"}`).join(", ") : undefined;
+    return prev ? prev.sets.map((s) => setLabel(s, measure)).join(", ") : undefined;
   };
 
   function move(i: number, dir: -1 | 1) {
@@ -246,7 +250,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
           onIndex={(i) => setCurrent(Math.max(0, Math.min(items.length - 1, i)))}
           onToggle={toggleSet}
           onEdit={() => setView("list")}
-          previous={prevLabel(items[Math.min(current, items.length - 1)].exercise_id)}
+          previous={prevLabel(items[Math.min(current, items.length - 1)].exercise_id, items[Math.min(current, items.length - 1)].measure)}
         />
       ) : (
       <>
@@ -271,7 +275,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                   <p className="truncate text-[15px] font-medium text-text">{ex.name}</p>
                   <p className="text-[11px] text-muted">
                     {muscleLabel(ex.muscle_group)}
-                    {prev ? ` · vorige keer: ${prevLabel(ex.exercise_id)}` : ""}
+                    {prev ? ` · vorige keer: ${prevLabel(ex.exercise_id, ex.measure)}` : ""}
                   </p>
                 </div>
                 <ExerciseDemoButton name={ex.name} subtitle={muscleLabel(ex.muscle_group)} />
@@ -286,36 +290,44 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                 </button>
               </div>
 
-              <div className={cn("mt-3 grid items-center gap-2 px-1 text-[10.5px] font-medium uppercase tracking-wide text-muted", after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]")}>
+              <div className={cn("mt-3 grid items-center gap-2 px-1 text-[10.5px] font-medium uppercase tracking-wide text-muted", setGrid(ex.measure, after))}>
                 <span>Set</span>
-                <span>kg</span>
-                <span>Herh.</span>
+                {ex.measure === "time" ? <span>Seconden</span> : (
+                  <>
+                    <span>kg</span>
+                    <span>Herh.</span>
+                  </>
+                )}
                 {after ? null : <span className="text-center">Klaar</span>}
               </div>
               <div className="mt-1 space-y-1.5">
                 {ex.sets.map((s, n) => (
-                  <div key={n} className={cn("grid items-center gap-2 rounded-[14px] px-1 py-1", after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]", !after && s.completed && "bg-sage/15")}>
+                  <div key={n} className={cn("grid items-center gap-2 rounded-[14px] px-1 py-1", setGrid(ex.measure, after), !after && s.completed && "bg-sage/15")}>
                     <span className="text-center text-[13px] font-medium text-muted">{n + 1}</span>
-                    <DecimalInput
-                      value={s.weight_kg}
-                      placeholder="–"
-                      aria-label={`Gewicht set ${n + 1}`}
-                      className="h-10 rounded-[12px] px-3 py-0 text-center"
-                      onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, weight_kg: num } : x)) })}
-                    />
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      value={s.repetitions ?? ""}
-                      placeholder="–"
-                      aria-label={`Herhalingen set ${n + 1}`}
-                      className="h-10 rounded-[12px] px-3 py-0 text-center"
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        const num = v === "" ? null : Math.max(0, Math.min(1000, Math.round(Number(v))));
-                        update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, repetitions: num === null || Number.isNaN(num) ? null : num } : x)) });
-                      }}
-                    />
+                    {ex.measure === "time" ? (
+                      <WholeInput
+                        value={s.duration_seconds}
+                        max={3600}
+                        label={`Seconden set ${n + 1}`}
+                        onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, duration_seconds: num } : x)) })}
+                      />
+                    ) : (
+                      <>
+                        <DecimalInput
+                          value={s.weight_kg}
+                          placeholder="–"
+                          aria-label={`Gewicht set ${n + 1}`}
+                          className="h-10 rounded-[12px] px-3 py-0 text-center"
+                          onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, weight_kg: num } : x)) })}
+                        />
+                        <WholeInput
+                          value={s.repetitions}
+                          max={1000}
+                          label={`Herhalingen set ${n + 1}`}
+                          onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, repetitions: num } : x)) })}
+                        />
+                      </>
+                    )}
                     {after ? null : (
                     <div className="flex items-center justify-center gap-1">
                       <motion.button
@@ -334,7 +346,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                 ))}
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <button type="button" onClick={() => update(i, { sets: [...ex.sets, { ...(ex.sets[ex.sets.length - 1] ?? { weight_kg: null, repetitions: null }), completed: false }] })} className="soft flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium">
+                <button type="button" onClick={() => update(i, { sets: [...ex.sets, { ...(ex.sets[ex.sets.length - 1] ?? EMPTY_SET), completed: false }] })} className="soft flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium">
                   <Plus className="h-3.5 w-3.5" strokeWidth={1.8} /> Set
                 </button>
                 {ex.sets.length > 0 ? (
@@ -387,5 +399,30 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
         </Button>
       )}
     </div>
+  );
+}
+
+/** Grid of a set row: set number, the inputs (seconds, or kg and reps) and the tick when live. */
+function setGrid(measure: ExerciseMeasure, after: boolean): string {
+  if (measure === "time") return after ? "grid-cols-[32px_1fr]" : "grid-cols-[32px_1fr_40px]";
+  return after ? "grid-cols-[32px_1fr_1fr]" : "grid-cols-[32px_1fr_1fr_40px]";
+}
+
+/** Whole numbers only (reps, seconds); empty means not filled in. */
+function WholeInput({ value, max, label, onValue }: { value: number | null; max: number; label: string; onValue: (v: number | null) => void }) {
+  return (
+    <Input
+      type="number"
+      inputMode="numeric"
+      value={value ?? ""}
+      placeholder="–"
+      aria-label={label}
+      className="h-10 rounded-[12px] px-3 py-0 text-center"
+      onChange={(e) => {
+        const v = e.target.value;
+        const num = v === "" ? null : Math.max(0, Math.min(max, Math.round(Number(v))));
+        onValue(num === null || Number.isNaN(num) ? null : num);
+      }}
+    />
   );
 }

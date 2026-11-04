@@ -5,6 +5,9 @@ import { addDays, diffDays, formatDateNl, type DateKey } from "./dates";
 export type ActivityType = "run" | "walk" | "cycle" | "strength" | "hiit" | "yoga" | "other";
 export type MuscleGroup = "legs" | "chest" | "back" | "shoulders" | "arms" | "core" | "mobility" | "cardio" | "other";
 
+/** How an exercise is logged: weight × repetitions, or how long you hold it (plank). */
+export type ExerciseMeasure = "reps" | "time";
+
 export interface ActivityMeta {
   key: ActivityType;
   label: string;
@@ -117,7 +120,23 @@ export function decimalText(n: number | null | undefined): string {
 export interface SetLike {
   weight_kg: number | null;
   repetitions: number | null;
+  /** Timed exercises: how long the set was held. */
+  duration_seconds?: number | null;
   completed: boolean;
+}
+
+/** A hold time: "45 sec", "1:30 min". */
+export function formatHold(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined) return "– sec";
+  if (seconds < 60) return `${seconds} sec`;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")} min`;
+}
+
+/** One set as text: "8 × 40 kg", "8 herh." or, for a timed exercise, "45 sec". */
+export function setLabel(s: Pick<SetLike, "weight_kg" | "repetitions" | "duration_seconds">, measure: ExerciseMeasure = "reps"): string {
+  if (measure === "time") return s.weight_kg ? `${formatHold(s.duration_seconds)} · ${formatKg(s.weight_kg)}` : formatHold(s.duration_seconds);
+  const reps = s.repetitions ?? "–";
+  return s.weight_kg !== null ? `${reps} × ${formatKg(s.weight_kg)}` : `${reps} herh.`;
 }
 
 /** Training volume = sum of weight × reps over completed sets. Bodyweight sets (no weight) add nothing. */
@@ -290,9 +309,10 @@ export function templateSummary(exercises: { target_sets: number }[]): { exercis
   return { exercises: exercises.length, sets, minutes: sets === 0 ? 0 : Math.max(5, Math.round((sets * SECONDS_PER_SET) / 60 / 5) * 5) };
 }
 
-/** "3 × 10 · 20 kg", "3 × 10" or "3 sets". */
-export function targetLabel(t: { target_sets: number; target_reps: number | null; target_weight_kg: number | null }): string {
-  const base = t.target_reps ? `${t.target_sets} × ${t.target_reps}` : `${t.target_sets} ${t.target_sets === 1 ? "set" : "sets"}`;
+/** "3 × 10 · 20 kg", "3 × 10", "3 × 45 sec" or "3 sets". */
+export function targetLabel(t: { target_sets: number; target_reps: number | null; target_weight_kg: number | null; target_seconds?: number | null; measure?: ExerciseMeasure }): string {
+  const sets = `${t.target_sets} ${t.target_sets === 1 ? "set" : "sets"}`;
+  const base = t.measure === "time" ? (t.target_seconds ? `${t.target_sets} × ${formatHold(t.target_seconds)}` : sets) : t.target_reps ? `${t.target_sets} × ${t.target_reps}` : sets;
   return t.target_weight_kg ? `${base} · ${formatKg(t.target_weight_kg)}` : base;
 }
 

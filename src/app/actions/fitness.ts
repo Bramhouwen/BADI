@@ -102,6 +102,8 @@ export async function updateCardioSession(id: string, formData: FormData): Promi
 export interface DraftSet {
   weight_kg: number | null;
   repetitions: number | null;
+  /** Timed exercises (plank): how long the set was held. */
+  duration_seconds: number | null;
   completed: boolean;
 }
 export interface DraftExercise {
@@ -132,6 +134,7 @@ const draftSchema = z.object({
             z.object({
               weight_kg: z.number().min(0).max(1000).nullable(),
               repetitions: z.number().int().min(0).max(1000).nullable(),
+              duration_seconds: z.number().int().min(0).max(3600).nullable().default(null),
               completed: z.boolean(),
             }),
           )
@@ -167,7 +170,7 @@ export async function startStrengthSession(opts: { templateId?: string; repeatOf
           exercises.push({
             exercise_id: te.exercise_id,
             notes: null,
-            sets: Array.from({ length: te.target_sets }, () => ({ weight_kg: te.target_weight_kg, repetitions: te.target_reps, completed: false })),
+            sets: Array.from({ length: te.target_sets }, () => ({ weight_kg: te.target_weight_kg, repetitions: te.measure === "time" ? null : te.target_reps, duration_seconds: te.measure === "time" ? te.target_seconds : null, completed: false })),
           });
         }
       }
@@ -178,7 +181,7 @@ export async function startStrengthSession(opts: { templateId?: string; repeatOf
       title = prev.title;
       templateId = prev.template_id;
       for (const e of prev.exercises) {
-        exercises.push({ exercise_id: e.exercise_id, notes: e.notes, sets: e.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, completed: false })) });
+        exercises.push({ exercise_id: e.exercise_id, notes: e.notes, sets: e.sets.map((s) => ({ weight_kg: s.weight_kg, repetitions: s.repetitions, duration_seconds: s.duration_seconds, completed: false })) });
       }
     }
   }
@@ -207,7 +210,7 @@ async function writeExercises(sessionId: string, exercises: { exercise_id: strin
     if (error || !we) continue;
     if (ex.sets.length) {
       await supabase.from("exercise_sets").insert(
-        ex.sets.map((s, n) => ({ workout_exercise_id: we.id, set_number: n + 1, weight_kg: s.weight_kg, repetitions: s.repetitions, completed: s.completed })),
+        ex.sets.map((s, n) => ({ workout_exercise_id: we.id, set_number: n + 1, weight_kg: s.weight_kg, repetitions: s.repetitions, duration_seconds: s.duration_seconds ?? null, completed: s.completed })),
       );
     }
   }
@@ -295,9 +298,10 @@ export async function repeatSession(id: string): Promise<ActionResult> {
 const exerciseSchema = z.object({
   name: z.string().trim().min(1, "Geef de oefening een naam.").max(60, "Maximaal 60 tekens."),
   muscle_group: z.enum(["legs", "chest", "back", "shoulders", "arms", "core", "mobility", "cardio", "other"]),
+  measure: z.enum(["reps", "time"]).default("reps"),
 });
 
-export async function createExercise(input: { name: string; muscle_group: string }): Promise<ActionResult<{ id: string }>> {
+export async function createExercise(input: { name: string; muscle_group: string; measure?: string }): Promise<ActionResult<{ id: string }>> {
   const parsed = exerciseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const ctx = await requireContext();
@@ -312,7 +316,7 @@ export async function createExercise(input: { name: string; muscle_group: string
   return { ok: true, data: { id: data.id as string } };
 }
 
-export async function updateExercise(id: string, input: { name: string; muscle_group: string }): Promise<ActionResult> {
+export async function updateExercise(id: string, input: { name: string; muscle_group: string; measure?: string }): Promise<ActionResult> {
   if (!uuid.safeParse(id).success) return { ok: false, error: "Onbekende oefening." };
   const parsed = exerciseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
@@ -407,7 +411,7 @@ export async function duplicatePlan(id: string): Promise<ActionResult> {
     if (!nt) continue;
     if (t.exercises.length) {
       await supabase.from("template_exercises").insert(
-        t.exercises.map((e) => ({ template_id: nt.id, exercise_id: e.exercise_id, sort_order: e.sort_order, target_sets: e.target_sets, target_reps: e.target_reps, target_weight_kg: e.target_weight_kg })),
+        t.exercises.map((e) => ({ template_id: nt.id, exercise_id: e.exercise_id, sort_order: e.sort_order, target_sets: e.target_sets, target_reps: e.target_reps, target_weight_kg: e.target_weight_kg, target_seconds: e.target_seconds })),
       );
     }
   }
@@ -476,12 +480,13 @@ const templateExerciseSchema = z.object({
   target_sets: z.number().int().min(1).max(20),
   target_reps: z.number().int().min(1).max(500).nullable(),
   target_weight_kg: z.number().min(0).max(1000).nullable(),
+  target_seconds: z.number().int().min(1).max(3600).nullable().default(null),
 });
 
 export async function addTemplateExercise(templateId: string, input: z.input<typeof templateExerciseSchema>): Promise<ActionResult> {
   if (!uuid.safeParse(templateId).success) return { ok: false, error: "Onbekende workout." };
   const parsed = templateExerciseSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Controleer sets, herhalingen en gewicht." };
+  if (!parsed.success) return { ok: false, error: "Controleer sets, herhalingen, tijd en gewicht." };
   await requireContext();
   const supabase = await createClient();
   const { count } = await supabase.from("template_exercises").select("id", { count: "exact", head: true }).eq("template_id", templateId);
@@ -491,10 +496,10 @@ export async function addTemplateExercise(templateId: string, input: z.input<typ
   return { ok: true };
 }
 
-export async function updateTemplateExercise(id: string, input: { target_sets: number; target_reps: number | null; target_weight_kg: number | null }): Promise<ActionResult> {
+export async function updateTemplateExercise(id: string, input: { target_sets: number; target_reps: number | null; target_weight_kg: number | null; target_seconds?: number | null }): Promise<ActionResult> {
   if (!uuid.safeParse(id).success) return { ok: false, error: "Onbekende oefening." };
   const parsed = templateExerciseSchema.omit({ exercise_id: true }).safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Controleer sets, herhalingen en gewicht." };
+  if (!parsed.success) return { ok: false, error: "Controleer sets, herhalingen, tijd en gewicht." };
   await requireContext();
   const supabase = await createClient();
   const { error } = await supabase.from("template_exercises").update(parsed.data).eq("id", id);

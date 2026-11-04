@@ -36,6 +36,7 @@ export const createPlanInput = z.object({
               muscle_group: z.enum(MUSCLE_GROUPS).optional(),
               sets: z.number().int().min(1).max(20),
               reps: z.number().int().min(1).max(500).optional(),
+              seconds: z.number().int().min(1).max(3600).optional(),
               weight_kg: z.number().min(0).max(1000).optional(),
             }),
           )
@@ -99,6 +100,7 @@ export const COACH_TOOLS: Anthropic.Beta.BetaTool[] = [
                     muscle_group: { type: "string", enum: [...MUSCLE_GROUPS] },
                     sets: { type: "integer" },
                     reps: { type: "integer" },
+                    seconds: { type: "integer", description: "Alleen voor oefeningen op tijd (Plank, Downward Dog, Hip Flexor Stretch of een eigen houdoefening): hoe lang per set, in seconden. Dan geen reps." },
                     weight_kg: { type: "number", description: "Alleen als je een concreet startgewicht wilt adviseren." },
                   },
                   required: ["name", "sets"],

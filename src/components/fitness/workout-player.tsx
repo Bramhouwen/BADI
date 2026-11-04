@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { formatKg, muscleLabel } from "@/lib/fitness";
+import { muscleLabel, setLabel, type ExerciseMeasure } from "@/lib/fitness";
 import { exerciseMedia } from "@/lib/exercise-video";
 import { motionFor } from "@/lib/exercise-motion/library";
 import type { DraftSet } from "@/app/actions/fitness";
@@ -16,12 +16,8 @@ export interface PlayerExercise {
   key: string;
   name: string;
   muscle_group: string;
+  measure: ExerciseMeasure;
   sets: DraftSet[];
-}
-
-function setLabel(s: DraftSet): string {
-  const reps = s.repetitions ?? "–";
-  return s.weight_kg !== null ? `${reps} × ${formatKg(s.weight_kg)}` : `${reps} herh.`;
 }
 
 /**
@@ -99,7 +95,7 @@ export function WorkoutPlayer({
               <motion.button
                 type="button"
                 aria-pressed={s.completed}
-                aria-label={`Set ${n + 1}: ${setLabel(s)}${s.completed ? ", voltooid" : ""}`}
+                aria-label={`Set ${n + 1}: ${setLabel(s, ex.measure)}${s.completed ? ", voltooid" : ""}`}
                 whileTap={reduce ? undefined : { scale: 0.94 }}
                 onClick={() => onToggle(index, n)}
                 className={cn(
@@ -111,7 +107,7 @@ export function WorkoutPlayer({
                 <span className={cn("flex h-7 w-7 items-center justify-center rounded-full", s.completed ? "bg-white/25 text-white" : "bg-[#fbf3ec] text-ink")}>
                   {s.completed ? <Check className="h-3.5 w-3.5" strokeWidth={2.4} /> : <span className="text-[11.5px] font-semibold tabular-nums">{n + 1}</span>}
                 </span>
-                <span className={cn("text-[13.5px] font-medium tabular-nums", s.completed ? "text-white" : "text-ink")}>{setLabel(s)}</span>
+                <span className={cn("text-[13.5px] font-medium tabular-nums", s.completed ? "text-white" : "text-ink")}>{setLabel(s, ex.measure)}</span>
               </motion.button>
             </li>
           ))}
@@ -139,7 +135,7 @@ export function WorkoutPlayer({
             <span className="block truncate text-[14.5px] font-medium text-text">{next.name}</span>
             <span className="block truncate text-[11.5px] text-muted">
               {next.sets.length} {next.sets.length === 1 ? "set" : "sets"}
-              {next.sets[0] ? ` · ${setLabel(next.sets[0])}` : ""}
+              {next.sets[0] ? ` · ${setLabel(next.sets[0], next.measure)}` : ""}
             </span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.6} />

@@ -132,7 +132,8 @@ export function buildSeed(): Store {
     ["Plank", "core"], ["Crunch", "core"], ["Leg Raise", "core"], ["Russian Twist", "core"],
   ];
   for (const name of MOBILITY_EXERCISES) exerciseNames.push([name, "mobility"]);
-  const exercises: Row[] = exerciseNames.map(([name, muscle_group]) => ({ id: demoId(), name, muscle_group, is_custom: false, owner_user_id: null, created_at: iso(start) }));
+  const timedNames = ["Plank", "Downward Dog", "Hip Flexor Stretch"];
+  const exercises: Row[] = exerciseNames.map(([name, muscle_group]) => ({ id: demoId(), name, muscle_group, measure: timedNames.includes(name) ? "time" : "reps", is_custom: false, owner_user_id: null, created_at: iso(start) }));
   const exId = (name: string) => exercises.find((e) => e.name === name)!.id as string;
 
   const workout_sessions: Row[] = [
@@ -157,7 +158,7 @@ export function buildSeed(): Store {
   ];
   const exercise_sets: Row[] = [];
   const setPlan: [number, [number, number][]][] = [[0, [[40, 12], [50, 10], [55, 8]]], [1, [[50, 10], [60, 8], [60, 8]]], [2, [[100, 12], [120, 10], [120, 10]]]];
-  for (const [wi, sets] of setPlan) sets.forEach(([w, r], i) => exercise_sets.push({ id: demoId(), workout_exercise_id: workout_exercises[wi].id, set_number: i + 1, weight_kg: w, repetitions: r, completed: true }));
+  for (const [wi, sets] of setPlan) sets.forEach(([w, r], i) => exercise_sets.push({ id: demoId(), workout_exercise_id: workout_exercises[wi].id, set_number: i + 1, weight_kg: w, repetitions: r, duration_seconds: null, completed: true }));
 
   const stat_sharing: Row[] = [
     { user_id: SAM, share_workout_counts: true, share_minutes_distance: true, share_active_days: true, share_checkins: true, share_records: true, share_recent_workouts: true, share_habits: true, updated_at: iso(start) },
@@ -230,13 +231,13 @@ export function buildSeed(): Store {
       [0, "Bench Press", 3, 10, 30],
       [0, "Lat Pulldown", 3, 10, 35],
       [0, "Shoulder Press", 3, 10, 8],
-      [0, "Plank", 3, null, null],
+      [0, "Plank", 3, null, null, 45],
       [1, "Romanian Deadlift", 3, 10, 40],
       [1, "Lunges", 3, 12, 8],
       [1, "Leg Press", 3, 12, 80],
       [1, "Calf Raise", 3, 15, 10],
-    ] as [number, string, number, number | null, number | null][]
-  ).map(([ti, name, target_sets, target_reps, target_weight_kg], i) => ({ id: demoId(), template_id: workout_templates[ti].id, exercise_id: exId(name), sort_order: i, target_sets, target_reps, target_weight_kg }));
+    ] as [number, string, number, number | null, number | null, number?][]
+  ).map(([ti, name, target_sets, target_reps, target_weight_kg, target_seconds], i) => ({ id: demoId(), template_id: workout_templates[ti].id, exercise_id: exId(name), sort_order: i, target_sets, target_reps, target_weight_kg, target_seconds: target_seconds ?? null }));
 
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });

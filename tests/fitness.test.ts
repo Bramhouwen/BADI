@@ -171,3 +171,19 @@ describe("decimal input", () => {
     expect(formatKg(1.25)).toBe("1,25 kg");
   });
 });
+
+describe("timed exercises", () => {
+  it("labels hold times, timed sets and timed targets", async () => {
+    const { formatHold, setLabel, targetLabel } = await import("@/lib/fitness");
+    expect(formatHold(45)).toBe("45 sec");
+    expect(formatHold(90)).toBe("1:30 min");
+    expect(formatHold(null)).toBe("– sec");
+    expect(setLabel({ weight_kg: null, repetitions: null, duration_seconds: 60 }, "time")).toBe("1:00 min");
+    expect(setLabel({ weight_kg: 10, repetitions: null, duration_seconds: 30 }, "time")).toBe("30 sec · 10 kg");
+    expect(setLabel({ weight_kg: 40, repetitions: 8 })).toBe("8 × 40 kg");
+    expect(setLabel({ weight_kg: null, repetitions: 12 })).toBe("12 herh.");
+    expect(targetLabel({ target_sets: 3, target_reps: null, target_weight_kg: null, target_seconds: 45, measure: "time" })).toBe("3 × 45 sec");
+    expect(targetLabel({ target_sets: 3, target_reps: 10, target_weight_kg: null, target_seconds: null, measure: "time" })).toBe("3 sets");
+    expect(targetLabel({ target_sets: 4, target_reps: 8, target_weight_kg: 40 })).toBe("4 × 8 · 40 kg");
+  });
+});

@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireContext } from "@/lib/data";
 import { formatDateNl, formatDateTimeNl, isEditableDate, todayKey } from "@/lib/dates";
 import { activityByKey } from "@/lib/constants";
-import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, formatSpeed, formatVolume, muscleLabel, paceSecPerKm, sessionVolumeKg, speedKmh } from "@/lib/fitness";
+import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, formatSpeed, formatVolume, muscleLabel, paceSecPerKm, sessionVolumeKg, speedKmh, setLabel } from "@/lib/fitness";
 import { loadSessionDetail } from "@/lib/fitness/data";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -86,7 +86,7 @@ async function Content({ params, searchParams }: { params: Promise<{ id: string 
                     <li key={x.id} className={cn("flex items-center justify-between rounded-[12px] px-3 py-1.5 text-[13px]", x.completed ? "bg-sage/15 text-text" : "bg-blush/50 text-muted line-through")}>
                       <span>Set {x.set_number}</span>
                       <span className="tabular-nums">
-                        {x.weight_kg !== null ? formatKg(x.weight_kg) : "lichaamsgewicht"} × {x.repetitions ?? "–"}
+                        {e.measure === "time" ? setLabel(x, "time") : `${x.weight_kg !== null ? formatKg(x.weight_kg) : "lichaamsgewicht"} × ${x.repetitions ?? "–"}`}
                       </span>
                     </li>
                   ))}

@@ -7,7 +7,8 @@ import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ErrorText, Input, inputClass } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { MUSCLE_GROUPS, muscleLabel, type MuscleGroup } from "@/lib/fitness";
+import { MUSCLE_GROUPS, muscleLabel, type ExerciseMeasure, type MuscleGroup } from "@/lib/fitness";
+import { ChipTabs } from "@/components/ui/page";
 import type { ExerciseRow } from "@/lib/fitness/data";
 import { createExercise, deleteExercise, updateExercise } from "@/app/actions/fitness";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function ExercisePicker({
   const [editing, setEditing] = useState<ExerciseRow | null>(null);
   const [name, setName] = useState("");
   const [muscle, setMuscle] = useState<MuscleGroup>("other");
+  const [measure, setMeasure] = useState<ExerciseMeasure>("reps");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [local, setLocal] = useState<ExerciseRow[]>(exercises);
@@ -43,6 +45,7 @@ export function ExercisePicker({
     setEditing(null);
     setName(query.trim());
     setMuscle(group === "all" ? "other" : group);
+    setMeasure("reps");
     setError(null);
     setCreating(true);
   }
@@ -51,6 +54,7 @@ export function ExercisePicker({
     setEditing(e);
     setName(e.name);
     setMuscle(e.muscle_group);
+    setMeasure(e.measure);
     setError(null);
     setCreating(true);
   }
@@ -58,13 +62,13 @@ export function ExercisePicker({
   function submit() {
     start(async () => {
       if (editing) {
-        const r = await updateExercise(editing.id, { name, muscle_group: muscle });
+        const r = await updateExercise(editing.id, { name, muscle_group: muscle, measure });
         if (!r.ok) return setError(r.error);
-        setLocal((l) => l.map((x) => (x.id === editing.id ? { ...x, name: name.trim(), muscle_group: muscle } : x)));
+        setLocal((l) => l.map((x) => (x.id === editing.id ? { ...x, name: name.trim(), muscle_group: muscle, measure } : x)));
       } else {
-        const r = await createExercise({ name, muscle_group: muscle });
+        const r = await createExercise({ name, muscle_group: muscle, measure });
         if (!r.ok) return setError(r.error);
-        const row: ExerciseRow = { id: r.data!.id, name: name.trim(), muscle_group: muscle, is_custom: true, owner_user_id: "me" };
+        const row: ExerciseRow = { id: r.data!.id, name: name.trim(), muscle_group: muscle, measure, is_custom: true, owner_user_id: "me" };
         setLocal((l) => [...l, row].sort((a, b) => a.name.localeCompare(b.name)));
         onPick(row);
         onClose();
@@ -95,6 +99,15 @@ export function ExercisePicker({
               </option>
             ))}
           </select>
+          <ChipTabs
+            label="Bijhouden"
+            value={measure}
+            onChange={setMeasure}
+            options={[
+              { key: "reps", label: "Gewicht en herhalingen" },
+              { key: "time", label: "Op tijd" },
+            ]}
+          />
           <ErrorText>{error}</ErrorText>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={submit} loading={pending}>
@@ -132,6 +145,7 @@ export function ExercisePicker({
                   <span className="block truncate text-[14px] font-medium text-text">{e.name}</span>
                   <span className="block text-[11px] text-muted">
                     {muscleLabel(e.muscle_group)}
+                    {e.measure === "time" ? " · op tijd" : ""}
                     {e.is_custom ? " · eigen oefening" : ""}
                   </span>
                 </button>

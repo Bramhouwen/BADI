@@ -32,9 +32,10 @@ async function createPlan(supabase: SupabaseClient, ctx: AppContext, raw: unknow
 
   const { data: exRows } = await supabase
     .from("exercises")
-    .select("id, name")
+    .select("id, name, measure")
     .or(`owner_user_id.is.null,owner_user_id.eq.${ctx.userId}`);
   const byKey = new Map(((exRows ?? []) as { id: string; name: string }[]).map((e) => [exerciseKey(e.name), e.id]));
+  const timed = new Set(((exRows ?? []) as { id: string; measure?: string }[]).filter((e) => e.measure === "time").map((e) => e.id));
 
   const { data: plan, error: planError } = await supabase
     .from("workout_plans")
@@ -58,12 +59,13 @@ async function createPlan(supabase: SupabaseClient, ctx: AppContext, raw: unknow
       if (!exerciseId) {
         const { data: created } = await supabase
           .from("exercises")
-          .insert({ name: e.name, muscle_group: e.muscle_group ?? "other", is_custom: true, owner_user_id: ctx.userId })
+          .insert({ name: e.name, muscle_group: e.muscle_group ?? "other", measure: e.seconds ? "time" : "reps", is_custom: true, owner_user_id: ctx.userId })
           .select("id")
           .single();
         exerciseId = (created as { id: string } | null)?.id;
         if (exerciseId) {
           byKey.set(exerciseKey(e.name), exerciseId);
+          if (e.seconds) timed.add(exerciseId);
           added.push(e.name);
         }
       }
@@ -73,7 +75,9 @@ async function createPlan(supabase: SupabaseClient, ctx: AppContext, raw: unknow
         exercise_id: exerciseId,
         sort_order: ei,
         target_sets: e.sets,
-        target_reps: e.reps ?? null,
+        // A timed exercise (plank) gets seconds per set; 30 when Baddy gave none.
+        target_reps: timed.has(exerciseId) ? null : (e.reps ?? null),
+        target_seconds: timed.has(exerciseId) ? (e.seconds ?? 30) : null,
         target_weight_kg: e.weight_kg ?? null,
       });
     }
