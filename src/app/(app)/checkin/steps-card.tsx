@@ -123,7 +123,7 @@ export function StepsCard({
                   className={cn("flex w-full flex-col items-center gap-1 rounded-[12px] py-1.5 transition", d === day ? "bg-white shadow-sm" : "", !pick && "opacity-45")}
                 >
                   <span className="flex h-12 w-2.5 items-end overflow-hidden rounded-full bg-ink/10" aria-hidden>
-                    <span className={cn("block w-full rounded-full", v >= STEPS_PER_POINT ? "bg-sage" : "bg-sage/50")} style={{ height: `${Math.min(1, v / (STEPS_PER_POINT * 1.5)) * 100}%` }} />
+                    <span className={cn("block w-full rounded-full", v >= STEPS_PER_POINT ? "bg-sage" : "bg-sage/50")} style={{ height: `${Math.min(1, v / STEPS_PER_POINT) * 100}%` }} />
                   </span>
                   <span className={cn("text-[10px] font-medium uppercase", d === today ? "text-ink" : "text-muted")}>{weekdayShortNl(d)}</span>
                   <span className="text-[10px] tabular-nums text-muted">{v ? `${Math.round(v / 100) / 10}k`.replace(".", ",") : "–"}</span>
