@@ -29,7 +29,6 @@ import { activityMeta } from "@/lib/fitness";
 import { formatDateNl } from "@/lib/dates";
 import { loadSessions } from "@/lib/fitness/data";
 import { SquadPreview } from "@/components/home/squad-preview";
-import { SuperBadiCard } from "@/components/home/super-badi-card";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
@@ -185,11 +184,6 @@ async function Content() {
 
       <section>
         <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Chats</Link>}>Jouw squad</SectionTitle>
-        <SuperBadiCard
-          members={members
-            .filter((m) => crowned.has(m.user_id))
-            .map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, weekPoints: m.week.earned, week: m.week.fraction, isMe: m.isMe }))}
-        />
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction, superBadi: crowned.has(m.user_id) }))} today={today} />
       </section>
 

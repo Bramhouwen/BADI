@@ -25,25 +25,29 @@ function GoldGradient({ id }: { id: string }) {
  */
 export function SuperBadiCrown({ outer }: { outer: number }) {
   const id = useId().replace(/:/g, "");
-  const w = Math.max(14, outer * 0.34);
+  const w = Math.max(18, outer * 0.42);
   const h = w * 0.62;
-  // On the ring at about one o'clock, leaning outward.
-  const a = (-58 * Math.PI) / 180;
-  const r = outer / 2 - 1;
+  // Base of the crown rests on the outside of the ring at about one o'clock,
+  // and it leans outward from there.
+  const a = (-52 * Math.PI) / 180;
+  const r = outer / 2;
   const x = outer / 2 + r * Math.cos(a);
   const y = outer / 2 + r * Math.sin(a);
   return (
     <svg
       width={w}
       height={h}
-      viewBox="0 0 24 15"
-      className="pointer-events-none absolute overflow-visible"
-      style={{ left: x - w / 2, top: y - h * 0.8, transform: "rotate(28deg)", filter: "drop-shadow(0 1px 1.5px rgba(95, 53, 41, 0.35))" }}
+      viewBox="-1.5 -1.5 27 18"
+      className="pointer-events-none absolute z-10 overflow-visible"
+      style={{ left: x - w / 2, top: y - h, transform: "rotate(30deg)", transformOrigin: "50% 100%", filter: "drop-shadow(0 1px 2px rgba(95, 53, 41, 0.4))" }}
       aria-hidden
     >
       <GoldGradient id={id} />
-      <path d="M2 12 L3.4 4.6 Q6.6 9.2 9 6.2 L12 0.6 L15 6.2 Q17.4 9.2 20.6 4.6 L22 12 Z" fill={`url(#${id})`} />
-      <rect x="2" y="12.3" width="20" height="2.4" rx="1" fill={`url(#${id})`} />
+      {/* White outline first, so the crown stands free from the photo and the ring. */}
+      <g fill={`url(#${id})`} stroke="#fff" strokeWidth={1.6} strokeLinejoin="round" paintOrder="stroke">
+        <path d="M2 12 L3.4 4.6 Q6.6 9.2 9 6.2 L12 0.6 L15 6.2 Q17.4 9.2 20.6 4.6 L22 12 Z" />
+        <rect x="2" y="12.3" width="20" height="2.6" rx="1" />
+      </g>
     </svg>
   );
 }
