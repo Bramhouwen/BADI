@@ -120,6 +120,8 @@ export function ExercisePicker({
         </div>
       ) : (
         <div className="space-y-3 pb-2">
+          {/* One scroll area (the sheet): a list scrolling inside a scrolling sheet sticks on iPhone. */}
+          <div className="sticky -top-3 z-10 -mx-4 space-y-3 bg-paper px-4 pb-2 pt-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" strokeWidth={1.6} />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Zoek een oefening" className="pl-11" aria-label="Zoek een oefening" />
@@ -138,7 +140,8 @@ export function ExercisePicker({
               </button>
             ))}
           </div>
-          <ul className="max-h-[46dvh] space-y-1.5 overflow-y-auto">
+          </div>
+          <ul className="space-y-1.5">
             {list.map((e) => (
               <li key={e.id} className="glass flex items-center gap-2 rounded-[16px] py-2 pl-3.5 pr-2">
                 <button type="button" onClick={() => { onPick(e); onClose(); }} className="min-w-0 flex-1 text-left">

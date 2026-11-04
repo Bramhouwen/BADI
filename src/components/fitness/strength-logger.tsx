@@ -83,21 +83,11 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
     } catch {}
     return fallback;
   });
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (mode !== "draft") return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [mode]);
-  const mounted = useMounted();
   const live = mode === "draft";
   const after = mode === "after";
   const [hours, setHours] = useState(() => Math.floor((session.duration_seconds ?? 0) / 3600));
   const [minutes, setMinutes] = useState(() => Math.floor(((session.duration_seconds ?? 0) % 3600) / 60));
   const typedSeconds = hours * 3600 + minutes * 60;
-  const elapsed = live ? timerElapsed(timer) : typedSeconds;
-  // The live clock only exists in the browser; the server and hydration pass show 0 so the HTML matches.
-  const shownElapsed = mode === "draft" && !mounted ? 0 : elapsed;
 
   const draft = (): StrengthDraft => ({
     title,
@@ -183,7 +173,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
       if (completedSets === 0) return setError("Markeer minimaal één set als voltooid.");
     }
     start(async () => {
-      const r = await finishStrengthSession(session.id, draft(), elapsed);
+      const r = await finishStrengthSession(session.id, draft(), live ? timerElapsed(timer) : typedSeconds);
       if (r && !r.ok) setError(r.error);
       else {
         dirty.current = false;
@@ -209,7 +199,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
         {live ? (
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Bezig</p>
-            <p className="font-display text-[28px] leading-none tabular-nums text-text">{formatDuration(shownElapsed) === "–" ? "0s" : formatDuration(shownElapsed)}</p>
+            <LiveClock timer={timer} />
           </div>
         ) : (
           <div>
@@ -274,7 +264,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
         {items.map((ex, i) => {
           const prev = last[ex.exercise_id];
           return (
-            <motion.li key={ex.key} layout={!reduce} className="glass rounded-[20px] p-3.5">
+            <li key={ex.key} className="glass rounded-[20px] p-3.5">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-text">{ex.name}</p>
@@ -360,7 +350,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                 ) : null}
               </div>
               <Input value={ex.notes} onChange={(e) => update(i, { notes: e.target.value })} maxLength={300} placeholder="Notitie bij deze oefening (optioneel)" className="mt-2 h-10 rounded-[12px] px-3.5 py-0 text-[13px]" aria-label="Notitie" />
-            </motion.li>
+            </li>
           );
         })}
       </ol>
@@ -429,4 +419,20 @@ function WholeInput({ value, max, label, onValue }: { value: number | null; max:
       }}
     />
   );
+}
+
+/**
+ * The running workout clock. It ticks on its own, so the rest of the logger
+ * (the exercise list) does not redraw every second while you scroll.
+ */
+function LiveClock({ timer }: { timer: TimerState }) {
+  const mounted = useMounted();
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  // The live clock only exists in the browser; the server and hydration pass show 0 so the HTML matches.
+  const shown = mounted ? timerElapsed(timer) : 0;
+  return <p className="font-display text-[28px] leading-none tabular-nums text-text">{formatDuration(shown) === "–" ? "0s" : formatDuration(shown)}</p>;
 }

@@ -50,7 +50,7 @@ export function Sheet({
             aria-modal="true"
             aria-label={title}
             className={cn(
-              "relative w-full max-w-lg rounded-t-[32px] border border-white bg-paper/95 px-4 pt-3 shadow-2xl backdrop-blur-2xl sm:rounded-[32px]",
+              "relative w-full max-w-lg rounded-t-[32px] border border-white bg-paper px-4 pt-3 shadow-2xl sm:rounded-[32px]",
               "max-h-[88dvh] overflow-y-auto overscroll-contain",
               className,
             )}
