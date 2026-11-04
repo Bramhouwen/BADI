@@ -14,6 +14,7 @@ import {
   wrappedStatus,
 } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
+import { superBadi } from "@/lib/super-badi";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
@@ -101,6 +102,7 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge, now);
   const finale = daysUntilFinale(ctx.challenge, now);
   const canEditToday = isEditableDate(ctx.challenge, today, now);
+  const crowned = superBadi(members.map((m) => ({ id: m.user_id, streak: m.stats.current, weekPoints: m.week.earned, totalDays: m.stats.total })));
   const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, total: 48 };
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
@@ -170,7 +172,7 @@ async function Content() {
 
       <section>
         <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Chats</Link>}>Jouw squad</SectionTitle>
-        <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction }))} today={today} />
+        <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction, superBadi: crowned.has(m.user_id) }))} today={today} />
       </section>
 
       <section>

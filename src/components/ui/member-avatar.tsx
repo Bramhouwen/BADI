@@ -1,5 +1,6 @@
 "use client";
 
+import { Crown } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { useIsOnline } from "@/lib/presence";
 import { cn } from "@/lib/utils";
@@ -7,7 +8,8 @@ import { cn } from "@/lib/utils";
 /**
  * Profile photo with this week's progress as a ring around it and a green
  * dot while the member has the app open. `progress` is 0 to 1; leave it out
- * (null) when the member does not share check-ins.
+ * (null) when the member does not share check-ins. `crown` marks the Super
+ * Badi of the squad.
  */
 export function MemberAvatar({
   userId,
@@ -15,6 +17,7 @@ export function MemberAvatar({
   src,
   size,
   progress,
+  crown = false,
   className,
 }: {
   userId: string;
@@ -23,6 +26,7 @@ export function MemberAvatar({
   /** Diameter of the photo in px; the ring adds 10 px around it. */
   size: number;
   progress?: number | null;
+  crown?: boolean;
   className?: string;
 }) {
   const online = useIsOnline(userId);
@@ -31,7 +35,8 @@ export function MemberAvatar({
   const r = (outer - stroke) / 2;
   const c = 2 * Math.PI * r;
   const p = progress === null || progress === undefined ? null : Math.max(0, Math.min(1, progress));
-  const label = [name, p !== null ? `${Math.round(p * 100)}% van deze week` : null, online ? "online" : null].filter(Boolean).join(", ");
+  const label = [name, crown ? "Super Badi" : null, p !== null ? `${Math.round(p * 100)}% van deze week` : null, online ? "online" : null].filter(Boolean).join(", ");
+  const crownSize = Math.max(16, Math.round(size * 0.36));
 
   return (
     <div className={cn("relative shrink-0", className)} style={{ width: outer, height: outer }} role="img" aria-label={label}>
@@ -56,6 +61,15 @@ export function MemberAvatar({
       <div className="absolute inset-[5px]">
         <Avatar name={name} src={src} className="h-full w-full ring-0" style={{ fontSize: Math.round(size * 0.3) }} />
       </div>
+      {crown ? (
+        <span
+          className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#e3b54a]/40"
+          style={{ width: crownSize + 6, height: crownSize + 6, top: -Math.round(crownSize * 0.55) }}
+          aria-hidden
+        >
+          <Crown style={{ width: crownSize - 2, height: crownSize - 2 }} strokeWidth={1.8} className="text-[#c9962e]" fill="#f3cf6b" />
+        </span>
+      ) : null}
       {online ? (
         <span
           className="absolute rounded-full bg-[#4caf6a] ring-2 ring-white"
