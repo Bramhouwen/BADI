@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Camera, Crown, Inbox } from "lucide-react";
+import { Camera, Inbox } from "lucide-react";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { challengeDay, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
-import { GOLD, SUPER_BADI_RULE, superBadi } from "@/lib/super-badi";
+import { superBadi } from "@/lib/super-badi";
 import { firstName } from "@/lib/utils";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
@@ -132,15 +132,6 @@ async function Content() {
             : null}
         </ul>
       </section>
-
-      {crowned.size > 0 ? (
-        <p className="-mt-2 flex items-start gap-1.5 px-1 text-[11.5px] leading-snug text-muted">
-          <Crown className="mt-[1px] h-3.5 w-3.5 shrink-0" strokeWidth={1.8} style={{ color: GOLD.mid }} />
-          <span>
-            <span className="font-medium text-ink">Super Badi</span>: {SUPER_BADI_RULE}
-          </span>
-        </p>
-      ) : null}
 
       <PushPrompt publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
 

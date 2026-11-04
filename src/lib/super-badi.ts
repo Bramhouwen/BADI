@@ -18,8 +18,6 @@ export interface SuperBadiInput {
   checkedInAt: string | null;
 }
 
-export const SUPER_BADI_RULE = "Langste reeks. Bij gelijkstand tellen de weekpunten, dan de stappen deze week, dan het totaal aantal ingecheckte dagen en tot slot wie vandaag het eerst incheckte.";
-
 function compare(a: SuperBadiInput, b: SuperBadiInput): number {
   // Not checked in today sorts last; Infinity minus Infinity would be NaN, so compare instead of subtract.
   const early = (x: SuperBadiInput) => (x.checkedInAt ? Date.parse(x.checkedInAt) : Number.POSITIVE_INFINITY);
