@@ -5,13 +5,13 @@ import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { challengeDay, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
-import { SUPER_BADI_RULE, superBadi } from "@/lib/super-badi";
+import { GOLD, SUPER_BADI_RULE, superBadi } from "@/lib/super-badi";
 import { firstName } from "@/lib/utils";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
 import { MemberAvatar } from "@/components/ui/member-avatar";
-import { weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { stepsByDay, weekScore, weekStartOf } from "@/lib/checkin-plan";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { PushPrompt } from "@/components/app/push-prompt";
 import { loadChatList, loadPeople } from "@/lib/chat-data";
@@ -31,7 +31,7 @@ async function Content() {
   const [squad, people, { data: checkinRows }, { count: unreadCount }, { data: jokerRows }, { data: stepRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
     loadPeople(ctx),
-    supabase.from("daily_checkins").select("user_id, checkin_date, activities").eq("challenge_id", ctx.challenge.id),
+    supabase.from("daily_checkins").select("user_id, checkin_date, activities, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
     supabase.from("step_logs").select("user_id, log_date, steps").eq("challenge_id", ctx.challenge.id).gte("log_date", weekStart),
@@ -39,7 +39,7 @@ async function Content() {
   const steps = (stepRows ?? []) as { user_id: string; log_date: string; steps: number }[];
   const chats = await loadChatList(ctx, people);
 
-  const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string; activities: string[] }[];
+  const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string; activities: string[]; created_at: string }[];
   const jokers = (jokerRows ?? []) as { user_id: string; exception_date: string }[];
   const avatarOf = (id: string) => people.find((p) => p.id === id)?.avatar ?? null;
 
@@ -62,7 +62,17 @@ async function Content() {
   });
 
   const crowned = superBadi(
-    members.map((m) => ({ id: m.id, streak: m.streak, weekPoints: m.week.earned, totalDays: computeStreakStats(checkins.filter((c) => c.user_id === m.id).map((c) => c.checkin_date), today).total })),
+    members.map((m) => {
+      const theirs = checkins.filter((c) => c.user_id === m.id);
+      return {
+        id: m.id,
+        streak: m.streak,
+        weekPoints: m.week.earned,
+        weekSteps: Object.values(stepsByDay(weekStart, steps.filter((s) => s.user_id === m.id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
+        totalDays: computeStreakStats(theirs.map((c) => c.checkin_date), today).total,
+        checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,
+      };
+    }),
   );
 
   return (
@@ -88,7 +98,7 @@ async function Content() {
       />
 
       <section aria-label="Leden" className="sticky top-[calc(var(--sat)+60px)] z-20 rounded-[22px] bg-[#fbf7f2] px-3 py-3 shadow-[0_12px_28px_-20px_rgba(95,53,41,0.45)] ring-1 ring-ink/[0.05]">
-        <ul className="grid grid-cols-4 gap-1 pt-2">
+        <ul className="grid grid-cols-4 gap-1 pt-3">
           {members.map((m) => (
             <li key={m.id}>
               <Link href={`/squad/${m.id}`} className="flex flex-col items-center gap-1.5 rounded-[16px] py-1 hover:bg-blush/40" aria-label={`Profiel van ${firstName(m.name)}`}>
@@ -125,7 +135,7 @@ async function Content() {
 
       {crowned.size > 0 ? (
         <p className="-mt-2 flex items-start gap-1.5 px-1 text-[11.5px] leading-snug text-muted">
-          <Crown className="mt-[1px] h-3.5 w-3.5 shrink-0 text-[#c9962e]" strokeWidth={1.8} />
+          <Crown className="mt-[1px] h-3.5 w-3.5 shrink-0" strokeWidth={1.8} style={{ color: GOLD.mid }} />
           <span>
             <span className="font-medium text-ink">Super Badi</span>: {SUPER_BADI_RULE}
           </span>

@@ -29,6 +29,7 @@ import { activityMeta } from "@/lib/fitness";
 import { formatDateNl } from "@/lib/dates";
 import { loadSessions } from "@/lib/fitness/data";
 import { SquadPreview } from "@/components/home/squad-preview";
+import { SuperBadiCard } from "@/components/home/super-badi-card";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
@@ -102,7 +103,19 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge, now);
   const finale = daysUntilFinale(ctx.challenge, now);
   const canEditToday = isEditableDate(ctx.challenge, today, now);
-  const crowned = superBadi(members.map((m) => ({ id: m.user_id, streak: m.stats.current, weekPoints: m.week.earned, totalDays: m.stats.total })));
+  const crowned = superBadi(
+    members.map((m) => {
+      const theirs = checkins.filter((c) => c.user_id === m.user_id);
+      return {
+        id: m.user_id,
+        streak: m.stats.current,
+        weekPoints: m.week.earned,
+        weekSteps: Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === m.user_id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
+        totalDays: m.stats.total,
+        checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,
+      };
+    }),
+  );
   const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, total: 48 };
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
@@ -172,6 +185,11 @@ async function Content() {
 
       <section>
         <SectionTitle action={<Link href="/squad" className="text-[13px] text-muted">Chats</Link>}>Jouw squad</SectionTitle>
+        <SuperBadiCard
+          members={members
+            .filter((m) => crowned.has(m.user_id))
+            .map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, weekPoints: m.week.earned, isMe: m.isMe }))}
+        />
         <SquadPreview members={members.map((m) => ({ id: m.user_id, name: m.profile.display_name, avatar: m.profile.avatar_path ? avatarUrls.get(m.profile.avatar_path) ?? null : null, streak: m.stats.current, lastDate: m.stats.lastDate, checkedInToday: m.stats.checkedInToday, isMe: m.isMe, week: m.week.fraction, superBadi: crowned.has(m.user_id) }))} today={today} />
       </section>
 
