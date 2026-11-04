@@ -10,6 +10,7 @@ import { ErrorText, Input, Label, Textarea, inputClass } from "@/components/ui/f
 import { IconBadge } from "@/components/ui/icon-badge";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { DurationInput } from "./duration-input";
 import { ACTIVITY_TYPES, activityMeta, decimalText, muscleLabel, parseDecimal, targetLabel, type ActivityType } from "@/lib/fitness";
 import type { ExerciseRow, PlanDetail, TemplateRow } from "@/lib/fitness/data";
 import {
@@ -253,7 +254,8 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
   const [editing, setEditing] = useState(false);
   const [sets, setSets] = useState(row.target_sets);
   const timed = row.measure === "time";
-  const [reps, setReps] = useState<string>((timed ? row.target_seconds : row.target_reps)?.toString() ?? "");
+  const [reps, setReps] = useState<string>(row.target_reps?.toString() ?? "");
+  const [seconds, setSeconds] = useState<number | null>(row.target_seconds);
   const [weight, setWeight] = useState<string>(decimalText(row.target_weight_kg));
   return (
     <li className="rounded-[14px] bg-blush/60 px-3 py-2">
@@ -279,15 +281,22 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
         </button>
       </div>
       {editing ? (
-        <div className={cn("mt-2 grid items-end gap-2", timed ? "grid-cols-[1fr_1fr_auto]" : "grid-cols-[1fr_1fr_1fr_auto]")}>
+        <div className={cn("mt-2 grid items-end gap-2", timed ? "grid-cols-[64px_1fr_auto]" : "grid-cols-[1fr_1fr_1fr_auto]")}>
           <div>
             <Label className="mb-1 text-[11px]">Sets</Label>
             <Input type="number" min={1} max={20} value={sets} onChange={(e) => setSets(Math.max(1, Math.min(20, Number(e.target.value) || 1)))} className="h-10 py-0 text-center" />
           </div>
-          <div>
-            <Label className="mb-1 text-[11px]">{timed ? "Sec" : "Herh."}</Label>
-            <Input type="number" inputMode="numeric" min={1} max={timed ? 3600 : 500} value={reps} onChange={(e) => setReps(e.target.value)} className="h-10 py-0 text-center" placeholder="–" />
-          </div>
+          {timed ? (
+            <div>
+              <Label className="mb-1 text-[11px]">Tijd per set</Label>
+              <DurationInput value={seconds} onValue={setSeconds} label="Tijd per set" />
+            </div>
+          ) : (
+            <div>
+              <Label className="mb-1 text-[11px]">Herh.</Label>
+              <Input type="number" inputMode="numeric" min={1} max={500} value={reps} onChange={(e) => setReps(e.target.value)} className="h-10 py-0 text-center" placeholder="–" />
+            </div>
+          )}
           {timed ? null : (
             <div>
               <Label className="mb-1 text-[11px]">kg</Label>
@@ -301,7 +310,7 @@ function TemplateExerciseRowView({ row, index, count, templateId, run }: { row: 
                 const r = await updateTemplateExercise(row.id, {
                   target_sets: sets,
                   target_reps: timed || reps === "" ? null : Math.round(Number(reps)),
-                  target_seconds: !timed || reps === "" ? null : Math.round(Number(reps)),
+                  target_seconds: timed && seconds ? seconds : null,
                   target_weight_kg: timed ? null : parseDecimal(weight),
                 });
                 if (r.ok) setEditing(false);

@@ -10,6 +10,7 @@ import type { DraftSet } from "@/app/actions/fitness";
 import { ExerciseThumb } from "./exercise-demo";
 import { ExerciseFigure } from "./exercise-figure";
 import { ExerciseVideo } from "./exercise-video";
+import { HoldTimer } from "./hold-timer";
 import { cn } from "@/lib/utils";
 
 export interface PlayerExercise {
@@ -30,6 +31,7 @@ export function WorkoutPlayer({
   onIndex,
   onToggle,
   onEdit,
+  onHold,
   previous,
 }: {
   items: PlayerExercise[];
@@ -37,6 +39,8 @@ export function WorkoutPlayer({
   onIndex: (i: number) => void;
   onToggle: (exercise: number, set: number) => void;
   onEdit: () => void;
+  /** Timed exercises: the hold timer finished a set with this many seconds held. */
+  onHold?: (exercise: number, set: number, seconds: number) => void;
   previous?: string;
 }) {
   const reduce = useReducedMotion();
@@ -116,6 +120,9 @@ export function WorkoutPlayer({
         <p className="text-[13px] text-muted">Nog geen sets voor deze oefening.</p>
       )}
 
+      {ex.measure === "time" && open >= 0 && onHold ? (
+        <HoldTimer key={`${ex.key}-${open}`} setNumber={open + 1} target={ex.sets[open].duration_seconds} onDone={(seconds) => onHold(index, open, seconds)} onEdit={onEdit} />
+      ) : (
       <div className="flex items-center gap-2">
         <button type="button" onClick={primary} disabled={done && !next} className="espresso flex h-12 flex-1 items-center justify-center gap-2 rounded-full shadow-none disabled:opacity-50">
           <span className="text-[14.5px] font-medium text-paper">{open >= 0 ? `Set ${open + 1} afvinken` : next ? "Volgende oefening" : "Alle sets klaar"}</span>
@@ -124,6 +131,7 @@ export function WorkoutPlayer({
           <span className="text-[13px] font-medium text-ink">Aanpassen</span>
         </button>
       </div>
+      )}
 
       {next ? (
         <button type="button" onClick={() => onIndex(index + 1)} className="glass flex w-full items-center gap-3 rounded-[18px] p-2 pr-3 text-left hover:bg-blush/40">

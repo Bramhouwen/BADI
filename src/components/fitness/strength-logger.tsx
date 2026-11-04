@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorText, Input, Label, Textarea } from "@/components/ui/field";
 import { DecimalInput } from "./decimal-input";
+import { DurationInput } from "./duration-input";
 import { useToast } from "@/components/ui/toast";
 import { formatDuration, formatVolume, muscleLabel, sessionVolumeKg, setLabel, timerElapsed, type ExerciseMeasure, type TimerState } from "@/lib/fitness";
 import type { ExerciseRow, LastPerformance, SessionDetail } from "@/lib/fitness/data";
@@ -250,6 +251,10 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
           onIndex={(i) => setCurrent(Math.max(0, Math.min(items.length - 1, i)))}
           onToggle={toggleSet}
           onEdit={() => setView("list")}
+          onHold={(ei, n, seconds) => {
+            setItems((l) => l.map((x, k) => (k === ei ? { ...x, sets: x.sets.map((y, m) => (m === n ? { ...y, duration_seconds: seconds, completed: true } : y)) } : x)));
+            mark();
+          }}
           previous={prevLabel(items[Math.min(current, items.length - 1)].exercise_id, items[Math.min(current, items.length - 1)].measure)}
         />
       ) : (
@@ -292,7 +297,7 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
 
               <div className={cn("mt-3 grid items-center gap-2 px-1 text-[10.5px] font-medium uppercase tracking-wide text-muted", setGrid(ex.measure, after))}>
                 <span>Set</span>
-                {ex.measure === "time" ? <span>Seconden</span> : (
+                {ex.measure === "time" ? <span>Tijd</span> : (
                   <>
                     <span>kg</span>
                     <span>Herh.</span>
@@ -305,10 +310,9 @@ export function StrengthLogger({ session, exercises, last, today, mode }: { sess
                   <div key={n} className={cn("grid items-center gap-2 rounded-[14px] px-1 py-1", setGrid(ex.measure, after), !after && s.completed && "bg-sage/15")}>
                     <span className="text-center text-[13px] font-medium text-muted">{n + 1}</span>
                     {ex.measure === "time" ? (
-                      <WholeInput
+                      <DurationInput
                         value={s.duration_seconds}
-                        max={3600}
-                        label={`Seconden set ${n + 1}`}
+                        label={`Tijd set ${n + 1}`}
                         onValue={(num) => update(i, { sets: ex.sets.map((x, k) => (k === n ? { ...x, duration_seconds: num } : x)) })}
                       />
                     ) : (
