@@ -16,7 +16,7 @@ const base: DailyInput = {
 describe("Baddy's daily messages", () => {
   it("knows the day, length, streak and score", () => {
     const v = dailyVars({ ...base, checkinDates: ["2026-11-01", "2026-11-02"], todayActivities: ["steps", "hydration", "run"] });
-    expect(v).toMatchObject({ name: "Daphne", day: 2, length: 61, streak: 2, done: 2, total: 6, left: 4 });
+    expect(v).toMatchObject({ name: "Daphne", day: 2, length: 61, streak: 2, done: 1, total: 5, left: 4 });
   });
 
   it("writes a morning message with name and day, and mentions planned training", () => {

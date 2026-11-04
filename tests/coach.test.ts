@@ -31,7 +31,7 @@ const baseCtx: CoachContext = {
 describe("Baddy prompt", () => {
   it("contains the house rules and never an em-dash", () => {
     expect(BADDY_SYSTEM).toContain("Geen toegevoegde suikers");
-    expect(BADDY_SYSTEM).toContain("10.000 stappen");
+    expect(BADDY_SYSTEM).toContain("70.000 stappen per week");
     expect(BADDY_SYSTEM).not.toMatch(/—/);
   });
 

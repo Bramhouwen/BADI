@@ -27,13 +27,15 @@ async function Content() {
   const day = challengeDay(ctx.challenge, now);
 
   const weekStart = weekStartOf(today);
-  const [squad, people, { data: checkinRows }, { count: unreadCount }, { data: jokerRows }] = await Promise.all([
+  const [squad, people, { data: checkinRows }, { count: unreadCount }, { data: jokerRows }, { data: stepRows }] = await Promise.all([
     getSquad(ctx.challenge.id),
     loadPeople(ctx),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities").eq("challenge_id", ctx.challenge.id),
     supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
+    supabase.from("step_logs").select("user_id, log_date, steps").eq("challenge_id", ctx.challenge.id).gte("log_date", weekStart),
   ]);
+  const steps = (stepRows ?? []) as { user_id: string; log_date: string; steps: number }[];
   const chats = await loadChatList(ctx, people);
 
   const checkins = (checkinRows ?? []) as { user_id: string; checkin_date: string; activities: string[] }[];
@@ -53,6 +55,7 @@ async function Content() {
         weekStart,
         checkins.filter((c) => c.user_id === m.user_id && c.checkin_date >= weekStart),
         jokers.filter((j) => j.user_id === m.user_id).map((j) => j.exception_date),
+        steps.filter((s) => s.user_id === m.user_id),
       ),
     };
   });

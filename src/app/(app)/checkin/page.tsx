@@ -26,7 +26,7 @@ async function Content() {
   const weekStart = weekStartOf(today);
   const rangeEnd = addDays(weekStart, 13);
 
-  const [{ data: checkinRows }, { data: sourceRows }, { data: planRows }, { data: jokerRows }, { data: waterRows }, { data: habitRows }, { data: habitLogRows }, { data: sharingRow }] = await Promise.all([
+  const [{ data: checkinRows }, { data: sourceRows }, { data: planRows }, { data: jokerRows }, { data: waterRows }, { data: habitRows }, { data: habitLogRows }, { data: sharingRow }, { data: stepRows }] = await Promise.all([
     supabase.from("daily_checkins").select("checkin_date, activities").eq("challenge_id", ctx.challenge.id).eq("user_id", ctx.userId),
     supabase.from("checkin_sources").select("checkin_date, activity, source").eq("user_id", ctx.userId).in("checkin_date", dates),
     supabase.from("planned_trainings").select("plan_date, kind").eq("user_id", ctx.userId).gte("plan_date", weekStart).lte("plan_date", rangeEnd),
@@ -35,6 +35,7 @@ async function Content() {
     supabase.from("custom_habits").select("id, name, emoji, sort_order").eq("user_id", ctx.userId).order("sort_order"),
     supabase.from("custom_habit_logs").select("habit_id, log_date").eq("user_id", ctx.userId).in("log_date", dates),
     supabase.from("stat_sharing").select("share_habits").eq("user_id", ctx.userId).maybeSingle(),
+    supabase.from("step_logs").select("log_date, steps").eq("user_id", ctx.userId).gte("log_date", addDays(weekStart, -1)).lte("log_date", today),
   ]);
   const checkins = (checkinRows ?? []) as { checkin_date: string; activities: ActivityKey[] }[];
   const stats = computeStreakStats(checkins.map((c) => c.checkin_date), today);
@@ -96,6 +97,7 @@ async function Content() {
         habits={(habitRows ?? []) as Habit[]}
         habitLogs={habitLogs}
         habitsShared={Boolean((sharingRow as { share_habits?: boolean } | null)?.share_habits)}
+        steps={(stepRows ?? []) as { log_date: string; steps: number }[]}
       />
     </Page>
   );

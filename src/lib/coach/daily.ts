@@ -43,7 +43,7 @@ const MORNING: Template[] = [
   { text: (v) => `Nieuwe dag, nieuwe kansen ${v.name}. Dag ${v.day} van ${v.length}: laat zien wat je kan.` },
   { text: (v) => `Hé ${v.name}! Vandaag is dag ${v.day}. Kleine stappen, grote winter. Knallen!` },
   { text: (v) => `Goedemorgen kampioen. Dag ${v.day} van de Winter Arc, ${v.name}. Ik geloof in je.` },
-  { text: (v) => `${v.name}, die 10.000 stappen tellen vandaag weer. Dag ${v.day}, zet 'm op!` },
+  { text: (v) => `${v.name}, elke wandeling telt mee voor je 70.000 stappen deze week. Dag ${v.day}, zet 'm op!` },
   { text: (v) => `Dag ${v.day}, ${v.name}! Eiwit bij je ontbijt en je bent al goed op weg.` },
   { text: (v) => `Al ${v.day} dagen bezig, ${v.name}. Dat is geen toeval, dat ben jij. Goedemorgen!` },
   { text: (v) => `Opstaan ${v.name}, de Winter Arc wacht. Dag ${v.day}, de squad staat naast je.` },
@@ -58,6 +58,7 @@ const EVENING: Template[] = [
   { text: (v) => `Hoe was je dag, ${v.name}? Even je check-in doen en dan lekker slapen.` },
   { text: (v) => `${v.name}, elke dag dat je showt telt. Vandaag ook. Slaap lekker!` },
   { text: (v) => `Klaar voor de nacht, ${v.name}? 7 tot 9 uur slaap, dan ben je morgen weer scherp.` },
+  { text: (v) => `${v.name}, vul je stappen van vandaag nog even in. Ze tellen mee voor je 70.000 deze week.` },
   { text: (v) => `Trots op je, ${v.name}. ${v.streak} dagen op rij. Morgen weer!`, when: (v) => v.streak >= 2 },
   { text: (v) => `Dag ${v.day} van ${v.length} afgevinkt, ${v.name}. De squad is trots, ik ook.` },
 ];

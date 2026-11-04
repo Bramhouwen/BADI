@@ -44,6 +44,40 @@ export async function toggleActivity(input: { date: string; key: string; on: boo
   return { ok: true, data: { activities: result.activities, stats } };
 }
 
+/**
+ * Saves the step count of one day: any day of the current week up to today,
+ * plus yesterday. null removes it. On today and yesterday it also keeps the
+ * check-in (and so the streak) in step with what was typed.
+ */
+export async function setSteps(input: { date: string; steps: number | null }): Promise<ActionResult<{ stats: StreakStats | null }>> {
+  const parsed = z.object({ date: dateSchema, steps: z.number().int().min(0, "Minimaal 0 stappen.").max(100_000, "Maximaal 100.000 stappen per dag.").nullable() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const { date, steps } = parsed.data;
+  const ctx = await requireContext();
+  const today = todayKey(new Date(), ctx.challenge.timezone);
+  const inWeek = date >= weekStartOf(today) && date <= today;
+  if ((!inWeek && !isEditableDate(ctx.challenge, date)) || date < ctx.challenge.start_date || date > ctx.challenge.end_date) {
+    return { ok: false, error: "Je vult stappen in voor deze week en gisteren." };
+  }
+  const supabase = await createClient();
+  const { error } =
+    steps === null
+      ? await supabase.from("step_logs").delete().eq("user_id", ctx.userId).eq("log_date", date)
+      : await supabase.from("step_logs").upsert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, log_date: date, steps }, { onConflict: "user_id,log_date" });
+  if (error) return { ok: false, error: friendlyError(error) };
+
+  let stats: StreakStats | null = null;
+  if (isEditableDate(ctx.challenge, date)) {
+    const current = await manualActivities(ctx, date);
+    await setManualSources(ctx, date, toggledSet(current, "steps", Boolean(steps)));
+    await recomputeCheckinDay(ctx, date);
+    const { data: rows } = await supabase.from("daily_checkins").select("checkin_date").eq("challenge_id", ctx.challenge.id).eq("user_id", ctx.userId);
+    stats = computeStreakStats(((rows ?? []) as { checkin_date: string }[]).map((r) => r.checkin_date), today);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, data: { stats } };
+}
+
 /** Plans (or unplans) a run or strength session on a day this week or next week. */
 export async function togglePlan(input: { date: string; kind: string; on: boolean }): Promise<ActionResult> {
   const parsed = z.object({ date: dateSchema, kind: kindSchema, on: z.boolean() }).safeParse(input);

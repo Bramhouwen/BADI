@@ -14,7 +14,7 @@ import { firstName } from "@/lib/utils";
 import { MemberAvatar } from "@/components/ui/member-avatar";
 import { OnlineLine } from "@/components/ui/online-line";
 import { createClient } from "@/lib/supabase/server";
-import { weekScore } from "@/lib/checkin-plan";
+import { WEEKLY_STEPS_GOAL, stepsByDay, weekScore } from "@/lib/checkin-plan";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
@@ -55,7 +55,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const weekStart = weekStartOf(today);
   const supabase = await createClient();
-  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }] = await Promise.all([
+  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }, { data: weekSteps }] = await Promise.all([
     loadMemberStats(userId),
     isMe ? null : loadMemberStats(ctx.userId),
     signedUrl("avatars", member.profile.avatar_path),
@@ -63,6 +63,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
     // RLS only returns check-ins of members who share them.
     supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", userId).gte("checkin_date", weekStart),
     supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", userId).gte("exception_date", weekStart),
+    supabase.from("step_logs").select("log_date, steps").eq("user_id", userId).gte("log_date", weekStart),
   ]);
   if (!payload) notFound();
 
@@ -72,7 +73,11 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const status = activityStatus(stats, today);
   const showHabits = habits.shared && habits.habits.length > 0;
   const week = stats.checkin
-    ? weekScore(weekStart, (weekRows ?? []) as { checkin_date: string; activities: string[] }[], ((weekJokers ?? []) as { exception_date: string }[]).map((j) => j.exception_date))
+    ? weekScore(weekStart, (weekRows ?? []) as { checkin_date: string; activities: string[] }[], ((weekJokers ?? []) as { exception_date: string }[]).map((j) => j.exception_date), (weekSteps ?? []) as { log_date: string; steps: number }[])
+    : null;
+  // Steps are shared together with the check-ins.
+  const weekStepsTotal = stats.checkin
+    ? Object.values(stepsByDay(weekStart, (weekSteps ?? []) as { log_date: string; steps: number }[], (weekRows ?? []) as { checkin_date: string; activities: string[] }[])).reduce((a, b) => a + b, 0)
     : null;
   const sharesAnything = Object.values(stats.sharing).some(Boolean) || showHabits;
   const showGrid = Boolean(stats.activeDays) || Boolean(stats.checkin);
@@ -183,6 +188,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
             <Tile value={`${stats.checkin.consistencyPct}%`} label="consistentie" />
             <Tile value={stats.checkin.current} unit={stats.checkin.current === 1 ? "dag" : "dagen"} label="huidige streak" />
             <Tile value={stats.checkin.longest} unit={stats.checkin.longest === 1 ? "dag" : "dagen"} label="langste streak" />
+            {weekStepsTotal !== null ? <Tile value={new Intl.NumberFormat("nl-NL").format(weekStepsTotal)} label={`stappen deze week, doel ${new Intl.NumberFormat("nl-NL").format(WEEKLY_STEPS_GOAL)}`} /> : null}
           </Tiles>
         </section>
       ) : null}

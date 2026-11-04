@@ -80,8 +80,31 @@ export function toggledSet(current: readonly string[], key: ActivityKey, on: boo
   return ACTIVITIES.map((a) => a.key).filter((k) => set.has(k));
 }
 
-/** Points available in one week: the daily habits on seven days plus the run and strength targets. */
-export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_TARGETS.run + WEEKLY_TARGETS.strength;
+/** Steps are a weekly goal: 1 point per 10,000 steps in the week, at most 7. */
+export const STEPS_PER_POINT = 10_000;
+export const WEEKLY_STEP_POINTS = 7;
+export const WEEKLY_STEPS_GOAL = STEPS_PER_POINT * WEEKLY_STEP_POINTS;
+
+/**
+ * Steps per day of a week. A typed count wins; a day ticked as "steps" before
+ * steps became a weekly goal counts as 10,000.
+ */
+export function stepsByDay(start: DateKey, logs: { log_date: DateKey; steps: number }[], checkins: { checkin_date: DateKey; activities: readonly string[] }[] = []): Record<DateKey, number> {
+  const out: Record<DateKey, number> = {};
+  for (const date of weekDates(start)) {
+    const log = logs.find((l) => l.log_date === date);
+    const ticked = checkins.find((c) => c.checkin_date === date)?.activities.includes("steps") ?? false;
+    out[date] = log ? log.steps : ticked ? STEPS_PER_POINT : 0;
+  }
+  return out;
+}
+
+export function stepPoints(total: number): number {
+  return Math.min(WEEKLY_STEP_POINTS, Math.floor(Math.max(0, total) / STEPS_PER_POINT));
+}
+
+/** Points available in one week: the daily habits on seven days, the steps goal and the run and strength targets. */
+export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_STEP_POINTS + WEEKLY_TARGETS.run + WEEKLY_TARGETS.strength;
 
 export interface WeekScore {
   earned: number;
@@ -92,17 +115,20 @@ export interface WeekScore {
 
 /**
  * How far a member is this week: daily points done (a joker counts as no
- * alcohol) plus run and strength sessions up to the weekly target. Resets
- * every Monday; the ring is full when everything for the week is done.
+ * alcohol), steps points over the week, plus run and strength sessions up to
+ * the weekly target. Resets every Monday; the ring is full when everything for
+ * the week is done.
  */
 export function weekScore(
   start: DateKey,
   checkins: { checkin_date: DateKey; activities: readonly string[] }[],
   jokers: DateKey[] = [],
+  steps: { log_date: DateKey; steps: number }[] = [],
 ): WeekScore {
   const p = weekProgress(start, checkins, [], jokers);
   const habits = p.days.reduce((n, d) => n + d.habitsDone, 0);
   const training = TRAINING_KINDS.reduce((n, k) => n + Math.min(p.totals[k].done, WEEKLY_TARGETS[k]), 0);
-  const earned = habits + training;
+  const walked = stepPoints(Object.values(stepsByDay(start, steps, checkins)).reduce((a, b) => a + b, 0));
+  const earned = habits + walked + training;
   return { earned, total: WEEK_POINTS, fraction: Math.min(1, earned / WEEK_POINTS) };
 }

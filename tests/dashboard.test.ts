@@ -10,16 +10,16 @@ const checkins = [
 describe("dashboard points", () => {
   it("counts daily points and a joker as no alcohol", () => {
     const p = pointsByDate(checkins, ["2026-11-04"]);
-    expect(p.get("2026-11-02")).toBe(2);
-    expect(p.get("2026-11-03")).toBe(6);
+    expect(p.get("2026-11-02")).toBe(1);
+    expect(p.get("2026-11-03")).toBe(5);
     expect(p.get("2026-11-04")).toBe(1);
-    expect(weekDays("2026-11-02", p).map((d) => d.points)).toEqual([2, 6, 1, 0, 0, 0, 0]);
+    expect(weekDays("2026-11-02", p).map((d) => d.points)).toEqual([1, 5, 1, 0, 0, 0, 0]);
   });
 
   it("builds week scores oldest first", () => {
     const s = weekScoreSeries("2026-11-10", checkins, [], 2);
     expect(s.map((w) => w.start)).toEqual(["2026-11-02", "2026-11-09"]);
-    expect(s[0].earned).toBe(2 + 6 + 1); // run counts toward the weekly target
+    expect(s[0].earned).toBe(1 + 5 + 2 + 1); // daily points, two ticked step days (10.000 each), one run
     expect(s[1].earned).toBe(1);
   });
 
@@ -29,7 +29,7 @@ describe("dashboard points", () => {
     expect(cols).toHaveLength(3); // week of 26 Oct (only Sunday 1 Nov), 2 Nov, 9 Nov
     expect(cols[0].slice(0, 6).every((c) => c === null)).toBe(true);
     expect(cols[0][6]).toEqual({ date: "2026-11-01", points: 0 });
-    expect(cols[1][1]).toEqual({ date: "2026-11-03", points: 6 });
+    expect(cols[1][1]).toEqual({ date: "2026-11-03", points: 5 });
     expect(cols[1][2]).toEqual({ date: "2026-11-04", points: null });
     expect(cols[2][2]).toBeNull();
   });

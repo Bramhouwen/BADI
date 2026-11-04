@@ -12,7 +12,7 @@ export interface CheckinRow {
   activities: readonly string[];
 }
 
-/** Daily points (0 to 6) per date; a joker counts as the alcohol point. */
+/** Daily points (0 to 5) per date; a joker counts as the alcohol point. Steps count per week, not here. */
 export function pointsByDate(checkins: CheckinRow[], jokers: DateKey[]): Map<DateKey, number> {
   const jokerSet = new Set(jokers);
   const out = new Map<DateKey, number>();
@@ -30,7 +30,7 @@ export function weekDays(start: DateKey, points: Map<DateKey, number>): { date: 
 }
 
 /** Week score (0 to 1) for the last `weeks` weeks ending this week, oldest first. */
-export function weekScoreSeries(today: DateKey, checkins: CheckinRow[], jokers: DateKey[], weeks: number): { start: DateKey; fraction: number; earned: number }[] {
+export function weekScoreSeries(today: DateKey, checkins: CheckinRow[], jokers: DateKey[], weeks: number, steps: { log_date: DateKey; steps: number }[] = []): { start: DateKey; fraction: number; earned: number }[] {
   const thisWeek = weekStartOf(today);
   return Array.from({ length: weeks }, (_, i) => {
     const start = addDays(thisWeek, -7 * (weeks - 1 - i));
@@ -39,6 +39,7 @@ export function weekScoreSeries(today: DateKey, checkins: CheckinRow[], jokers: 
       start,
       checkins.filter((c) => c.checkin_date >= start && c.checkin_date <= end),
       jokers.filter((j) => j >= start && j <= end),
+      steps.filter((l) => l.log_date >= start && l.log_date <= end),
     );
     return { start, fraction: s.fraction, earned: s.earned };
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { DAILY_HABITS } from "@/lib/checkin-plan";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { formatDateNl } from "@/lib/dates";
@@ -225,7 +226,7 @@ export function Heatmap({ columns, today }: { columns: ({ date: string; points: 
   const labelOf = (date: string) => formatDateNl(date, { weekday: "short", day: "numeric", month: "short" });
   const [active, setActive] = useState<string | null>(null);
   const cell = (points: number | null) => (points === null ? "transparent" : points === 0 ? CHART.track : CHART.green);
-  const opacity = (points: number | null) => (points === null || points === 0 ? 1 : 0.25 + (points / 6) * 0.75);
+  const opacity = (points: number | null) => (points === null || points === 0 ? 1 : 0.25 + (points / DAILY_HABITS.length) * 0.75);
   const activeCell = columns.flat().find((c) => c?.date === active) ?? null;
   return (
     <div onPointerLeave={() => setActive(null)}>
@@ -246,7 +247,7 @@ export function Heatmap({ columns, today }: { columns: ({ date: string; points: 
                   type="button"
                   onPointerEnter={() => setActive(c.date)}
                   onClick={() => setActive(c.date)}
-                  aria-label={`${labelOf(c.date)}: ${c.points === null ? "nog niet" : `${c.points} van 6 punten`}`}
+                  aria-label={`${labelOf(c.date)}: ${c.points === null ? "nog niet" : `${c.points} van ${DAILY_HABITS.length} punten`}`}
                   className={cn("h-[15px] w-full rounded-[4px]", c.date === today && "ring-2 ring-ink/60 ring-offset-1 ring-offset-[#fdf8f4]", c.points === null && "border border-dashed border-ink/15")}
                   style={{ background: cell(c.points), opacity: opacity(c.points) }}
                 />
@@ -259,14 +260,14 @@ export function Heatmap({ columns, today }: { columns: ({ date: string; points: 
       </div>
       <div className="mt-2.5 flex items-center justify-between gap-3">
         <span className="min-h-[16px] truncate">
-          <span className="text-[11.5px] text-muted">{activeCell ? `${labelOf(activeCell.date)}: ${activeCell.points === null ? "nog niet" : `${activeCell.points} van 6 punten`}` : "Tik op een dag"}</span>
+          <span className="text-[11.5px] text-muted">{activeCell ? `${labelOf(activeCell.date)}: ${activeCell.points === null ? "nog niet" : `${activeCell.points} van ${DAILY_HABITS.length} punten`}` : "Tik op een dag"}</span>
         </span>
         <span className="flex shrink-0 items-center gap-1" aria-hidden>
           <span className="text-[10px] text-muted">0</span>
-          {[0, 2, 4, 6].map((p) => (
+          {[0, 1, 3, 5].map((p) => (
             <span key={p} className="h-[11px] w-[11px] rounded-[3px]" style={{ background: cell(p), opacity: opacity(p) }} />
           ))}
-          <span className="text-[10px] text-muted">6</span>
+          <span className="text-[10px] text-muted">{DAILY_HABITS.length}</span>
         </span>
       </div>
     </div>

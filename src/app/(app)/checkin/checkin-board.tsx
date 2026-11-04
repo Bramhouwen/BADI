@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/lib/habits";
 import { MyHabits } from "./my-habits";
+import { StepsCard } from "./steps-card";
 
 interface Props {
   today: string;
@@ -31,6 +32,7 @@ interface Props {
   habits: Habit[];
   habitLogs: Record<string, string[]>;
   habitsShared: boolean;
+  steps: { log_date: string; steps: number }[];
 }
 
 const meta = (key: ActivityKey) => ACTIVITIES.find((a) => a.key === key)!;
@@ -218,6 +220,18 @@ export function CheckinBoard(props: Props) {
           Jokers: {jokers.length} van {maxJokers} ingezet.
         </p>
       </section>
+
+      <StepsCard
+        today={today}
+        weekStart={weekStart}
+        date={date}
+        editable={dates}
+        challengeStart={challengeStart}
+        challengeEnd={challengeEnd}
+        logs={props.steps}
+        ticks={Object.entries(acts).map(([checkin_date, activities]) => ({ checkin_date, activities }))}
+        onStreak={setStreak}
+      />
 
       <MyHabits date={date} initialHabits={props.habits} initialLogs={props.habitLogs} shared={props.habitsShared} />
 

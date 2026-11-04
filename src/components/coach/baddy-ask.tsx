@@ -63,7 +63,7 @@ export function BaddyAsk() {
         <AskField placeholder="Wat wil je weten?" />
       </div>
       <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4">
-        {["Maak een avondeten met veel eiwit", "Tips voor 10.000 stappen", "Wat eet ik na het sporten?"].map((q) => (
+        {["Maak een avondeten met veel eiwit", "Hoe haal ik 70.000 stappen per week?", "Wat eet ik na het sporten?"].map((q) => (
           <Link key={q} href={askHref(q)} className="soft shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium text-ink">
             {q}
           </Link>

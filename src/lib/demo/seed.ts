@@ -115,6 +115,14 @@ export function buildSeed(): Store {
     { id: demoId(), user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, type: "recipe", actor_id: NOOR, ref_id: recipes[3].id, created_at: iso(d(1), 7, 30), read_at: iso(d(1), 9) },
   ];
 
+  // Steps typed in per day this week, for the demo member and Sam.
+  const step_logs: Row[] = [
+    [DEMO_USER_ID, 1, 6400],
+    [DEMO_USER_ID, 2, 13200],
+    [DEMO_USER_ID, 3, 9100],
+    [SAM, 1, 11800],
+    [SAM, 2, 8700],
+  ].map(([user_id, n, steps]) => ({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id, log_date: d(n as number), steps, updated_at: iso(d(n as number), 21) }));
   const water_entries: Row[] = [];
   const waterPlan: [number, number[]][] = [[0, [250, 500, 250]], [1, [500, 500, 750, 250, 250]], [2, [250, 500, 500, 250]], [3, [500, 750, 250]], [4, [250, 250]], [5, [500, 500, 500, 500, 500]], [6, [750, 500, 250, 250]]];
   for (const [n, amounts] of waterPlan) {
@@ -245,6 +253,7 @@ export function buildSeed(): Store {
   return {
     profiles,
     water_entries,
+    step_logs,
     exercises,
     workout_plans,
     workout_templates,

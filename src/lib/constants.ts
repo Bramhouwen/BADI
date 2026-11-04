@@ -33,7 +33,7 @@ export type ActivityKey =
   | "strength"
   | "moved";
 
-export type ActivityKind = "daily" | "weekly" | "extra";
+export type ActivityKind = "daily" | "weekly" | "steps" | "extra";
 
 /**
  * Check-in parts. Daily habits are ticked every day; weekly trainings have a
@@ -41,7 +41,7 @@ export type ActivityKind = "daily" | "weekly" | "extra";
  * other workouts (walking, cycling, yoga) and older check-ins.
  */
 export const ACTIVITIES: { key: ActivityKey; emoji: string; label: string; hint: string; kind: ActivityKind }[] = [
-  { key: "steps", emoji: "🚶", label: "10.000 stappen", hint: "Wandelen, de trap, een ommetje", kind: "daily" },
+  { key: "steps", emoji: "🚶", label: "Stappen", hint: "Doel: 70.000 per week", kind: "steps" },
   { key: "hydration", emoji: "💧", label: "Water", hint: "2,5 tot 3 liter", kind: "daily" },
   { key: "nutrition", emoji: "🥑", label: "Whole foods", hint: "Vooral onbewerkt gegeten", kind: "daily" },
   { key: "protein", emoji: "🍳", label: "Genoeg eiwit", hint: "Eiwit bij elke hoofdmaaltijd", kind: "daily" },
@@ -103,7 +103,7 @@ export const PRINCIPLES = [
   {
     emoji: "🚶",
     title: "Daily movement",
-    body: "Richtlijn: zo'n 10.000 stappen per dag, als dat bij je past. Wandelen en gewoon bewegen tellen volop mee.",
+    body: "Richtlijn: 70.000 stappen per week, zo'n 10.000 per dag. Een rustige dag haal je later in de week in. Wandelen en gewoon bewegen tellen volop mee.",
   },
   {
     emoji: "🍳",

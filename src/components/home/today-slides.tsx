@@ -2,7 +2,7 @@
 
 import { Children, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Droplets, Dumbbell, Flame, Plus } from "lucide-react";
+import { ArrowRight, Droplets, Dumbbell, Flame, Footprints, Plus } from "lucide-react";
 import { addWater } from "@/app/actions/water";
 import { useToast } from "@/components/ui/toast";
 import { CHART } from "@/lib/chart-colors";
@@ -92,6 +92,36 @@ export function WeekSlide({ fraction, earned, total, streak }: { fraction: numbe
           </span>
           <span className="flex items-center gap-0.5 text-[12px] font-medium text-ink">
             Performance <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
+          </span>
+        </p>
+      </div>
+    </SlideShell>
+  );
+}
+
+/** Steps this week against the weekly goal; opens the check-in to type today's count. */
+export function StepsSlide({ total, goal, points, maxPoints }: { total: number; goal: number; points: number; maxPoints: number }) {
+  const nl = new Intl.NumberFormat("nl-NL");
+  const fraction = Math.min(1, total / goal);
+  return (
+    <SlideShell href="/checkin">
+      <div>
+        <Eyebrow icon={Footprints}>Stappen deze week</Eyebrow>
+        <p className="mt-2 font-sans text-[40px] font-semibold leading-none tabular-nums text-text">
+          {nl.format(total)}
+          <span className="text-[18px] font-medium text-muted"> van {nl.format(goal)}</span>
+        </p>
+      </div>
+      <div>
+        <div className="h-2 overflow-hidden rounded-full" style={{ background: CHART.track }} aria-hidden>
+          <div className="h-full rounded-full" style={{ width: `${fraction * 100}%`, background: CHART.green }} />
+        </div>
+        <p className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-[12px] text-muted">
+            {points} van {maxPoints} punten{total < goal ? ` · nog ${nl.format(goal - total)}` : ""}
+          </span>
+          <span className="flex items-center gap-0.5 text-[12px] font-medium text-ink">
+            Invullen <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
           </span>
         </p>
       </div>
