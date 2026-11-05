@@ -232,7 +232,7 @@ const DEMO_TOKEN = "d".repeat(64);
 /** Demo twin of the SQL function member_habits: yourself always, others only while they share habits. */
 function memberHabits(s: Store, pUser: string, from: string, to: string) {
   const row = s.stat_sharing.find((r) => r.user_id === pUser);
-  const shared = pUser === DEMO_USER_ID || Boolean(row?.share_habits);
+  const shared = pUser === DEMO_USER_ID || (row ? row.share_habits !== false : true);
   if (!shared) return { shared: false, habits: [] };
   const habits = s.custom_habits
     .filter((h) => h.user_id === pUser)
@@ -253,12 +253,13 @@ function squadMemberStats(s: Store, pUser: string): Result {
   const self = pUser === DEMO_USER_ID;
   const row = s.stat_sharing.find((r) => r.user_id === pUser);
   const flag = (col: string, fallback: boolean) => self || (row ? Boolean(row[col]) : fallback);
-  const counts = flag("share_workout_counts", false);
-  const minutes = flag("share_minutes_distance", false);
-  const active = flag("share_active_days", false);
+  // Everything is shared unless switched off (migration 0022).
+  const counts = flag("share_workout_counts", true);
+  const minutes = flag("share_minutes_distance", true);
+  const active = flag("share_active_days", true);
   const checkins = flag("share_checkins", true);
-  const records = flag("share_records", false);
-  const recent = flag("share_recent_workouts", false);
+  const records = flag("share_records", true);
+  const recent = flag("share_recent_workouts", true);
   const done = s.workout_sessions.filter((w) => w.user_id === pUser && w.status === "completed").sort((a, b) => (String(a.workout_date) < String(b.workout_date) ? 1 : -1));
   const strip = (w: Row) => ({ activity_type: w.activity_type, workout_date: w.workout_date, duration_seconds: minutes ? w.duration_seconds : null, distance_meters: minutes ? w.distance_meters : null });
   let recordsJson: unknown = null;
@@ -318,6 +319,10 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       return Promise.resolve(ok(s.compliments.length));
     case "squad_member_stats":
       return Promise.resolve(squadMemberStats(s, String(args.p_user)));
+    case "shares_stat": {
+      const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
+      return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
+    }
     case "member_habits":
       return Promise.resolve(ok(memberHabits(s, String(args.p_user), String(args.p_from), String(args.p_to))));
     default:

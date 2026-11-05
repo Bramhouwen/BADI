@@ -49,10 +49,10 @@ describe("shared habits", () => {
     expect(r).toEqual({ shared: true, habits: [{ id: "h1", name: "Lezen", emoji: "📖", dates: ["2026-11-02"] }] });
   });
 
-  it("keeps habits private by default and stores the switch", () => {
-    expect(DEFAULT_SHARING.habits).toBe(false);
-    expect(sharingFromRow({ share_habits: true }).habits).toBe(true);
-    expect(sharingToRow({ ...DEFAULT_SHARING, habits: true }).share_habits).toBe(true);
+  it("shares habits by default and stores the switch", () => {
+    expect(DEFAULT_SHARING.habits).toBe(true);
+    expect(sharingFromRow({ share_habits: false }).habits).toBe(false);
+    expect(sharingToRow({ ...DEFAULT_SHARING, habits: false }).share_habits).toBe(false);
   });
 });
 

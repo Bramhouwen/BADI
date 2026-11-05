@@ -11,6 +11,7 @@ import { addDays, formatDateNl, todayKey, weekdayShortNl } from "@/lib/dates";
 import { activityMeta, formatDistance, formatDuration, formatKg, formatPace, paceSecPerKm } from "@/lib/fitness";
 import { activityStatus, compareRows, deriveMemberStats, gridDays, type MemberStats } from "@/lib/squad-stats";
 import { firstName } from "@/lib/utils";
+import { WATER_GOAL_ML } from "@/lib/constants";
 import { MemberAvatar } from "@/components/ui/member-avatar";
 import { OnlineLine } from "@/components/ui/online-line";
 import { createClient } from "@/lib/supabase/server";
@@ -55,7 +56,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const weekStart = weekStartOf(today);
   const supabase = await createClient();
-  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }, { data: weekSteps }] = await Promise.all([
+  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }, { data: weekSteps }, { data: waterShared }, { data: waterRows }] = await Promise.all([
     loadMemberStats(userId),
     isMe ? null : loadMemberStats(ctx.userId),
     signedUrl("avatars", member.profile.avatar_path),
@@ -64,6 +65,9 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
     supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", userId).gte("checkin_date", weekStart),
     supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", userId).gte("exception_date", weekStart),
     supabase.from("step_logs").select("log_date, steps").eq("user_id", userId).gte("log_date", weekStart),
+    isMe ? Promise.resolve({ data: true }) : supabase.rpc("shares_stat", { p_user: userId, p_key: "water" }),
+    // RLS only returns water of members who share it.
+    supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", userId).gte("log_date", weekStart),
   ]);
   if (!payload) notFound();
 
@@ -79,7 +83,17 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const weekStepsTotal = stats.checkin
     ? Object.values(stepsByDay(weekStart, (weekSteps ?? []) as { log_date: string; steps: number }[], (weekRows ?? []) as { checkin_date: string; activities: string[] }[])).reduce((a, b) => a + b, 0)
     : null;
-  const sharesAnything = Object.values(stats.sharing).some(Boolean) || showHabits;
+  const liters = (ml: number) => `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(ml / 1000)} l`;
+  // Water: today and the average per day so far this week.
+  const water = waterShared
+    ? (() => {
+        const rows = (waterRows ?? []) as { log_date: string; amount_ml: number }[];
+        const days = Math.max(1, Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${weekStart}T12:00:00Z`)) / 86_400_000) + 1);
+        const total = rows.reduce((n, r) => n + r.amount_ml, 0);
+        return { today: rows.filter((r) => r.log_date === today).reduce((n, r) => n + r.amount_ml, 0), average: Math.round(total / days) };
+      })()
+    : null;
+  const sharesAnything = Object.values(stats.sharing).some(Boolean) || showHabits || Boolean(water);
   const showGrid = Boolean(stats.activeDays) || Boolean(stats.checkin);
   const grids = showGrid ? { week: gridDays(stats, today, "week"), "prev-week": gridDays(stats, today, "prev-week"), month: gridDays(stats, today, "month") } : null;
   const rows = mine ? compareRows(mine, stats) : [];
@@ -189,6 +203,16 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
             <Tile value={stats.checkin.current} unit={stats.checkin.current === 1 ? "dag" : "dagen"} label="huidige streak" />
             <Tile value={stats.checkin.longest} unit={stats.checkin.longest === 1 ? "dag" : "dagen"} label="langste streak" />
             {weekStepsTotal !== null ? <Tile value={new Intl.NumberFormat("nl-NL").format(weekStepsTotal)} label={`stappen deze week, doel ${new Intl.NumberFormat("nl-NL").format(WEEKLY_STEPS_GOAL)}`} /> : null}
+          </Tiles>
+        </section>
+      ) : null}
+
+      {water ? (
+        <section>
+          <SectionTitle>Water</SectionTitle>
+          <Tiles>
+            <Tile value={liters(water.today)} label={`vandaag, doel ${liters(WATER_GOAL_ML)}`} />
+            <Tile value={liters(water.average)} label="gemiddeld per dag deze week" />
           </Tiles>
         </section>
       ) : null}

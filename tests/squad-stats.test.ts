@@ -6,7 +6,7 @@ const today = "2026-11-12"; // Thursday; week runs 9 to 15 Nov
 
 const full: MemberStatsPayload = {
   user_id: "u1",
-  sharing: { workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true, habits: true },
+  sharing: { workout_counts: true, minutes_distance: true, active_days: true, checkins: true, records: true, recent_workouts: true, habits: true, water: true },
   sessions: [
     { activity_type: "run", workout_date: "2026-11-12", duration_seconds: 1500, distance_meters: 5000 },
     { activity_type: "strength", workout_date: "2026-11-12", duration_seconds: 3000, distance_meters: null },
@@ -107,12 +107,12 @@ describe("comparison and settings", () => {
     expect(rows.map((r) => r.key)).toEqual(["workouts_week", "active_month"]);
   });
 
-  it("maps settings rows both ways with private fitness defaults", () => {
+  it("maps settings rows both ways and shares everything by default", () => {
     expect(sharingFromRow(null)).toEqual(DEFAULT_SHARING);
-    expect(DEFAULT_SHARING.checkins).toBe(true);
-    expect(DEFAULT_SHARING.records).toBe(false);
-    const row = sharingToRow({ ...DEFAULT_SHARING, records: true });
-    expect(row.share_records).toBe(true);
-    expect(sharingFromRow(row)).toEqual({ ...DEFAULT_SHARING, records: true });
+    expect(Object.values(DEFAULT_SHARING).every(Boolean)).toBe(true);
+    const row = sharingToRow({ ...DEFAULT_SHARING, records: false });
+    expect(row.share_records).toBe(false);
+    expect(row.share_water).toBe(true);
+    expect(sharingFromRow(row)).toEqual({ ...DEFAULT_SHARING, records: false });
   });
 });
