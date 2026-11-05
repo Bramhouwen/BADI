@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import imageCompression from "browser-image-compression";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorText, Hint, Input, Label, Textarea } from "@/components/ui/field";
 import { ChipTabs } from "@/components/ui/page";
 import { importRecipe } from "@/app/actions/recipe-import";
 import { createRecipe } from "@/app/actions/recipes";
-import { firstUrl, sourceLabel, type RecipeDraft } from "@/lib/recipe-import";
+import { MAX_IMAGES, firstUrl, sourceLabel, type RecipeDraft } from "@/lib/recipe-import";
 import { RecipeForm } from "../recipe-form";
 
 type Mode = "link" | "text" | "image";
@@ -22,7 +22,8 @@ export function ImportRecipe({ pathPrefix, shared }: { pathPrefix: string; share
   const [mode, setMode] = useState<Mode>(shared && !sharedUrl ? "text" : "link");
   const [url, setUrl] = useState(sharedUrl ?? "");
   const [text, setText] = useState(shared && !sharedUrl ? shared : "");
-  const [image, setImage] = useState<{ file: File; preview: string } | null>(null);
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<RecipeDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -44,8 +45,8 @@ export function ImportRecipe({ pathPrefix, shared }: { pathPrefix: string; share
     if (mode === "link") fd.set("url", url.trim());
     if (mode === "text") fd.set("text", text);
     if (mode === "image") {
-      if (!image) return setError("Kies een screenshot.");
-      fd.set("image", image.file);
+      if (images.length === 0) return setError("Kies een screenshot.");
+      for (const img of images) fd.append("image", img.file);
     }
     run(fd);
   }
@@ -66,18 +67,37 @@ export function ImportRecipe({ pathPrefix, shared }: { pathPrefix: string; share
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function pick(file: File | undefined) {
-    if (!file) return;
+  /** Adds the chosen screenshots, compressed, in the order picked; at most MAX_IMAGES in total. */
+  async function pick(list: FileList | null) {
+    const files = Array.from(list ?? []);
+    if (files.length === 0) return;
     setError(null);
-    if (!file.type.startsWith("image/")) return setError("Kies een afbeelding.");
+    if (files.some((f) => !f.type.startsWith("image/"))) return setError("Kies alleen afbeeldingen.");
+    const room = MAX_IMAGES - images.length;
+    if (files.length > room) setError(`Maximaal ${MAX_IMAGES} screenshots per recept. De eerste ${Math.max(0, room)} zijn toegevoegd.`);
+    setBusy(true);
     try {
-      const compressed = await imageCompression(file, { maxSizeMB: 0.9, maxWidthOrHeight: 1800, useWebWorker: true, fileType: "image/jpeg", initialQuality: 0.85 });
-      const jpg = new File([compressed], "screenshot.jpg", { type: "image/jpeg" });
-      if (image) URL.revokeObjectURL(image.preview);
-      setImage({ file: jpg, preview: URL.createObjectURL(jpg) });
+      const added: { file: File; preview: string }[] = [];
+      for (const file of files.slice(0, Math.max(0, room))) {
+        // Small enough that four fit in one upload, sharp enough to read the text.
+        const compressed = await imageCompression(file, { maxSizeMB: 0.7, maxWidthOrHeight: 1800, useWebWorker: true, fileType: "image/jpeg", initialQuality: 0.82 });
+        const jpg = new File([compressed], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+        added.push({ file: jpg, preview: URL.createObjectURL(jpg) });
+      }
+      setImages((l) => [...l, ...added]);
     } catch {
-      setError("Deze afbeelding kon niet worden geladen.");
+      setError("Een afbeelding kon niet worden geladen.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  function removeImage(i: number) {
+    setImages((l) => {
+      URL.revokeObjectURL(l[i].preview);
+      return l.filter((_, k) => k !== i);
+    });
   }
 
   if (draft) {
@@ -85,7 +105,7 @@ export function ImportRecipe({ pathPrefix, shared }: { pathPrefix: string; share
       <div className="space-y-5">
         <div className="soft flex items-start gap-3 rounded-[18px] p-3.5">
           <p className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-medium text-text">{draft.source_url ? `Uit ${sourceLabel(draft.source_url)}` : mode === "image" ? "Uit je screenshot" : "Uit je tekst"}</span>
+            <span className="block text-[13.5px] font-medium text-text">{draft.source_url ? `Uit ${sourceLabel(draft.source_url)}` : mode === "image" ? (images.length > 1 ? `Uit je ${images.length} screenshots` : "Uit je screenshot") : "Uit je tekst"}</span>
             <span className="block text-[12.5px] text-muted">Controleer het recept voordat je het deelt.</span>
           </p>
           <Button type="button" size="sm" variant="secondary" onClick={() => setDraft(null)}>
@@ -130,24 +150,45 @@ export function ImportRecipe({ pathPrefix, shared }: { pathPrefix: string; share
 
       {mode === "image" ? (
         <div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
-          {image ? (
-            <button type="button" onClick={() => fileRef.current?.click()} className="block w-full overflow-hidden rounded-[18px] border border-ink/10 bg-white/70">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.preview} alt="Gekozen screenshot" className="max-h-[360px] w-full object-contain" />
-            </button>
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => pick(e.target.files)} />
+          {images.length > 0 ? (
+            <>
+              <ul className="grid grid-cols-3 gap-2">
+                {images.map((img, i) => (
+                  <li key={img.preview} className="relative aspect-[3/4] overflow-hidden rounded-[14px] border border-ink/10 bg-white/70">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.preview} alt={`Screenshot ${i + 1}`} className="h-full w-full object-cover object-top" />
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-white/90 px-1.5 text-[10.5px] font-semibold tabular-nums text-ink shadow-sm">{i + 1}</span>
+                    <button type="button" onClick={() => removeImage(i)} aria-label={`Screenshot ${i + 1} weghalen`} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm">
+                      <X className="h-3.5 w-3.5" strokeWidth={2} />
+                    </button>
+                  </li>
+                ))}
+                {images.length < MAX_IMAGES ? (
+                  <li>
+                    <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed border-ink/20 text-muted">
+                      <Plus className="h-5 w-5" strokeWidth={1.7} />
+                      <span className="text-[11.5px] font-medium">Toevoegen</span>
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+              <p className="mt-2 text-[11.5px] text-muted">
+                {images.length} van {MAX_IMAGES} screenshots. Ze worden samen als één recept gelezen, in deze volgorde.
+              </p>
+            </>
           ) : (
-            <button type="button" onClick={() => fileRef.current?.click()} className="glass flex w-full flex-col items-center gap-2 rounded-[18px] px-4 py-8">
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="glass flex w-full flex-col items-center gap-2 rounded-[18px] px-4 py-8">
               <ImagePlus className="h-7 w-7 text-ink/70" strokeWidth={1.5} aria-hidden />
-              <span className="text-[14px] font-medium text-text">Screenshot kiezen</span>
-              <span className="text-[12px] text-muted">Van een recept in de AH-app, een website of een TikTok-video</span>
+              <span className="text-[14px] font-medium text-text">{busy ? "Bezig met laden…" : "Screenshots kiezen"}</span>
+              <span className="text-[12px] text-muted">Tot {MAX_IMAGES} tegelijk, bijvoorbeeld ingrediënten en bereiding</span>
             </button>
           )}
         </div>
       ) : null}
 
       <ErrorText>{error}</ErrorText>
-      <Button type="button" size="lg" className="w-full" loading={pending} onClick={submit} disabled={pending || (mode === "link" ? !url.trim() : mode === "text" ? text.trim().length < 20 : !image)}>
+      <Button type="button" size="lg" className="w-full" loading={pending} onClick={submit} disabled={pending || (mode === "link" ? !url.trim() : mode === "text" ? text.trim().length < 20 : images.length === 0 || busy)}>
         <span>{mode === "link" ? "Recept ophalen" : "Recept uitlezen"}</span>
       </Button>
     </div>

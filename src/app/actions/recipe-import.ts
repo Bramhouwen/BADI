@@ -1,7 +1,7 @@
 "use server";
 
 import { requireContext } from "@/lib/data";
-import { IMPORT_TEXT_MAX, firstUrl, isTikTok, pageText, publicUrl, recipeFromHtml, type RecipeDraft } from "@/lib/recipe-import";
+import { IMPORT_TEXT_MAX, MAX_IMAGES, firstUrl, isTikTok, pageText, publicUrl, recipeFromHtml, type RecipeDraft } from "@/lib/recipe-import";
 import { ImportError, fetchPublic, readRecipe, tiktokCaption } from "@/lib/recipe-import-server";
 import type { ActionResult } from "@/lib/types";
 
@@ -55,14 +55,18 @@ export async function importRecipe(formData: FormData): Promise<ActionResult<Rec
       return draft ? { ok: true, data: draft } : { ok: false, error: "In deze tekst staat geen recept." };
     }
     if (mode === "image") {
-      const file = formData.get("image");
-      if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Kies een screenshot." };
-      const mediaType = IMAGE_TYPES.find((t) => t === file.type);
-      if (!mediaType) return { ok: false, error: "Kies een afbeelding (jpg, png of webp)." };
-      if (file.size > MAX_IMAGE_BYTES) return { ok: false, error: "Deze afbeelding is te groot." };
-      const data = Buffer.from(await file.arrayBuffer()).toString("base64");
-      const draft = await readRecipe({ image: { data, mediaType } }, null);
-      return draft ? { ok: true, data: draft } : { ok: false, error: "Op deze screenshot staat geen recept dat de app kan lezen." };
+      const files = formData.getAll("image").filter((f): f is File => f instanceof File && f.size > 0);
+      if (files.length === 0) return { ok: false, error: "Kies een screenshot." };
+      if (files.length > MAX_IMAGES) return { ok: false, error: `Kies maximaal ${MAX_IMAGES} screenshots.` };
+      const images = [];
+      for (const file of files) {
+        const mediaType = IMAGE_TYPES.find((t) => t === file.type);
+        if (!mediaType) return { ok: false, error: "Kies afbeeldingen (jpg, png of webp)." };
+        if (file.size > MAX_IMAGE_BYTES) return { ok: false, error: "Een van de afbeeldingen is te groot." };
+        images.push({ data: Buffer.from(await file.arrayBuffer()).toString("base64"), mediaType });
+      }
+      const draft = await readRecipe({ images }, null);
+      return draft ? { ok: true, data: draft } : { ok: false, error: files.length > 1 ? "Op deze screenshots staat geen recept dat de app kan lezen." : "Op deze screenshot staat geen recept dat de app kan lezen." };
     }
     return { ok: false, error: "Kies een link, tekst of screenshot." };
   } catch (err) {

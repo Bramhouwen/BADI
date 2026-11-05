@@ -36,4 +36,26 @@ describe("reading a recipe with Claude", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("sends several screenshots as one request, in order, to be merged into one recipe", async () => {
+    const { readRecipe } = await import("@/lib/recipe-import-server");
+    let sent: { messages?: { content: { type: string; source?: { data: string }; text?: string }[] }[] } = {};
+    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      sent = JSON.parse(String(init.body));
+      const answer = { found: true, title: "Wrap", description: "", category: "geen", ingredients: ["1 wrap"], instructions: ["Rol op."], protein_grams: null };
+      const body = { id: "msg_2", type: "message", role: "assistant", model: "m", content: [{ type: "text", text: JSON.stringify(answer) }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } };
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    try {
+      const draft = await readRecipe({ images: [{ data: "AAA", mediaType: "image/jpeg" }, { data: "BBB", mediaType: "image/jpeg" }] }, null);
+      const content = sent.messages?.[0].content ?? [];
+      expect(content.filter((b) => b.type === "image").map((b) => b.source?.data)).toEqual(["AAA", "BBB"]);
+      expect(content.at(-1)?.text).toContain("2 screenshots");
+      expect(draft?.ingredients).toBe("1 wrap");
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
 });

@@ -12,6 +12,8 @@ export interface RecipeDraft {
 }
 
 export const IMPORT_TEXT_MAX = 8000;
+/** Screenshots per import; four compressed ones stay under the 4 MB upload limit. */
+export const MAX_IMAGES = 4;
 
 /** The first http(s) link in a piece of text, for example a TikTok share message. */
 export function firstUrl(text: string): string | null {
