@@ -5,6 +5,7 @@
  */
 import { buildSeed, demoId, type Row, type Store } from "./seed";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
+import { personalRecords, type RecordSession } from "@/lib/checkin-plan";
 
 type Result = { data: unknown; error: { message: string } | null; count: number | null };
 
@@ -323,11 +324,34 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
       return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
     }
+    case "week_records":
+      return Promise.resolve(ok(weekRecords(s, String(args.p_from))));
     case "member_habits":
       return Promise.resolve(ok(memberHabits(s, String(args.p_user), String(args.p_from), String(args.p_to))));
     default:
       return Promise.resolve({ data: null, error: { message: `unknown rpc ${name}` }, count: null });
   }
+}
+
+/** Twin of the SQL function week_records: new personal records since a date. */
+function weekRecords(s: ReturnType<typeof store>, from: string): { user_id: string; record_date: string }[] {
+  const sessions: RecordSession[] = [];
+  for (const w of s.workout_sessions.filter((x) => x.status === "completed")) {
+    for (const we of s.workout_exercises.filter((x) => x.session_id === w.id)) {
+      const ex = s.exercises.find((e) => e.id === we.exercise_id);
+      sessions.push({
+        user_id: String(w.user_id),
+        date: String(w.workout_date),
+        created_at: String(w.created_at),
+        exercise_id: String(we.exercise_id),
+        measure: ex?.measure === "time" ? "time" : "reps",
+        sets: s.exercise_sets
+          .filter((x) => x.workout_exercise_id === we.id)
+          .map((x) => ({ weight_kg: x.weight_kg == null ? null : Number(x.weight_kg), repetitions: (x.repetitions as number | null) ?? null, duration_seconds: (x.duration_seconds as number | null) ?? null, completed: Boolean(x.completed) })),
+      });
+    }
+  }
+  return personalRecords(sessions).filter((r) => r.date >= from).map((r) => ({ user_id: r.user_id, record_date: r.date }));
 }
 
 /** Resolves an object path to a URL: seeded demo images, or a placeholder for uploads made during the demo. */

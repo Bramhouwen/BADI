@@ -107,23 +107,32 @@ export function stepPoints(total: number): number {
 export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_STEP_POINTS + WEEKLY_TARGETS.run + WEEKLY_TARGETS.strength;
 
 /**
- * Bonus points on top of the week: something extra for the squad, such as a
- * photo on the Wall or a shared recipe. Each kind counts once per week.
+ * Bonus points on top of the week: something extra for the squad. A photo on
+ * the Wall and a shared recipe count once per day each; every new personal
+ * record counts, up to RECORDS_PER_WEEK a week.
  */
 export const BONUS_POINTS = 5;
-export const BONUS_KINDS = ["wall", "recipe"] as const;
+export const RECORDS_PER_WEEK = 3;
+export const BONUS_KINDS = ["wall", "recipe", "record"] as const;
 export type BonusKind = (typeof BONUS_KINDS)[number];
-export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld" };
+export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld", record: "Persoonlijk record" };
+export const BONUS_RULES: Record<BonusKind, string> = { wall: "+5 per dag", recipe: "+5 per dag", record: "+5, max 3 per week" };
 export interface BonusItem {
   kind: BonusKind;
   date: DateKey;
 }
 
-/** Bonus kinds earned in the week starting at `start`, each worth BONUS_POINTS once. */
-export function weekBonus(start: DateKey, items: readonly BonusItem[]): { kinds: BonusKind[]; points: number } {
+/** Bonus per kind in the week starting at `start`: distinct days for Wall and recipes, records capped at RECORDS_PER_WEEK. */
+export function weekBonus(start: DateKey, items: readonly BonusItem[]): { counts: Record<BonusKind, number>; points: number } {
   const end = addDays(start, 6);
-  const kinds = BONUS_KINDS.filter((k) => items.some((i) => i.kind === k && i.date >= start && i.date <= end));
-  return { kinds, points: kinds.length * BONUS_POINTS };
+  const inWeek = items.filter((i) => i.date >= start && i.date <= end);
+  const days = (kind: BonusKind) => new Set(inWeek.filter((i) => i.kind === kind).map((i) => i.date)).size;
+  const counts: Record<BonusKind, number> = {
+    wall: days("wall"),
+    recipe: days("recipe"),
+    record: Math.min(RECORDS_PER_WEEK, inWeek.filter((i) => i.kind === "record").length),
+  };
+  return { counts, points: (counts.wall + counts.recipe + counts.record) * BONUS_POINTS };
 }
 
 export interface WeekScore {
@@ -154,4 +163,47 @@ export function weekScore(
   const walked = stepPoints(Object.values(stepsByDay(start, steps, checkins)).reduce((a, b) => a + b, 0));
   const earned = habits + walked + training;
   return { earned, bonus: weekBonus(start, bonus).points, total: WEEK_POINTS, fraction: Math.min(1, earned / WEEK_POINTS) };
+}
+
+export interface RecordSession {
+  user_id: string;
+  date: DateKey;
+  created_at: string;
+  exercise_id: string;
+  measure: "reps" | "time";
+  sets: { weight_kg: number | null; repetitions: number | null; duration_seconds: number | null; completed: boolean }[];
+}
+
+/**
+ * New personal records: an exercise in a session that beats the best of all
+ * earlier sessions of the same member. Timed exercises compare the longest
+ * hold, weighted ones the heaviest set, bodyweight ones the most repetitions.
+ * The first time an exercise is logged sets the baseline, not a record.
+ * Same rules as the SQL function week_records (migration 0023).
+ */
+export function personalRecords(sessions: readonly RecordSession[]): { user_id: string; date: DateKey }[] {
+  const sorted = [...sessions].sort((a, b) => (a.date === b.date ? (a.created_at < b.created_at ? -1 : 1) : a.date < b.date ? -1 : 1));
+  const best = new Map<string, { kg: number | null; reps: number | null; secs: number | null }>();
+  const out: { user_id: string; date: DateKey }[] = [];
+  const max = (xs: (number | null)[]) => (xs.length ? Math.max(...(xs as number[])) : null);
+  for (const s of sorted) {
+    const done = s.sets.filter((x) => x.completed);
+    if (done.length === 0) continue;
+    const kg = max(done.map((x) => x.weight_kg).filter((v): v is number => v !== null && v > 0));
+    const reps = max(done.filter((x) => !x.weight_kg).map((x) => x.repetitions).filter((v): v is number => v !== null));
+    const secs = max(done.map((x) => x.duration_seconds).filter((v): v is number => v !== null));
+    const key = `${s.user_id}:${s.exercise_id}`;
+    const prev = best.get(key);
+    if (prev) {
+      const beats = (now: number | null, before: number | null) => now !== null && before !== null && now > before;
+      const record = s.measure === "time" ? beats(secs, prev.secs) : kg !== null ? beats(kg, prev.kg) : beats(reps, prev.reps);
+      if (record) out.push({ user_id: s.user_id, date: s.date });
+    }
+    best.set(key, {
+      kg: max([prev?.kg ?? null, kg].filter((v): v is number => v !== null)),
+      reps: max([prev?.reps ?? null, reps].filter((v): v is number => v !== null)),
+      secs: max([prev?.secs ?? null, secs].filter((v): v is number => v !== null)),
+    });
+  }
+  return out;
 }

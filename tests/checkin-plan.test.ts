@@ -112,19 +112,44 @@ describe("steps per week", () => {
 });
 
 describe("bonus points", () => {
-  it("gives 5 per kind once a week, on top of the ring", async () => {
+  it("counts Wall and recipes per day and records up to 3 a week, on top of the ring", async () => {
     const { weekBonus, weekScore } = await import("@/lib/checkin-plan");
     const items = [
       { kind: "wall" as const, date: "2026-11-03" },
+      { kind: "wall" as const, date: "2026-11-03" },
       { kind: "wall" as const, date: "2026-11-05" },
       { kind: "recipe" as const, date: "2026-11-08" },
+      { kind: "record" as const, date: "2026-11-04" },
+      { kind: "record" as const, date: "2026-11-04" },
+      { kind: "record" as const, date: "2026-11-06" },
+      { kind: "record" as const, date: "2026-11-07" },
       // Last week and next week do not count.
       { kind: "recipe" as const, date: "2026-11-01" },
       { kind: "wall" as const, date: "2026-11-09" },
     ];
-    expect(weekBonus("2026-11-02", items)).toEqual({ kinds: ["wall", "recipe"], points: 10 });
-    expect(weekBonus("2026-11-02", items.slice(0, 2))).toEqual({ kinds: ["wall"], points: 5 });
-    const s = weekScore("2026-11-02", [], [], [], items);
-    expect(s).toEqual({ earned: 0, bonus: 10, total: 48, fraction: 0 });
+    // Wall on 2 days, recipe on 1, records capped at 3: 6 x 5.
+    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 2, recipe: 1, record: 3 }, points: 30 });
+    expect(weekScore("2026-11-02", [], [], [], items)).toEqual({ earned: 0, bonus: 30, total: 48, fraction: 0 });
+  });
+
+  it("finds personal records against earlier sessions only", async () => {
+    const { personalRecords } = await import("@/lib/checkin-plan");
+    const set = (weight_kg: number | null, repetitions: number | null, duration_seconds: number | null = null, completed = true) => ({ weight_kg, repetitions, duration_seconds, completed });
+    const s = (date: string, exercise_id: string, measure: "reps" | "time", sets: ReturnType<typeof set>[], user_id = "a") => ({ user_id, date, created_at: `${date}T18:00:00Z`, exercise_id, measure, sets });
+    const records = personalRecords([
+      s("2026-11-01", "squat", "reps", [set(50, 10)]), // baseline
+      s("2026-11-03", "squat", "reps", [set(55, 8), set(60, 1, null, false)]), // 55 > 50
+      s("2026-11-05", "squat", "reps", [set(55, 10)]), // equal: no record
+      s("2026-11-02", "plank", "time", [set(null, null, 60)]),
+      s("2026-11-04", "plank", "time", [set(null, null, 75)]), // longer hold
+      s("2026-11-02", "pushup", "reps", [set(null, 20)]),
+      s("2026-11-06", "pushup", "reps", [set(null, 25)]), // more reps
+      s("2026-11-03", "squat", "reps", [set(80, 5)], "b"), // other member's first: baseline
+    ]);
+    expect(records).toEqual([
+      { user_id: "a", date: "2026-11-03" },
+      { user_id: "a", date: "2026-11-04" },
+      { user_id: "a", date: "2026-11-06" },
+    ]);
   });
 });

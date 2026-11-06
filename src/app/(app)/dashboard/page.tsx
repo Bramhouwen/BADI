@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, challengeDay, challengeLengthDays, challengePhase, formatDateNl, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
 import { WATER_GOAL_ML, MAX_ALCOHOL_EXCEPTIONS } from "@/lib/constants";
-import { BONUS_KINDS, BONUS_LABELS, BONUS_POINTS, DAILY_HABITS, WEEKLY_TARGETS, weekBonus, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { BONUS_KINDS, BONUS_LABELS, BONUS_POINTS, BONUS_RULES, DAILY_HABITS, WEEKLY_TARGETS, weekBonus, weekScore, weekStartOf } from "@/lib/checkin-plan";
 import { loadBonusItems } from "@/lib/bonus";
 import { consistency, daysOnWaterGoal, delta, heatmap, pointsByDate, trainingWeeks, waterDays, weekDays, weekScoreSeries, type CheckinRow } from "@/lib/dashboard";
 import { formatDistance, formatDuration, formatKg, runningProgress, strengthRecords } from "@/lib/fitness";
@@ -54,7 +54,7 @@ async function Content() {
   const points = pointsByDate(checkins, jokers);
   const streak = computeStreakStats(checkins.map((c) => c.checkin_date), today);
   const thisWeek = weekScore(start, checkins.filter((c) => c.checkin_date >= start), jokers.filter((j) => j >= start), steps.filter((l) => l.log_date >= start), bonusItems);
-  const bonusThisWeek = weekBonus(start, bonusItems).kinds;
+  const bonusThisWeek = weekBonus(start, bonusItems).counts;
   const prevWeek = weekScore(
     lastWeekStart,
     checkins.filter((c) => c.checkin_date >= lastWeekStart && c.checkin_date < start),
@@ -109,11 +109,11 @@ async function Content() {
         </p>
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Bonus deze week">
           {BONUS_KINDS.map((k) => {
-            const done = bonusThisWeek.includes(k);
+            const done = bonusThisWeek[k] > 0;
             return (
               <li key={k} className={done ? "flex items-center gap-1 on-tile rounded-full bg-white/90 px-2.5 py-1 text-[11.5px] font-medium" : "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] opacity-75 ring-1 ring-white/30"}>
                 {done ? <Check className="h-3 w-3" strokeWidth={2.4} aria-hidden /> : null}
-                {BONUS_LABELS[k]} +{BONUS_POINTS}
+                {BONUS_LABELS[k]} {done ? `+${bonusThisWeek[k] * BONUS_POINTS}` : BONUS_RULES[k]}
                 <span className="sr-only">{done ? "(behaald)" : "(nog niet)"}</span>
               </li>
             );
