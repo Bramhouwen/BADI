@@ -23,16 +23,24 @@ describe("wheel odds", () => {
     expect(wheelOdds({ food: 0, hydration: 0, sport: 0, voucher: 0, challenge: 0 }, [])).toEqual([{ category: "challenge", weight: 1, chance: 1 }]);
   });
 
-  it("lands the pointer inside the chosen segment after full turns", () => {
-    const segs = segments(wheelOdds({ food: 40, hydration: 10, sport: 5, voucher: 10, challenge: 35 }, [prize("a", "food"), prize("b", "hydration"), prize("c", "sport"), prize("d", "voucher")]));
-    for (const r of [0, 0.5, 1]) {
-      const rot = landingRotation(segs, "sport", 123, r);
+  it("draws equal slots for what can be won, neighbours in different colours", () => {
+    const segs = segments(wheelOdds({ food: 40, hydration: 10, sport: 5, voucher: 10, challenge: 35 }, [prize("a", "food"), prize("d", "voucher")]));
+    expect(segs.map((s) => s.label)).toEqual(["Drankje", "Challenge", "Cadeaubon", "Proteïnereep", "Challenge"]);
+    expect(new Set(segs.map((s) => s.end - s.start)).size).toBe(1);
+    segs.forEach((s, i) => expect(s.color).not.toBe(segs[(i + 1) % segs.length].color));
+    // Only the challenge left: still a full wheel.
+    expect(segments([{ category: "challenge" }]).length).toBe(4);
+  });
+
+  it("lands the pointer inside a slot of the chosen category after full turns", () => {
+    const segs = segments(wheelOdds({}, [prize("a", "food"), prize("b", "hydration"), prize("c", "sport"), prize("d", "voucher")]));
+    for (const r of [0, 0.3, 0.5, 0.8, 1]) {
+      const rot = landingRotation(segs, "food", 123, r);
       expect(rot).toBeGreaterThan(123 + 5 * 360);
       // The angle under the pointer at the top, in wheel coordinates.
       const under = (360 - (rot % 360)) % 360;
-      const sport = segs.find((s) => s.category === "sport")!;
-      expect(under).toBeGreaterThan(sport.start);
-      expect(under).toBeLessThan(sport.end);
+      const hit = segs.find((s) => under > s.start && under < s.end)!;
+      expect(hit.category).toBe("food");
     }
   });
 });

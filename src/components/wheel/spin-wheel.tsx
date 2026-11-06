@@ -63,12 +63,12 @@ export function SpinWheel({ odds, canSpin, nextAt, serverNow }: { odds: Odds[]; 
     <div className="flex flex-col items-center">
       <div className="relative aspect-square w-full max-w-[340px]">
         {/* Pointer */}
-        <svg viewBox="0 0 40 44" className="absolute left-1/2 top-[-6px] z-10 h-9 w-8 -translate-x-1/2 drop-shadow-[0_3px_4px_rgba(95,53,41,0.35)]" aria-hidden>
-          <path d="M20 42 L5 12 A16 16 0 1 1 35 12 Z" fill="#6e4034" />
-          <circle cx="20" cy="15" r="5.5" fill="#fbf3ec" />
+        <svg viewBox="0 0 40 48" className="absolute left-1/2 top-[-10px] z-10 h-11 w-9 -translate-x-1/2 drop-shadow-[0_3px_4px_rgba(95,53,41,0.35)]" aria-hidden>
+          <path d="M20 46 L6 18 Q4 14 7 11 L16 3 Q20 0 24 3 L33 11 Q36 14 34 18 Z" fill="#6e4034" stroke="#fbf3ec" strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="20" cy="13" r="4.5" fill="#fbf3ec" />
         </svg>
         <div
-          className="h-full w-full rounded-full shadow-[0_22px_48px_-24px_rgba(95,53,41,0.55)]"
+          className="h-full w-full rounded-full shadow-[0_26px_50px_-22px_rgba(95,53,41,0.6)]"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: phase === "spinning" ? (reduce ? "transform 0.6s ease-out" : "transform 5.2s cubic-bezier(0.12, 0.8, 0.14, 1)") : "none",
@@ -81,12 +81,13 @@ export function SpinWheel({ odds, canSpin, nextAt, serverNow }: { odds: Odds[]; 
           type="button"
           onClick={spin}
           disabled={used || phase === "spinning"}
-          className="espresso absolute left-1/2 top-1/2 flex h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full font-display text-[19px] tracking-wide ring-4 ring-[#fbf3ec] transition-transform active:scale-95 disabled:cursor-default"
+          className="absolute left-1/2 top-1/2 flex h-[30%] w-[30%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-0.5 rounded-full bg-[#6e4034] text-[#fbf3ec] shadow-[0_8px_18px_-8px_rgba(60,30,20,0.7)] ring-[5px] ring-[#fbf3ec] transition-transform active:scale-95 disabled:cursor-default"
           aria-label={used ? "Je draaibeurt van deze week is gebruikt" : "Draai aan het rad"}
         >
-          {used ? <span className="text-center text-[11px] font-sans font-medium leading-tight opacity-90">Volgende
-            <br />
-            draai</span> : "DRAAI!"}
+          <Image src="/brand/runner.png" alt="" width={44} height={38} className="h-auto w-[38%]" priority />
+          <span className="font-display text-[17px] italic leading-none" style={{ color: "#fbf3ec" }}>
+            {used ? "Weekrad" : "Draai!"}
+          </span>
         </button>
       </div>
 

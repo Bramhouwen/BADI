@@ -60,31 +60,62 @@ export function formatChance(chance: number): string {
   return `${pct.toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`;
 }
 
+/** Icons drawn on the wheel (see components/wheel/category-icon). */
+export type SlotIcon = "drink" | "bar" | "bottle" | "shaker" | "shirt" | "gift" | "flame";
+
+/**
+ * The wheel face: equal slots, each showing a kind of prize. A category can
+ * have more than one slot; the chance comes from the database, not from how
+ * many slots there are. Order keeps the same category apart.
+ */
+export const WHEEL_SLOTS: { category: WheelCategory; label: string; icon: SlotIcon }[] = [
+  { category: "food", label: "Drankje", icon: "drink" },
+  { category: "sport", label: "Sportset", icon: "shirt" },
+  { category: "hydration", label: "Shaker", icon: "shaker" },
+  { category: "challenge", label: "Challenge", icon: "flame" },
+  { category: "voucher", label: "Cadeaubon", icon: "gift" },
+  { category: "food", label: "Proteïnereep", icon: "bar" },
+  { category: "hydration", label: "Bidon", icon: "bottle" },
+  { category: "challenge", label: "Challenge", icon: "flame" },
+];
+
+export const SLOT_COLORS = ["#d5dcc8", "#f8efe7", "#ecd3c3"] as const;
+
 export interface Segment {
   category: WheelCategory;
+  label: string;
+  icon: SlotIcon;
+  color: string;
   /** Degrees clockwise from the top. */
   start: number;
   end: number;
 }
 
-export function segments(odds: readonly Odds[]): Segment[] {
-  let at = 0;
-  return odds.map((o) => {
-    const seg = { category: o.category, start: at, end: at + o.chance * 360 };
-    at = seg.end;
-    return seg;
-  });
+/** Equal slots for the categories that can be won now; neighbours never share a colour. */
+export function segments(odds: readonly Pick<Odds, "category">[]): Segment[] {
+  const live = new Set(odds.map((o) => o.category));
+  let slots = WHEEL_SLOTS.filter((s) => live.has(s.category));
+  if (slots.length === 0) slots = WHEEL_SLOTS.filter((s) => s.category === "challenge");
+  while (slots.length < 4) slots = [...slots, ...slots];
+  const n = slots.length;
+  const colors = slots.map((_, i) => i % 3);
+  // With a count that is not a multiple of three, the last slot would match the first.
+  if (n % 3 !== 0 && colors[n - 1] === colors[0]) colors[n - 1] = [0, 1, 2].find((c) => c !== colors[0] && c !== colors[n - 2])!;
+  return slots.map((s, i) => ({ ...s, color: SLOT_COLORS[colors[i]], start: (360 / n) * i, end: (360 / n) * (i + 1) }));
 }
 
 /**
- * Wheel rotation that brings `category` under the pointer at the top, after
- * a few full turns from `current`. `r` (0 to 1) picks the spot in the
- * segment, kept away from the edges.
+ * Wheel rotation that brings a slot of `category` under the pointer at the
+ * top, after a few full turns from `current`. `r` (0 to 1) picks which slot
+ * and the spot in it, kept away from the edges.
  */
 export function landingRotation(segs: readonly Segment[], category: WheelCategory, current: number, r: number, turns = 6): number {
-  const seg = segs.find((s) => s.category === category) ?? segs[0];
-  const span = seg.end - seg.start;
-  const target = seg.start + span * (0.15 + 0.7 * r);
+  const matches = segs.filter((s) => s.category === category);
+  const pool = matches.length ? matches : [segs[0]];
+  const scaled = Math.min(0.999999, Math.max(0, r)) * pool.length;
+  const seg = pool[Math.floor(scaled)];
+  const within = scaled - Math.floor(scaled);
+  const target = seg.start + (seg.end - seg.start) * (0.2 + 0.6 * within);
   // The pointer is at 0 degrees: rotate the wheel back by the target angle.
   const base = Math.ceil(current / 360) * 360 + turns * 360;
   return base + ((360 - target) % 360);
