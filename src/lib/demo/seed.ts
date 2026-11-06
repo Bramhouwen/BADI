@@ -289,7 +289,7 @@ export function buildSeed(): Store {
   const demo = (t: string) => `Demotekst: ${t}`;
   const prizes: Row[] = [
     prize("small", "Upfront", "Eiwitreep", { weight: 30, value_cents: 250, cost_cents: 200, description: demo("een losse eiwitreep voor na je training."), url: "https://example.com" }),
-    prize("small", "Frank & Charlie", "Drankje naar keuze", { weight: 20, variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], value_cents: 350, cost_cents: 300, description: demo("een fris drankje; je kiest zelf de smaak."), url: "https://example.com" }),
+    prize("small", "Frank & Charlie", "Drankje naar keuze", { weight: 20, value_cents: 500, cost_cents: 500, image_path: "static:/prizes/frank-charlie-drankje.jpg", description: demo("een drankje naar keuze bij koffiebar Frank & Charlie in Enschede."), url: "https://www.frankencharlie.nl" }),
     prize("medium", "Orangefit", "Fit Shaker", { weight: 20, value_cents: 900, cost_cents: 700, description: demo("een shaker voor je eiwitshake."), url: "https://example.com" }),
     prize("medium", "Oot Granola", "Zak granola", { value_cents: 750, cost_cents: 600, description: demo("granola met havermout, noten en zaden."), url: "https://example.com" }),
     prize("large", "Cabau Lifestyle", "Bloom Waterfles", { weight: 5, variant_label: "Kleur", variants: ["Zand", "Salie"], value_cents: 2400, cost_cents: 1800, shipping_cents: 495, description: demo("een herbruikbare waterfles voor je 2,5 liter per dag."), url: "https://example.com" }),

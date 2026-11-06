@@ -421,32 +421,33 @@ create policy "prize media: admin delete" on storage.objects
     bucket_id = 'prizes' and public.is_admin(((storage.foldername(name))[1])::uuid)
   );
 
--- Starting prize pool from the brief, by level and with a weight: inactive and
+-- Starting prize pool from the brief, by level, with a weight, the product
+-- page and (where there is one) a photo bundled with the app. Inactive and
 -- without stock until the admin has arranged them, so nothing can be won that
 -- is not really there.
-insert into public.prizes (challenge_id, category, brand, name, weight, variant_label, value_cents, needs_code)
-select c.id, d.category, d.brand, d.name, d.weight, d.variant_label, d.value_cents, d.needs_code
+insert into public.prizes (challenge_id, category, brand, name, weight, variant_label, value_cents, needs_code, url, image_path)
+select c.id, d.category, d.brand, d.name, d.weight, d.variant_label, d.value_cents, d.needs_code, d.url, d.image_path
 from public.challenges c
 cross join (values
-  ('small', 'Upfront', 'Eiwitreep', 30, null, null::int, false),
-  ('small', 'Upfront', 'Meat Jerky', 20, null, null, false),
-  ('small', 'Upfront', 'Hazelnootpasta', 20, null, null, false),
-  ('small', 'Frank & Charlie', 'Drankje naar keuze', 20, 'Smaak', null, false),
-  ('small', 'Partner', 'Gezonde snack', 10, null, null, false),
-  ('medium', 'Oot Granola', 'Zak granola', 10, null, null, false),
-  ('medium', 'Upfront', 'Pindakaas', 10, null, null, false),
-  ('medium', 'Orangefit', 'Fit Shaker', 20, null, null, false),
-  ('medium', 'Orangefit', 'Sportsokken', 10, 'Maat', null, false),
-  ('medium', 'Cabau Lifestyle', 'Shaker', 10, null, null, false),
-  ('large', 'Oot Granola', 'Starter Pack', 10, null, null, false),
-  ('large', 'Cabau Lifestyle', 'Bloom Waterfles', 5, 'Kleur', null, false),
-  ('large', 'Flowee', 'Ontspannend oogkussen', 10, null, null, false),
-  ('large', 'Upfront', 'Mixdoos eiwitrepen', 10, null, null, false),
-  ('large', 'Partner', 'Gezond lifestylepakket', 10, null, null, false),
-  ('jackpot', 'air up', 'Waterfles', 5, 'Kleur', null, false),
-  ('jackpot', 'Loavies', 'Compleet sportpak', 2, 'Maat', null, false),
-  ('jackpot', 'ELVOU', 'Cadeaubon', 10, null, 2500, true),
-  ('jackpot', 'Orangefit', 'Proteïnepakket', 10, null, null, false),
-  ('jackpot', 'Flowee', 'Relaxpakket', 10, null, null, false),
-  ('jackpot', 'Cabau Lifestyle', 'Premium pakket', 10, null, null, false)
-) as d(category, brand, name, weight, variant_label, value_cents, needs_code);
+  ('small', 'Upfront', 'Eiwitreep', 30, null, null::int, false, 'https://upfront.nl/products/eiwitreep-1', null),
+  ('small', 'Upfront', 'Meat Jerky', 20, null, null, false, 'https://upfront.nl/products/meat-snacks', null),
+  ('small', 'Upfront', 'Hazelnootpasta', 20, null, null, false, 'https://upfront.nl/products/hazelnootpasta', null),
+  ('small', 'Frank & Charlie', 'Drankje naar keuze', 20, null, null, false, 'https://www.frankencharlie.nl', 'static:/prizes/frank-charlie-drankje.jpg'),
+  ('small', 'Partner', 'Gezonde snack', 10, null, null, false, null, null),
+  ('medium', 'Oot Granola', 'Cinnamon Bun granola', 10, null, null, false, 'https://www.oot.nl/products/cinnamon-bun-granola', null),
+  ('medium', 'Upfront', 'Pindakaas', 10, null, null, false, 'https://upfront.nl/products/pindakaas', null),
+  ('medium', 'Orangefit', 'Fit Shaker', 20, null, null, false, 'https://www.orangefit.nl/producten/accessoires/fit-shaker', null),
+  ('medium', 'Orangefit', 'Fit Socks', 10, 'Maat', null, false, 'https://www.orangefit.nl/producten/accessoires/fit-socks', null),
+  ('medium', 'Cabau Lifestyle', 'Shaker', 10, 'Kleur', null, false, 'https://cabaulifestyle.com/products/shaker', null),
+  ('large', 'Oot Granola', 'Granola Starter Pack', 10, null, null, false, 'https://www.oot.nl/products/granola-starterpack', null),
+  ('large', 'Cabau Lifestyle', 'Bloom Water Bottle', 5, 'Kleur', null, false, 'https://cabaulifestyle.com/products/bloom-water-bottle', null),
+  ('large', 'Flowee', 'Lavendel oogkussen', 10, null, null, false, 'https://yoga-pilatesshop.nl/en/product/eye-pillow-flowee/', null),
+  ('large', 'Upfront', 'Eiwitreep Mixdoos', 10, null, null, false, 'https://upfront.nl/products/protein-bars-mixdoos', null),
+  ('large', 'Partner', 'Gezond lifestylepakket', 10, null, null, false, null, null),
+  ('jackpot', 'air up', 'Starter set', 5, 'Kleur', null, false, 'https://shop.air-up.com/nl/en', null),
+  ('jackpot', 'Loavies', 'Sportset (top en legging)', 2, 'Maat', null, false, 'https://www.loavies.com/nl/sportswear/', null),
+  ('jackpot', 'ELVOU', 'Cadeaubon', 10, null, 2500, true, 'https://elvou.com/en/products/elvou-giftcard', null),
+  ('jackpot', 'Orangefit', 'Protein Pakket', 10, 'Smaak', null, false, 'https://www.orangefit.nl/producten/eiwitshakes/protein-pakket', null),
+  ('jackpot', 'Flowee', 'Spijkermat met kussen', 10, null, null, false, 'https://yoga-pilatesshop.nl/en/brand/flowee/', null),
+  ('jackpot', 'Cabau Lifestyle', 'Stainless Duo: fles en beker', 10, 'Kleur', null, false, 'https://cabaulifestyle.com/products/the-stainless-duo', null)
+) as d(category, brand, name, weight, variant_label, value_cents, needs_code, url, image_path);
