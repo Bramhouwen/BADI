@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deletePrize, savePrize, saveWeights, setGiftCode, setSpinStatus } from "@/app/actions/wheel";
+import { deletePrize, saveBudget, savePrize, saveWeights, setGiftCode, setSpinStatus } from "@/app/actions/wheel";
 import { Button } from "@/components/ui/button";
 import { ImagePicker } from "@/components/app/image-picker";
 import { CATEGORY_META, PRIZE_CATEGORIES, WHEEL_CATEGORIES, formatChance, type WheelCategory } from "@/lib/wheel";
@@ -54,8 +54,9 @@ export function WeightsForm({ weights }: { weights: Record<WheelCategory, number
         {WHEEL_CATEGORIES.map((k) => (
           <li key={k} className="flex items-center gap-3">
             <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: CATEGORY_META[k].color }} aria-hidden />
-            <label htmlFor={`w-${k}`} className="min-w-0 flex-1 truncate text-[13.5px] text-text">
+            <label htmlFor={`w-${k}`} className="min-w-0 flex-1 text-[13.5px] leading-tight text-text">
               {CATEGORY_META[k].label}
+              <span className="block text-[11px] text-muted">{CATEGORY_META[k].band}</span>
             </label>
             <input
               id={`w-${k}`}
@@ -72,7 +73,9 @@ export function WeightsForm({ weights }: { weights: Record<WheelCategory, number
           </li>
         ))}
       </ul>
-      <p className="text-[11.5px] leading-snug text-muted">Gewichten van 0 tot 100. Een categorie zonder actieve prijs met voorraad valt van het rad; de rest wordt dan naar verhouding groter.</p>
+      <p className={cn("text-[11.5px] leading-snug", total === 100 ? "text-muted" : "text-danger")}>
+        Totaal {Number.isFinite(total) ? total : "-"}%{total === 100 ? "" : ", hoort 100% te zijn"}. Een niveau zonder beschikbare prijs (uit, op, maximum per week of buiten budget) valt van het rad; de andere niveaus houden hun onderlinge verhouding.
+      </p>
       <Message error={error} saved={saved} />
       <Button type="submit" size="sm" loading={pending}>
         Kansen opslaan
@@ -96,7 +99,10 @@ export interface PrizeFormValue {
   needs_code: boolean;
   stock: number;
   weekly_max: string;
+  weight: number;
   cost: string;
+  sponsored: string;
+  shipping: string;
   active: boolean;
 }
 
@@ -126,7 +132,7 @@ export function PrizeForm({ value, pathPrefix }: { value: PrizeFormValue; pathPr
           <select name="category" defaultValue={value.category} className={input}>
             {PRIZE_CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {CATEGORY_META[c].label}
+                {CATEGORY_META[c].label} ({CATEGORY_META[c].band})
               </option>
             ))}
           </select>
@@ -144,7 +150,7 @@ export function PrizeForm({ value, pathPrefix }: { value: PrizeFormValue; pathPr
           <textarea name="description" defaultValue={value.description} maxLength={600} rows={4} placeholder="Wie is het merk en wat krijg je precies?" className={cn(input, "h-auto py-2.5")} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12.5px] text-muted">Waarde (€)</span>
+          <span className="mb-1 block text-[12.5px] text-muted">Winkelwaarde (€)</span>
           <input name="value" inputMode="decimal" defaultValue={value.value} placeholder="Bijv. 25" className={input} />
         </label>
         <label className="block">
@@ -168,9 +174,23 @@ export function PrizeForm({ value, pathPrefix }: { value: PrizeFormValue; pathPr
           <input name="weekly_max" type="number" inputMode="numeric" min={1} defaultValue={value.weekly_max} placeholder="Geen" className={input} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12.5px] text-muted">Kosten (€)</span>
+          <span className="mb-1 block text-[12.5px] text-muted">Gewicht in niveau</span>
+          <input name="weight" type="number" inputMode="numeric" min={1} max={100} defaultValue={value.weight} className={input} />
+        </label>
+        <p className="col-span-2 -mt-1 text-[11.5px] leading-snug text-muted">Gewicht: hoe vaak dit product valt ten opzichte van de andere in hetzelfde niveau. 30 valt drie keer zo vaak als 10.</p>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Inkoopprijs (€)</span>
           <input name="cost" inputMode="decimal" defaultValue={value.cost} placeholder="0,00" className={input} />
         </label>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Gesponsord (€)</span>
+          <input name="sponsored" inputMode="decimal" defaultValue={value.sponsored} placeholder="0,00" className={input} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Verzendkosten (€)</span>
+          <input name="shipping" inputMode="decimal" defaultValue={value.shipping} placeholder="0,00" className={input} />
+        </label>
+        <p className="col-span-2 -mt-1 text-[11.5px] leading-snug text-muted">Kosten per uitgereikte prijs = inkoop + verzending - gesponsord. Dat telt mee voor het budget. Winkelwaarde, inkoop en kosten ziet alleen jij.</p>
       </div>
       <label className="flex items-center gap-3 text-[13.5px] text-text">
         <input type="checkbox" name="needs_code" defaultChecked={value.needs_code} className="h-5 w-5 accent-[#6e4034]" />
@@ -248,5 +268,48 @@ export function ClaimControls({ spinId, status, needsCode, code }: { spinId: str
       ) : null}
       <Message error={error} />
     </div>
+  );
+}
+
+/** Prize budget per week or month; empty means no budget limit. */
+export function BudgetForm({ budget, period }: { budget: string; period: "week" | "month" }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <form
+      className="space-y-3"
+      action={(fd) =>
+        start(async () => {
+          setError(null);
+          setSaved(null);
+          const res = await saveBudget(fd);
+          if (!res.ok) setError(res.error);
+          else {
+            setSaved("Budget opgeslagen.");
+            router.refresh();
+          }
+        })
+      }
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Budget (€)</span>
+          <input name="budget" inputMode="decimal" defaultValue={budget} placeholder="Geen limiet" className={input} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Per</span>
+          <select name="period" defaultValue={period} className={input}>
+            <option value="week">Week</option>
+            <option value="month">Maand</option>
+          </select>
+        </label>
+      </div>
+      <Message error={error} saved={saved} />
+      <Button type="submit" size="sm" loading={pending}>
+        Budget opslaan
+      </Button>
+    </form>
   );
 }

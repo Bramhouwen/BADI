@@ -1,24 +1,29 @@
 /**
- * Weekrad: categories, odds, the extra week challenges and timing. Pure
+ * Weekrad: prize levels, odds, budget, the extra week challenges and timing. Pure
  * helpers shared by the wheel, the prize cabinet, the admin and tests. The
  * outcome itself is decided in the database (spin_wheel, migration 0024).
  */
 import { addDays, type DateKey } from "./dates";
 
-export const WHEEL_CATEGORIES = ["food", "hydration", "sport", "voucher", "challenge"] as const;
+/**
+ * Prize levels. The public name is what the wheel shows; the band is the
+ * internal guide value, never shown to members.
+ */
+export const WHEEL_CATEGORIES = ["small", "medium", "large", "jackpot", "challenge"] as const;
 export type WheelCategory = (typeof WHEEL_CATEGORIES)[number];
 export type PrizeCategory = Exclude<WheelCategory, "challenge">;
 export const PRIZE_CATEGORIES = WHEEL_CATEGORIES.filter((c): c is PrizeCategory => c !== "challenge");
 
-export const CATEGORY_META: Record<WheelCategory, { label: string; short: string; color: string }> = {
-  food: { label: "Gezonde voeding & drankjes", short: "Voeding", color: "#8c9e7a" },
-  hydration: { label: "Waterflessen & hydratatie", short: "Hydratatie", color: "#7fa3bd" },
-  sport: { label: "Sport & lifestyle", short: "Sport", color: "#cf9a7c" },
-  voucher: { label: "Cadeaubonnen & ervaringen", short: "Cadeaubon", color: "#c9a565" },
-  challenge: { label: "Extra weekchallenge", short: "Challenge", color: "#6e4034" },
+export const CATEGORY_META: Record<WheelCategory, { label: string; lines: string[]; band: string; color: string; face: string }> = {
+  small: { label: "Kleine verrassing", lines: ["Kleine", "verrassing"], band: "Kleine prijs, € 2 tot € 5", color: "#8c9e7a", face: "#d5dcc8" },
+  medium: { label: "Healthy Boost", lines: ["Healthy", "Boost"], band: "Middelgrote prijs, € 5 tot € 10", color: "#7fa3bd", face: "#f8efe7" },
+  large: { label: "Lifestyle Prize", lines: ["Lifestyle", "Prize"], band: "Grote prijs, € 10 tot € 25", color: "#cf9a7c", face: "#ecd3c3" },
+  jackpot: { label: "Jackpot", lines: ["Jackpot"], band: "Hoofdprijs, € 25 of meer", color: "#c9a565", face: "#e2b656" },
+  challenge: { label: "Extra Challenge", lines: ["Extra", "Challenge"], band: "Geen fysieke prijs", color: "#6e4034", face: "#e6d6c3" },
 };
 
-export const DEFAULT_WEIGHTS: Record<WheelCategory, number> = { food: 40, hydration: 10, sport: 5, voucher: 10, challenge: 35 };
+/** Chance per level in percent, from the brief: 65% on a prize, 35% on a challenge. */
+export const DEFAULT_WEIGHTS: Record<WheelCategory, number> = { small: 35, medium: 20, large: 8, jackpot: 2, challenge: 35 };
 
 export interface PrizeLike {
   id: string;
@@ -26,25 +31,45 @@ export interface PrizeLike {
   active: boolean;
   stock: number;
   weekly_max: number | null;
+  /** Relative weight within the level. */
+  weight: number;
+  cost_cents: number;
+  sponsored_cents: number;
+  shipping_cents: number;
 }
 
-/** Same rule as wheel_available_prizes: active, in stock, under the weekly cap. */
-export function availablePrizes<P extends PrizeLike>(prizes: readonly P[], winsThisWeek: Record<string, number>): P[] {
-  return prizes.filter((p) => p.active && p.stock > 0 && (p.weekly_max === null || (winsThisWeek[p.id] ?? 0) < p.weekly_max));
+/** Expected cost per prize handed out: purchase price plus shipping, minus what a partner sponsors. */
+export function expectedCost(p: Pick<PrizeLike, "cost_cents" | "sponsored_cents" | "shipping_cents">): number {
+  return Math.max(0, p.cost_cents + p.shipping_cents - p.sponsored_cents);
+}
+
+export type Unavailable = "inactive" | "stock" | "weekly" | "budget";
+
+/** Why a prize cannot be won right now, or null when it can. Same rule as wheel_available_prizes. */
+export function unavailableReason(p: PrizeLike, winsThisWeek: Record<string, number>, budgetLeft: number | null): Unavailable | null {
+  if (!p.active) return "inactive";
+  if (p.stock <= 0) return "stock";
+  if (p.weekly_max !== null && (winsThisWeek[p.id] ?? 0) >= p.weekly_max) return "weekly";
+  if (budgetLeft !== null && expectedCost(p) > budgetLeft) return "budget";
+  return null;
+}
+
+export function availablePrizes<P extends PrizeLike>(prizes: readonly P[], winsThisWeek: Record<string, number>, budgetLeft: number | null = null): P[] {
+  return prizes.filter((p) => unavailableReason(p, winsThisWeek, budgetLeft) === null);
 }
 
 export interface Odds {
   category: WheelCategory;
   weight: number;
-  /** 0 to 1, over the categories that can be won right now. */
+  /** 0 to 1, over the levels that can be won right now. */
   chance: number;
 }
 
 /**
- * Chances as spin_wheel applies them: only categories with a weight and
- * something to win; the challenge is always available. Wheel order.
+ * Chances as spin_wheel applies them: only levels with a chance and an
+ * available prize; the challenge is always there. The others keep their ratio.
  */
-export function wheelOdds(weights: Partial<Record<WheelCategory, number>>, available: readonly PrizeLike[]): Odds[] {
+export function wheelOdds(weights: Partial<Record<WheelCategory, number>>, available: readonly Pick<PrizeLike, "category">[]): Odds[] {
   const has = new Set(available.map((p) => p.category));
   const live = WHEEL_CATEGORIES.map((category) => ({ category, weight: Math.max(0, weights[category] ?? DEFAULT_WEIGHTS[category]) })).filter(
     (c) => c.weight > 0 && (c.category === "challenge" || has.has(c.category)),
@@ -54,59 +79,62 @@ export function wheelOdds(weights: Partial<Record<WheelCategory, number>>, avail
   return live.map((c) => ({ ...c, chance: c.weight / total }));
 }
 
-/** "40%", "12,5%". */
+/** Chance per spin of each available prize: the level's chance times its share of the level's weight. */
+export function prizeChances(odds: readonly Odds[], available: readonly Pick<PrizeLike, "id" | "category" | "weight">[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const o of odds) {
+    if (o.category === "challenge") continue;
+    const inLevel = available.filter((p) => p.category === o.category);
+    const total = inLevel.reduce((a, p) => a + p.weight, 0);
+    for (const p of inLevel) out.set(p.id, total > 0 ? (o.chance * p.weight) / total : 0);
+  }
+  return out;
+}
+
+/** "40%", "12,5%", "0,8%". */
 export function formatChance(chance: number): string {
   const pct = Math.round(chance * 1000) / 10;
   return `${pct.toLocaleString("nl-NL", { maximumFractionDigits: 1 })}%`;
 }
 
-/** Icons drawn on the wheel (see components/wheel/category-icon). */
-export type SlotIcon = "drink" | "bar" | "bottle" | "shaker" | "shirt" | "gift" | "flame";
+/** The wheel colours, also used by the small wheel in the header. */
+export const SLOT_COLORS = ["#d5dcc8", "#f8efe7", "#ecd3c3"] as const;
 
 /**
- * The wheel face: equal slots, each showing a kind of prize. A category can
- * have more than one slot; the chance comes from the database, not from how
- * many slots there are. Order keeps the same category apart.
+ * Order of the slices around the wheel. Bigger levels get two slices so the
+ * wheel looks balanced; every slice is sized by the real chance, so the face
+ * never suggests better odds than there are.
  */
-export const WHEEL_SLOTS: { category: WheelCategory; label: string; icon: SlotIcon }[] = [
-  { category: "food", label: "Drankje", icon: "drink" },
-  { category: "sport", label: "Sportset", icon: "shirt" },
-  { category: "hydration", label: "Shaker", icon: "shaker" },
-  { category: "challenge", label: "Challenge", icon: "flame" },
-  { category: "voucher", label: "Cadeaubon", icon: "gift" },
-  { category: "food", label: "Proteïnereep", icon: "bar" },
-  { category: "hydration", label: "Bidon", icon: "bottle" },
-  { category: "challenge", label: "Challenge", icon: "flame" },
-];
-
-export const SLOT_COLORS = ["#d5dcc8", "#f8efe7", "#ecd3c3"] as const;
+const SLICE_ORDER: WheelCategory[] = ["small", "challenge", "medium", "large", "small", "challenge", "medium", "jackpot"];
 
 export interface Segment {
   category: WheelCategory;
   label: string;
-  icon: SlotIcon;
+  lines: string[];
   color: string;
   /** Degrees clockwise from the top. */
   start: number;
   end: number;
 }
 
-/** Equal slots for the categories that can be won now; neighbours never share a colour. */
-export function segments(odds: readonly Pick<Odds, "category">[]): Segment[] {
-  const live = new Set(odds.map((o) => o.category));
-  let slots = WHEEL_SLOTS.filter((s) => live.has(s.category));
-  if (slots.length === 0) slots = WHEEL_SLOTS.filter((s) => s.category === "challenge");
-  while (slots.length < 4) slots = [...slots, ...slots];
-  const n = slots.length;
-  const colors = slots.map((_, i) => i % 3);
-  // With a count that is not a multiple of three, the last slot would match the first.
-  if (n % 3 !== 0 && colors[n - 1] === colors[0]) colors[n - 1] = [0, 1, 2].find((c) => c !== colors[0] && c !== colors[n - 2])!;
-  return slots.map((s, i) => ({ ...s, color: SLOT_COLORS[colors[i]], start: (360 / n) * i, end: (360 / n) * (i + 1) }));
+export function segments(odds: readonly Pick<Odds, "category" | "chance">[]): Segment[] {
+  const chance = new Map(odds.map((o) => [o.category, o.chance]));
+  let order = SLICE_ORDER.filter((c) => chance.has(c));
+  if (order.length === 0) order = ["challenge", "challenge"];
+  while (order.length < 4) order = [...order, ...order];
+  const count = (c: WheelCategory) => order.filter((x) => x === c).length;
+  let at = 0;
+  return order.map((c) => {
+    const span = ((chance.get(c) ?? 1) / count(c)) * 360;
+    const seg = { category: c, label: CATEGORY_META[c].label, lines: CATEGORY_META[c].lines, color: CATEGORY_META[c].face, start: at, end: at + span };
+    at += span;
+    return seg;
+  });
 }
 
 /**
- * Wheel rotation that brings a slot of `category` under the pointer at the
- * top, after a few full turns from `current`. `r` (0 to 1) picks which slot
+ * Wheel rotation that brings a slice of `category` under the pointer at the
+ * top, after a few full turns from `current`. `r` (0 to 1) picks which slice
  * and the spot in it, kept away from the edges.
  */
 export function landingRotation(segs: readonly Segment[], category: WheelCategory, current: number, r: number, turns = 6): number {
@@ -119,6 +147,23 @@ export function landingRotation(segs: readonly Segment[], category: WheelCategor
   // The pointer is at 0 degrees: rotate the wheel back by the target angle.
   const base = Math.ceil(current / 360) * 360 + turns * 360;
   return base + ((360 - target) % 360);
+}
+
+/* --------------------------------------------------------------------------
+ * Budget
+ * ------------------------------------------------------------------------ */
+
+export type BudgetPeriod = "week" | "month";
+
+/** Warn when the budget left no longer covers every active prize in stock. */
+export function budgetWarning(budgetLeft: number | null, prizes: readonly PrizeLike[]): "empty" | "low" | null {
+  if (budgetLeft === null) return null;
+  const live = prizes.filter((p) => p.active && p.stock > 0);
+  if (live.length === 0) return null;
+  const costs = live.map(expectedCost);
+  if (budgetLeft < Math.min(...costs)) return "empty";
+  if (budgetLeft < Math.max(...costs)) return "low";
+  return null;
 }
 
 /* --------------------------------------------------------------------------

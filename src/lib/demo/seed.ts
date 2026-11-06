@@ -255,10 +255,10 @@ export function buildSeed(): Store {
 
   const wheel_categories: Row[] = (
     [
-      ["food", 40],
-      ["hydration", 10],
-      ["sport", 5],
-      ["voucher", 10],
+      ["small", 35],
+      ["medium", 20],
+      ["large", 8],
+      ["jackpot", 2],
       ["challenge", 35],
     ] as const
   ).map(([key, weight]) => ({ challenge_id: DEMO_CHALLENGE_ID, key, weight }));
@@ -268,32 +268,40 @@ export function buildSeed(): Store {
     category,
     brand,
     name,
+    weight: 10,
     description: null,
     value_cents: null,
     url: null,
     image_path: null,
     variant_label: null,
     variants: [],
-    needs_code: category === "voucher",
+    needs_code: false,
     stock: 5,
     weekly_max: null,
-    cost_cents: 1500,
+    cost_cents: 0,
+    sponsored_cents: 0,
+    shipping_cents: 0,
     active: true,
     created_at: iso(start),
     updated_at: iso(start),
     ...extra,
   });
+  const demo = (t: string) => `Demotekst: ${t}`;
   const prizes: Row[] = [
-    prize("food", "Frank & Charlie", "Drankje naar keuze", { variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], cost_cents: 350, description: "Demotekst: een fris drankje na je training. Je kiest zelf de smaak.", url: "https://example.com" }),
-    prize("food", "Oot Granola", "Ontbijtpakket", { description: "Demotekst: granola en muesli voor een week ontbijt, met havermout, noten en zaden.", value_cents: 2500, cost_cents: 2500, url: "https://example.com" }),
-    prize("hydration", "Cabau Lifestyle", "Bloom Waterfles", { variant_label: "Kleur", variants: ["Zand", "Salie"], cost_cents: 3500, value_cents: 3500, description: "Demotekst: een herbruikbare waterfles die je de hele dag meeneemt, zodat je je 2,5 liter makkelijker haalt.", url: "https://example.com" }),
-    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 2, cost_cents: 6000, value_cents: 6000, description: "Demotekst: een top en legging die bij elkaar horen. Je kiest je maat bij het claimen.", url: "https://example.com" }),
-    prize("voucher", "ELVOU", "Tegoedbon", { cost_cents: 2500, value_cents: 2500, description: "Demotekst: een tegoedbon om online te besteden. De code verschijnt in je prijzenkast zodra hij klaarstaat.", url: "https://example.com" }),
-    prize("sport", "Flowee", "Relaxpakket", { active: false, stock: 0 }),
+    prize("small", "Upfront", "Eiwitreep", { weight: 30, value_cents: 250, cost_cents: 200, description: demo("een losse eiwitreep voor na je training."), url: "https://example.com" }),
+    prize("small", "Frank & Charlie", "Drankje naar keuze", { weight: 20, variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], value_cents: 350, cost_cents: 300, description: demo("een fris drankje; je kiest zelf de smaak."), url: "https://example.com" }),
+    prize("medium", "Orangefit", "Fit Shaker", { weight: 20, value_cents: 900, cost_cents: 700, description: demo("een shaker voor je eiwitshake."), url: "https://example.com" }),
+    prize("medium", "Oot Granola", "Zak granola", { value_cents: 750, cost_cents: 600, description: demo("granola met havermout, noten en zaden."), url: "https://example.com" }),
+    prize("large", "Cabau Lifestyle", "Bloom Waterfles", { weight: 5, variant_label: "Kleur", variants: ["Zand", "Salie"], value_cents: 2400, cost_cents: 1800, shipping_cents: 495, description: demo("een herbruikbare waterfles voor je 2,5 liter per dag."), url: "https://example.com" }),
+    prize("large", "Flowee", "Ontspannend oogkussen", { value_cents: 1995, cost_cents: 1500, sponsored_cents: 1500, description: demo("een oogkussen voor een betere nachtrust."), url: "https://example.com" }),
+    prize("jackpot", "air up", "Waterfles", { weight: 5, variant_label: "Kleur", variants: ["Zwart", "Wit"], value_cents: 4500, cost_cents: 3500, description: demo("een waterfles met geurpods."), url: "https://example.com" }),
+    prize("jackpot", "Loavies", "Compleet sportpak", { weight: 2, variant_label: "Maat", variants: ["S", "M", "L"], stock: 2, value_cents: 6000, cost_cents: 5000, description: demo("een top en legging die bij elkaar horen."), url: "https://example.com" }),
+    prize("jackpot", "ELVOU", "Cadeaubon", { needs_code: true, value_cents: 2500, cost_cents: 2500, description: demo("een tegoedbon om online te besteden; de code komt in je prijzenkast."), url: "https://example.com" }),
+    prize("large", "Flowee", "Relaxpakket", { active: false, stock: 0 }),
   ];
   const wheel_spins: Row[] = [
-    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, week_start: d(11), category: "food", prize_id: prizes[1].id, prize_brand: "Oot Granola", prize_name: "Ontbijtpakket", challenge_key: null, challenge_completed_at: null, variant: null, status: "delivered", created_at: iso(d(11), 9), claimed_at: iso(d(11), 9), delivered_at: iso(d(8), 12) },
-    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, week_start: d(4), category: "challenge", prize_id: null, prize_brand: null, prize_name: null, challenge_key: "hydration", challenge_completed_at: null, variant: null, status: "challenge", created_at: iso(d(4), 8), claimed_at: null, delivered_at: null },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, week_start: d(11), category: "medium", prize_id: prizes[3].id, prize_brand: "Oot Granola", prize_name: "Zak granola", cost_cents: 600, challenge_key: null, challenge_completed_at: null, variant: null, status: "delivered", created_at: iso(d(11), 9), claimed_at: iso(d(11), 9), delivered_at: iso(d(8), 12) },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, week_start: d(4), category: "challenge", prize_id: null, prize_brand: null, prize_name: null, cost_cents: 0, challenge_key: "hydration", challenge_completed_at: null, variant: null, status: "challenge", created_at: iso(d(4), 8), claimed_at: null, delivered_at: null },
   ];
 
   return {
@@ -301,6 +309,7 @@ export function buildSeed(): Store {
     prizes,
     wheel_spins,
     wheel_codes: [],
+    wheel_settings: [{ challenge_id: DEMO_CHALLENGE_ID, budget_cents: 15000, budget_period: "month", updated_at: iso(start) }],
     profiles,
     water_entries,
     step_logs,

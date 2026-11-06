@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { X } from "lucide-react";
+import { Crown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { spinWheel, type SpinOutcome } from "@/app/actions/wheel";
 import { CATEGORY_META, landingRotation, segments as toSegments, type Odds } from "@/lib/wheel";
 import { WheelGraphic } from "./wheel-graphic";
@@ -16,6 +17,8 @@ import { Confetti } from "./confetti";
 import { Countdown } from "./countdown";
 
 type Phase = "idle" | "spinning" | "revealed";
+
+const GOLD_CONFETTI = ["#f3d488", "#e2b656", "#d9a63c", "#fbf3ec", "#b8832a"];
 
 /** `unlimited`: demo only, the wheel can be spun again after every reveal. */
 export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow }: { odds: Odds[]; canSpin: boolean; unlimited?: boolean; nextAt: string; serverNow: number }) {
@@ -60,6 +63,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
   }
 
   const prize = outcome && outcome.category !== "challenge";
+  const jackpot = outcome?.category === "jackpot";
 
   return (
     <div className="flex flex-col items-center">
@@ -107,17 +111,25 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
             maandag 00:00
           </p>
         ) : (
-          <p className="text-[13px] text-muted">{unlimited ? "Demo: onbeperkt draaien." : "1 draaibeurt deze week. Vervalt zondag 23:59."}</p>
+          <div className="space-y-2.5">
+            <button type="button" onClick={spin} className="espresso h-[52px] rounded-full px-8 text-[15px] font-semibold tracking-wide transition-transform active:scale-[0.98]">
+              DRAAI HET RAD
+            </button>
+            <p className="text-[12.5px] text-muted">{unlimited ? "Demo: onbeperkt draaien." : "1 draaibeurt deze week. Vervalt zondag 23:59."}</p>
+          </div>
         )}
       </div>
 
       <AnimatePresence>
         {phase === "revealed" && outcome ? (
           <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-labelledby="wheel-reveal-title">
-            {prize ? <Confetti /> : null}
+            {prize ? <Confetti pieces={jackpot ? 140 : 70} colors={jackpot ? GOLD_CONFETTI : undefined} /> : null}
             <motion.div className="absolute inset-0 bg-ink/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close} />
             <motion.div
-              className="relative z-[55] m-3 w-full max-w-md rounded-[28px] bg-[#fbf7f2] p-5 pb-[calc(20px+var(--sab))] shadow-2xl"
+              className={cn(
+                "relative z-[55] m-3 w-full max-w-md rounded-[28px] p-5 pb-[calc(20px+var(--sab))] shadow-2xl",
+                jackpot ? "jackpot-card bg-[linear-gradient(160deg,#5f3529,#3b2a24)] text-[#fbf3ec] ring-2 ring-[#e2b656]" : "bg-[#fbf7f2]",
+              )}
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.94 }}
               animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0 }}
@@ -128,7 +140,17 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
               </button>
               {prize ? (
                 <div className="space-y-4 text-center">
-                  <div className="relative mx-auto mt-2 flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden rounded-[24px]" style={{ background: CATEGORY_META[outcome.category].color }}>
+                  {jackpot ? (
+                    <p className="mt-1 flex items-center justify-center gap-2 font-display text-[30px] italic leading-none text-[#f3d488]">
+                      <Crown className="h-7 w-7" strokeWidth={1.6} aria-hidden /> Jackpot
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-muted">{CATEGORY_META[outcome.category].label}</p>
+                  )}
+                  <div
+                    className={cn("relative mx-auto flex aspect-square w-full max-w-[220px] items-center justify-center overflow-hidden rounded-[24px]", jackpot && "jackpot-glow ring-4 ring-[#e2b656]")}
+                    style={{ background: CATEGORY_META[outcome.category].color }}
+                  >
                     {outcome.image ? (
                       <Image src={outcome.image} alt={`${outcome.brand} ${outcome.name}`} width={440} height={440} className="h-full w-full object-cover" unoptimized />
                     ) : (
@@ -136,15 +158,17 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                     )}
                   </div>
                   <div>
-                    <h2 id="wheel-reveal-title" className="font-display text-[26px] leading-tight text-text">
+                    <h2 id="wheel-reveal-title" className={cn("font-display text-[26px] leading-tight", jackpot ? "text-[#fbf3ec]" : "text-text")}>
                       YES! Jij hebt gewonnen! 🎉
                     </h2>
-                    <p className="mt-2 text-[12px] font-medium uppercase tracking-[0.16em] text-muted">{outcome.brand}</p>
-                    <p className="text-[18px] font-semibold text-text">{outcome.name}</p>
+                    <p className={cn("mt-2 text-[12px] font-medium uppercase tracking-[0.16em]", jackpot ? "text-[#f3d488]" : "text-muted")}>{outcome.brand}</p>
+                    <p className={cn("text-[18px] font-semibold", jackpot ? "text-[#fbf3ec]" : "text-text")}>{outcome.name}</p>
                   </div>
-                  <PrizeInfo category={outcome.category} valueCents={outcome.valueCents} description={outcome.description} url={outcome.url} center />
+                  <div className={cn(jackpot && "rounded-[18px] bg-[#fbf7f2] p-3 text-text")}>
+                    <PrizeInfo category={outcome.category} valueCents={outcome.valueCents} description={outcome.description} url={outcome.url} center />
+                  </div>
                   <ClaimForm spinId={outcome.spinId} variantLabel={outcome.variantLabel} variants={outcome.variants} />
-                  <Link href="/wheel/prizes" className="block text-[13px] text-muted underline-offset-2 hover:underline">
+                  <Link href="/wheel/prizes" className={cn("block text-[13px] underline-offset-2 hover:underline", jackpot ? "text-[#f3d488]" : "text-muted")}>
                     Naar mijn prijzenkast
                   </Link>
                 </div>

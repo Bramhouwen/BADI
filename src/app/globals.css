@@ -254,3 +254,22 @@ main:has(.chat-thread) {
   animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1);
   animation-fill-mode: forwards;
 }
+
+/* Weekrad jackpot: a slow gold glow around the prize */
+@keyframes jackpot-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(226, 182, 86, 0.55), 0 0 28px 4px rgba(226, 182, 86, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(226, 182, 86, 0.15), 0 0 46px 12px rgba(226, 182, 86, 0.5);
+  }
+}
+.jackpot-glow {
+  animation: jackpot-glow 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jackpot-glow {
+    animation: none;
+  }
+}

@@ -15,7 +15,7 @@ export function PrizeInfo({ category, valueCents, description, url, center = fal
     <div className={cn("space-y-2", center && "text-center")}>
       {valueCents ? (
         <p className={cn("w-fit rounded-full bg-gold/30 px-3 py-1 text-[12.5px] font-semibold text-ink", center && "mx-auto")}>
-          {category === "voucher" ? "Tegoed" : "Waarde"} {formatEuro(valueCents)}
+          {category === "challenge" ? "" : "Waarde"} {formatEuro(valueCents)}
         </p>
       ) : null}
       {description ? <p className="whitespace-pre-line text-[13.5px] leading-snug text-text/80">{description}</p> : null}

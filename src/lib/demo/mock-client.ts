@@ -7,7 +7,7 @@ import { buildSeed, demoId, type Row, type Store } from "./seed";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
 import { personalRecords, weekStartOf, type RecordSession } from "@/lib/checkin-plan";
 import { todayKey } from "@/lib/dates";
-import { availablePrizes, wheelOdds, WHEEL_CHALLENGES, type PrizeLike, type WheelCategory } from "@/lib/wheel";
+import { availablePrizes, expectedCost, wheelOdds, WHEEL_CHALLENGES, type PrizeLike, type WheelCategory } from "@/lib/wheel";
 
 type Result = { data: unknown; error: { message: string } | null; count: number | null };
 
@@ -326,6 +326,10 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
       return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
     }
+    case "wheel_available_ids":
+      return Promise.resolve(ok(demoAvailable(s).map((p) => p.id)));
+    case "wheel_budget_status":
+      return Promise.resolve(ok(demoBudgetLeft(s)));
     case "spin_wheel":
       return Promise.resolve(spinWheelTwin(s));
     case "claim_prize": {
@@ -351,13 +355,28 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
   }
 }
 
-/** Twin of the SQL function spin_wheel: weighted category, then a random available prize. */
+/** Twin of wheel_budget_left: budget minus the cost of spins this week or month, or null. */
+function demoBudgetLeft(s: ReturnType<typeof store>): number | null {
+  const cfg = s.wheel_settings.find((w) => w.challenge_id === DEMO_CHALLENGE_ID);
+  if (!cfg || cfg.budget_cents == null) return null;
+  const today = todayKey();
+  const from = cfg.budget_period === "week" ? weekStartOf(today) : `${today.slice(0, 7)}-01`;
+  const spent = s.wheel_spins.filter((x) => todayKey(new Date(String(x.created_at))) >= from).reduce((a, x) => a + Number(x.cost_cents ?? 0), 0);
+  return Number(cfg.budget_cents) - spent;
+}
+
+function demoAvailable(s: ReturnType<typeof store>) {
+  const week = weekStartOf(todayKey());
+  const wins: Record<string, number> = {};
+  for (const x of s.wheel_spins) if (x.week_start === week && x.prize_id) wins[String(x.prize_id)] = (wins[String(x.prize_id)] ?? 0) + 1;
+  return availablePrizes(s.prizes as unknown as (PrizeLike & Row)[], wins, demoBudgetLeft(s));
+}
+
+/** Twin of the SQL function spin_wheel: a level by its chance, then a prize by product weight. */
 function spinWheelTwin(s: ReturnType<typeof store>): Result {
   const week = weekStartOf(todayKey());
   // Demo: unlimited spins, to walk through every outcome. The real function allows one per week.
-  const wins: Record<string, number> = {};
-  for (const x of s.wheel_spins) if (x.week_start === week && x.prize_id) wins[String(x.prize_id)] = (wins[String(x.prize_id)] ?? 0) + 1;
-  const available = availablePrizes(s.prizes as unknown as (PrizeLike & Row)[], wins);
+  const available = demoAvailable(s);
   const weights = Object.fromEntries(s.wheel_categories.map((c) => [c.key, c.weight])) as Record<WheelCategory, number>;
   const odds = wheelOdds(weights, available);
   let pick = Math.random();
@@ -372,12 +391,14 @@ function spinWheelTwin(s: ReturnType<typeof store>): Result {
   const base = { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: DEMO_USER_ID, week_start: week, created_at: new Date().toISOString(), claimed_at: null, delivered_at: null, challenge_completed_at: null, variant: null };
   let row: Row;
   if (category === "challenge") {
-    row = { ...base, category, prize_id: null, prize_brand: null, prize_name: null, challenge_key: WHEEL_CHALLENGES[Math.floor(Math.random() * WHEEL_CHALLENGES.length)], status: "challenge" };
+    row = { ...base, category, prize_id: null, prize_brand: null, prize_name: null, cost_cents: 0, challenge_key: WHEEL_CHALLENGES[Math.floor(Math.random() * WHEEL_CHALLENGES.length)], status: "challenge" };
   } else {
     const pool = available.filter((p) => p.category === category);
-    const prize = pool[Math.floor(Math.random() * pool.length)];
+    const total = pool.reduce((a, p) => a + p.weight, 0);
+    let r = Math.random() * total;
+    const prize = pool.find((p) => (r -= p.weight) < 0) ?? pool[pool.length - 1];
     prize.stock = Number(prize.stock) - 1;
-    row = { ...base, category, prize_id: prize.id, prize_brand: prize.brand, prize_name: prize.name, challenge_key: null, status: "won" };
+    row = { ...base, category, prize_id: prize.id, prize_brand: prize.brand, prize_name: prize.name, cost_cents: expectedCost(prize), challenge_key: null, status: "won" };
   }
   s.wheel_spins.push(row);
   return { data: row, error: null, count: null };

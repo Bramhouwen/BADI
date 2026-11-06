@@ -32,9 +32,12 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         stock: prize.stock,
         weekly_max: prize.weekly_max === null ? "" : String(prize.weekly_max),
         cost: prize.cost_cents ? (prize.cost_cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2 }) : "",
+        sponsored: prize.sponsored_cents ? (prize.sponsored_cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2 }) : "",
+        shipping: prize.shipping_cents ? (prize.shipping_cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2 }) : "",
+        weight: prize.weight,
         active: prize.active,
       }
-    : { id: "", category: "food", brand: "", name: "", description: "", value: "", url: "", image_path: null, image_url: null, variant_label: "", variants: "", needs_code: false, stock: 1, weekly_max: "", cost: "", active: true };
+    : { id: "", category: "small", brand: "", name: "", description: "", value: "", url: "", image_path: null, image_url: null, variant_label: "", variants: "", needs_code: false, stock: 1, weekly_max: "", weight: 10, cost: "", sponsored: "", shipping: "", active: true };
   return (
     <Page>
       <PageTitle title={prize ? `${prize.brand}: ${prize.name}` : "Nieuwe prijs"} back="/wheel/admin#prijzen" />

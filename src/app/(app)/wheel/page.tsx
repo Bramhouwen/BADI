@@ -44,7 +44,7 @@ async function Content() {
         <h1 className="font-display text-[40px] leading-[1.02] text-ink">
           Draai het <span className="italic text-[#7f9670]">Weekrad</span>
         </h1>
-        <p className="mx-auto mt-3 w-fit rounded-full bg-white/80 px-4 py-2 text-[13.5px] font-medium text-text shadow-sm">Elke week één kans op een prijs</p>
+        <p className="mx-auto mt-3 w-fit rounded-full bg-white/80 px-4 py-2 text-[13.5px] font-medium text-text shadow-sm">Jouw wekelijkse kans op iets leuks! 🎁</p>
       </header>
 
       <SpinWheel odds={state.odds} canSpin={!spin || isDemo()} unlimited={isDemo()} nextAt={nextAt} serverNow={state.now} />
@@ -82,6 +82,9 @@ async function Content() {
             );
           })}
         </ul>
+        <Link href="/wheel/voorwaarden" className="mt-2 block px-1 text-[12.5px] text-muted underline underline-offset-2">
+          Spelregels en winstkansen
+        </Link>
       </section>
     </Page>
   );

@@ -2,10 +2,17 @@
 -- 0024: Weekrad (weekly spin wheel), prizes and the prize cabinet
 --
 -- Every member gets one spin per calendar week (Monday 00:00 Europe/Amsterdam
--- to Sunday). The outcome is decided in spin_wheel(): first a category by the
--- weights the admin sets, then a random available prize in it. Stock is
--- reserved in the same transaction, so two spins can never take the last one.
--- The "challenge" category always has something: an extra week challenge.
+-- to Sunday). The outcome is decided in spin_wheel(): first a prize level
+-- (small, medium, large, jackpot or an extra challenge) by the chances the
+-- admin sets, then a prize in that level by the weight of each product. Stock
+-- and budget are checked and reserved in the same transaction, so two spins
+-- can never take the last one. The challenge level always has something.
+--
+-- A prize is available when it is active, in stock, under its weekly cap and
+-- its expected cost fits the remaining budget. A level without an available
+-- prize drops off the wheel and the other levels keep their ratio: that is
+-- the published rule, also when stock or budget runs out.
+--
 --
 -- Prizes are handed over in person, so no address is stored. Gift card codes
 -- live in their own table, readable only by the winner and the admin.
@@ -24,9 +31,11 @@ as $$
   );
 $$;
 
+-- Prize levels. Public names: Kleine verrassing, Healthy Boost, Lifestyle
+-- Prize, Jackpot, Extra Challenge. weight = chance in percent.
 create table public.wheel_categories (
   challenge_id uuid not null references public.challenges (id) on delete cascade,
-  key text not null check (key in ('food', 'hydration', 'sport', 'voucher', 'challenge')),
+  key text not null check (key in ('small', 'medium', 'large', 'jackpot', 'challenge')),
   weight int not null check (weight between 0 and 100),
   primary key (challenge_id, key)
 );
@@ -34,18 +43,20 @@ create table public.wheel_categories (
 insert into public.wheel_categories (challenge_id, key, weight)
 select c.id, d.key, d.weight
 from public.challenges c
-cross join (values ('food', 40), ('hydration', 10), ('sport', 5), ('voucher', 10), ('challenge', 35)) as d(key, weight)
+cross join (values ('small', 35), ('medium', 20), ('large', 8), ('jackpot', 2), ('challenge', 35)) as d(key, weight)
 on conflict do nothing;
 
 create table public.prizes (
   id uuid primary key default gen_random_uuid(),
   challenge_id uuid not null references public.challenges (id) on delete cascade,
-  category text not null check (category in ('food', 'hydration', 'sport', 'voucher')),
+  category text not null check (category in ('small', 'medium', 'large', 'jackpot')),
+  -- How often this product comes up within its level, relative to the others.
+  weight int not null default 10 check (weight between 1 and 100),
   brand text not null check (char_length(brand) between 1 and 60),
   name text not null check (char_length(name) between 1 and 80),
   -- Short introduction of the brand and product for the winner.
   description text check (description is null or char_length(description) <= 600),
-  -- What it is worth, e.g. the amount on a gift card; shown to the winner.
+  -- Shop value, e.g. the amount on a gift card; shown to the winner.
   value_cents int check (value_cents is null or value_cents >= 0),
   url text check (url is null or url ~* '^https?://'),
   image_path text,
@@ -56,7 +67,11 @@ create table public.prizes (
   needs_code boolean not null default false,
   stock int not null default 0 check (stock >= 0),
   weekly_max int check (weekly_max is null or weekly_max >= 1),
+  -- Internal: purchase price for Badi, value a partner sponsors, shipping.
+  -- Expected cost per prize handed out = cost + shipping - sponsored, at least 0.
   cost_cents int not null default 0 check (cost_cents >= 0),
+  sponsored_cents int not null default 0 check (sponsored_cents >= 0),
+  shipping_cents int not null default 0 check (shipping_cents >= 0),
   active boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -69,11 +84,13 @@ create table public.wheel_spins (
   challenge_id uuid not null references public.challenges (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
   week_start date not null,
-  category text not null check (category in ('food', 'hydration', 'sport', 'voucher', 'challenge')),
+  category text not null check (category in ('small', 'medium', 'large', 'jackpot', 'challenge')),
   prize_id uuid references public.prizes (id) on delete set null,
   -- Snapshot, so the cabinet still reads right if the prize is edited later.
   prize_brand text,
   prize_name text,
+  -- Expected cost at the moment of winning, for the budget.
+  cost_cents int not null default 0,
   challenge_key text check (challenge_key is null or challenge_key in ('hydration', 'movement', 'sleep', 'food', 'buddy')),
   challenge_completed_at timestamptz,
   variant text check (variant is null or char_length(variant) <= 40),
@@ -88,6 +105,14 @@ create table public.wheel_spins (
 
 create index wheel_spins_challenge_idx on public.wheel_spins (challenge_id, week_start);
 
+-- Prize budget per week or month. No row or no amount: no budget limit.
+create table public.wheel_settings (
+  challenge_id uuid primary key references public.challenges (id) on delete cascade,
+  budget_cents int check (budget_cents is null or budget_cents >= 0),
+  budget_period text not null default 'month' check (budget_period in ('week', 'month')),
+  updated_at timestamptz not null default now()
+);
+
 create table public.wheel_codes (
   spin_id uuid primary key references public.wheel_spins (id) on delete cascade,
   code text not null check (char_length(code) between 1 and 120),
@@ -98,6 +123,10 @@ alter table public.wheel_categories enable row level security;
 alter table public.prizes enable row level security;
 alter table public.wheel_spins enable row level security;
 alter table public.wheel_codes enable row level security;
+alter table public.wheel_settings enable row level security;
+
+create policy "wheel settings: admin" on public.wheel_settings
+  for all to authenticated using (public.is_admin(challenge_id)) with check (public.is_admin(challenge_id));
 
 create policy "wheel categories: members read" on public.wheel_categories
   for select to authenticated using (public.is_member(challenge_id));
@@ -142,7 +171,53 @@ as $$
   select date_trunc('week', (now() at time zone coalesce((select timezone from public.challenges where id = p_challenge), 'Europe/Amsterdam')))::date;
 $$;
 
--- Prizes that can still be won this week: active, in stock, under the weekly cap.
+-- Budget left in the current week or month, or null without a budget.
+create or replace function public.wheel_budget_left(p_challenge uuid)
+returns int
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with cfg as (
+    select w.budget_cents, w.budget_period, coalesce(c.timezone, 'Europe/Amsterdam') as tz
+    from public.challenges c
+    left join public.wheel_settings w on w.challenge_id = c.id
+    where c.id = p_challenge
+  )
+  select case
+    when cfg.budget_cents is null then null
+    else cfg.budget_cents - coalesce((
+      select sum(s.cost_cents)::int
+      from public.wheel_spins s
+      where s.challenge_id = p_challenge
+        and (s.created_at at time zone cfg.tz)::date >= case
+          when cfg.budget_period = 'week' then date_trunc('week', now() at time zone cfg.tz)::date
+          else date_trunc('month', now() at time zone cfg.tz)::date
+        end
+    ), 0)
+  end
+  from cfg;
+$$;
+
+revoke all on function public.wheel_budget_left(uuid) from public, anon, authenticated;
+
+-- The admin's view of the budget left; null for everyone else.
+create or replace function public.wheel_budget_status(p_challenge uuid)
+returns int
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case when public.is_admin(p_challenge) then public.wheel_budget_left(p_challenge) end;
+$$;
+
+revoke all on function public.wheel_budget_status(uuid) from public, anon;
+grant execute on function public.wheel_budget_status(uuid) to authenticated;
+
+-- Prizes that can be won right now: active, in stock, under the weekly cap,
+-- and within the remaining budget.
 create or replace function public.wheel_available_prizes(p_challenge uuid, p_week date)
 returns setof public.prizes
 language sql
@@ -158,10 +233,31 @@ as $$
     and (
       p.weekly_max is null
       or (select count(*) from public.wheel_spins s where s.prize_id = p.id and s.week_start = p_week) < p.weekly_max
+    )
+    and (
+      public.wheel_budget_left(p_challenge) is null
+      or greatest(0, p.cost_cents + p.shipping_cents - p.sponsored_cents) <= public.wheel_budget_left(p_challenge)
     );
 $$;
 
-revoke all on function public.wheel_available_prizes(uuid, date) from public, anon;
+revoke all on function public.wheel_available_prizes(uuid, date) from public, anon, authenticated;
+
+-- Which prizes can be won now, for the wheel and "Te winnen". Ids only, so
+-- members see what is available without seeing the budget.
+create or replace function public.wheel_available_ids(p_challenge uuid)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select a.id
+  from public.wheel_available_prizes(p_challenge, public.wheel_week_start(p_challenge)) a
+  where public.is_member(p_challenge);
+$$;
+
+revoke all on function public.wheel_available_ids(uuid) from public, anon;
+grant execute on function public.wheel_available_ids(uuid) to authenticated;
 
 -- The spin. Returns the new spin row. Errors: NOT_MEMBER, ALREADY_SPUN.
 create or replace function public.spin_wheel(p_challenge uuid)
@@ -196,10 +292,10 @@ begin
 
   insert into public.wheel_categories (challenge_id, key, weight)
   select p_challenge, d.key, d.weight
-  from (values ('food', 40), ('hydration', 10), ('sport', 5), ('voucher', 10), ('challenge', 35)) as d(key, weight)
+  from (values ('small', 35), ('medium', 20), ('large', 8), ('jackpot', 2), ('challenge', 35)) as d(key, weight)
   on conflict do nothing;
 
-  -- Step 1: a category, weighted, among those that have something to win.
+  -- Step 1: a level, by its chance, among those that have something to win.
   select coalesce(sum(c.weight), 0) into v_total
   from public.wheel_categories c
   where c.challenge_id = p_challenge and c.weight > 0
@@ -214,7 +310,7 @@ begin
       from public.wheel_categories c
       where c.challenge_id = p_challenge and c.weight > 0
         and (c.key = 'challenge' or exists (select 1 from public.wheel_available_prizes(p_challenge, v_week) a where a.category = c.key))
-      order by array_position(array['food', 'hydration', 'sport', 'voucher', 'challenge'], c.key)
+      order by array_position(array['small', 'medium', 'large', 'jackpot', 'challenge'], c.key)
     loop
       if v_pick < v_row.weight then
         v_category := v_row.key;
@@ -224,17 +320,18 @@ begin
     end loop;
   end if;
 
-  -- Step 2: one prize in that category, or a challenge.
+  -- Step 2: one prize in that level by product weight, or a challenge.
   if v_category = 'challenge' then
     v_challenge := (array['hydration', 'movement', 'sleep', 'food', 'buddy'])[1 + floor(random() * 5)::int];
     insert into public.wheel_spins (challenge_id, user_id, week_start, category, challenge_key, status)
     values (p_challenge, v_user, v_week, 'challenge', v_challenge, 'challenge')
     returning * into v_spin;
   else
+    -- Weighted random pick: the smallest -ln(u) / weight wins.
     select * into v_prize
     from public.wheel_available_prizes(p_challenge, v_week) a
     where a.category = v_category
-    order by random()
+    order by -ln(1 - random()) / a.weight
     limit 1;
 
     update public.prizes set stock = stock - 1, updated_at = now()
@@ -243,8 +340,9 @@ begin
       raise exception 'OUT_OF_STOCK';
     end if;
 
-    insert into public.wheel_spins (challenge_id, user_id, week_start, category, prize_id, prize_brand, prize_name, status)
-    values (p_challenge, v_user, v_week, v_category, v_prize.id, v_prize.brand, v_prize.name, 'won')
+    insert into public.wheel_spins (challenge_id, user_id, week_start, category, prize_id, prize_brand, prize_name, cost_cents, status)
+    values (p_challenge, v_user, v_week, v_category, v_prize.id, v_prize.brand, v_prize.name,
+            greatest(0, v_prize.cost_cents + v_prize.shipping_cents - v_prize.sponsored_cents), 'won')
     returning * into v_spin;
   end if;
 
@@ -323,25 +421,32 @@ create policy "prize media: admin delete" on storage.objects
     bucket_id = 'prizes' and public.is_admin(((storage.foldername(name))[1])::uuid)
   );
 
--- Example prizes from the brief: inactive and without stock until the admin
--- has arranged them, so nothing can be won that is not really there.
-insert into public.prizes (challenge_id, category, brand, name, variant_label, variants)
-select c.id, d.category, d.brand, d.name, d.variant_label, d.variants
+-- Starting prize pool from the brief, by level and with a weight: inactive and
+-- without stock until the admin has arranged them, so nothing can be won that
+-- is not really there.
+insert into public.prizes (challenge_id, category, brand, name, weight, variant_label, value_cents, needs_code)
+select c.id, d.category, d.brand, d.name, d.weight, d.variant_label, d.value_cents, d.needs_code
 from public.challenges c
 cross join (values
-  ('food', 'Frank & Charlie', 'Drankje naar keuze', 'Smaak', '{}'::text[]),
-  ('food', 'Upfront', 'Eiwitreep of snackbox', null, '{}'::text[]),
-  ('food', 'Orangefit', 'Proteïnepakket', null, '{}'::text[]),
-  ('food', 'Oot Granola', 'Ontbijtpakket', null, '{}'::text[]),
-  ('hydration', 'Cabau Lifestyle', 'Bloom Waterfles', 'Kleur', '{}'::text[]),
-  ('hydration', 'Cabau Lifestyle', 'Shaker', null, '{}'::text[]),
-  ('hydration', 'air up', 'Waterfles', 'Kleur', '{}'::text[]),
-  ('hydration', 'Orangefit', 'Fit Shaker', null, '{}'::text[]),
-  ('sport', 'Loavies', 'Compleet sportpak', 'Maat', '{}'::text[]),
-  ('sport', 'Flowee', 'Ontspannend oogkussen', null, '{}'::text[]),
-  ('sport', 'Flowee', 'Relaxpakket', null, '{}'::text[]),
-  ('voucher', 'ELVOU', 'Tegoedbon', null, '{}'::text[]),
-  ('voucher', 'Cabau Lifestyle', 'Cadeaubon', null, '{}'::text[])
-) as d(category, brand, name, variant_label, variants);
-
-update public.prizes set needs_code = true where category = 'voucher';
+  ('small', 'Upfront', 'Eiwitreep', 30, null, null::int, false),
+  ('small', 'Upfront', 'Meat Jerky', 20, null, null, false),
+  ('small', 'Upfront', 'Hazelnootpasta', 20, null, null, false),
+  ('small', 'Frank & Charlie', 'Drankje naar keuze', 20, 'Smaak', null, false),
+  ('small', 'Partner', 'Gezonde snack', 10, null, null, false),
+  ('medium', 'Oot Granola', 'Zak granola', 10, null, null, false),
+  ('medium', 'Upfront', 'Pindakaas', 10, null, null, false),
+  ('medium', 'Orangefit', 'Fit Shaker', 20, null, null, false),
+  ('medium', 'Orangefit', 'Sportsokken', 10, 'Maat', null, false),
+  ('medium', 'Cabau Lifestyle', 'Shaker', 10, null, null, false),
+  ('large', 'Oot Granola', 'Starter Pack', 10, null, null, false),
+  ('large', 'Cabau Lifestyle', 'Bloom Waterfles', 5, 'Kleur', null, false),
+  ('large', 'Flowee', 'Ontspannend oogkussen', 10, null, null, false),
+  ('large', 'Upfront', 'Mixdoos eiwitrepen', 10, null, null, false),
+  ('large', 'Partner', 'Gezond lifestylepakket', 10, null, null, false),
+  ('jackpot', 'air up', 'Waterfles', 5, 'Kleur', null, false),
+  ('jackpot', 'Loavies', 'Compleet sportpak', 2, 'Maat', null, false),
+  ('jackpot', 'ELVOU', 'Cadeaubon', 10, null, 2500, true),
+  ('jackpot', 'Orangefit', 'Proteïnepakket', 10, null, null, false),
+  ('jackpot', 'Flowee', 'Relaxpakket', 10, null, null, false),
+  ('jackpot', 'Cabau Lifestyle', 'Premium pakket', 10, null, null, false)
+) as d(category, brand, name, weight, variant_label, value_cents, needs_code);

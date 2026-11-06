@@ -9,7 +9,6 @@ import { firstName } from "@/lib/utils";
 import {
   DEFAULT_WEIGHTS,
   WHEEL_CATEGORIES,
-  availablePrizes,
   challengeProgress,
   wheelOdds,
   type ChallengeProgress,
@@ -35,7 +34,10 @@ export interface PrizeRow {
   needs_code: boolean;
   stock: number;
   weekly_max: number | null;
+  weight: number;
   cost_cents: number;
+  sponsored_cents: number;
+  shipping_cents: number;
   active: boolean;
 }
 
@@ -47,6 +49,7 @@ export interface SpinRow {
   prize_id: string | null;
   prize_brand: string | null;
   prize_name: string | null;
+  cost_cents: number;
   challenge_key: WheelChallengeKey | null;
   challenge_completed_at: string | null;
   variant: string | null;
@@ -56,7 +59,7 @@ export interface SpinRow {
   delivered_at: string | null;
 }
 
-export const SPIN_COLUMNS = "id, user_id, week_start, category, prize_id, prize_brand, prize_name, challenge_key, challenge_completed_at, variant, status, created_at, claimed_at, delivered_at";
+export const SPIN_COLUMNS = "id, user_id, week_start, category, prize_id, prize_brand, prize_name, cost_cents, challenge_key, challenge_completed_at, variant, status, created_at, claimed_at, delivered_at";
 
 export async function loadWeights(challengeId: string): Promise<Record<WheelCategory, number>> {
   const supabase = await createClient();
@@ -87,7 +90,7 @@ export interface WheelState {
   now: number;
   odds: Odds[];
   mySpin: SpinRow | null;
-  /** Available prizes per category, for "wat kun je winnen". */
+  /** Available prizes per level, for "Te winnen". */
   pool: Record<PrizeCategory, { brand: string; name: string }[]>;
 }
 
@@ -95,16 +98,17 @@ export async function loadWheelState(ctx: AppContext): Promise<WheelState> {
   const supabase = await createClient();
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const weekStart = weekStartOf(today);
-  const [weights, prizes, { data: weekSpins }] = await Promise.all([
+  const [weights, prizes, { data: weekSpins }, { data: availableIds }] = await Promise.all([
     loadWeights(ctx.challenge.id),
     loadPrizes(ctx.challenge.id),
     supabase.from("wheel_spins").select(SPIN_COLUMNS).eq("challenge_id", ctx.challenge.id).eq("week_start", weekStart),
+    // The database decides (stock, weekly cap and budget); members never see the budget itself.
+    supabase.rpc("wheel_available_ids", { p_challenge: ctx.challenge.id }),
   ]);
   const spins = (weekSpins ?? []) as SpinRow[];
-  const wins: Record<string, number> = {};
-  for (const s of spins) if (s.prize_id) wins[s.prize_id] = (wins[s.prize_id] ?? 0) + 1;
-  const available = availablePrizes(prizes, wins);
-  const pool = { food: [], hydration: [], sport: [], voucher: [] } as WheelState["pool"];
+  const ids = new Set(((availableIds ?? []) as (string | { wheel_available_ids: string })[]).map((r) => (typeof r === "string" ? r : r.wheel_available_ids)));
+  const available = prizes.filter((p) => ids.has(p.id));
+  const pool = { small: [], medium: [], large: [], jackpot: [] } as WheelState["pool"];
   for (const p of available) pool[p.category].push({ brand: p.brand, name: p.name });
   return { weekStart, today, now: Date.now(), odds: wheelOdds(weights, available), mySpin: spins.filter((s) => s.user_id === ctx.userId).at(-1) ?? null, pool };
 }

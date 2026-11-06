@@ -56,7 +56,10 @@ export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
     // Shared with the squad right away, as a message from Baddy in the group chat.
     const who = firstName(ctx.profile.display_name);
     const worth = valueCents ? ` (t.w.v. ${formatEuro(valueCents)})` : "";
-    const body = `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
+    const body =
+      spin.category === "jackpot"
+        ? `👑 JACKPOT! ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`
+        : `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
     after(async () => {
       await supabase.from("squad_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions: [], is_coach: true });
       await sendPush(supabase, "chat", { title: "Weekrad", body, url: "/squad/chat", tag: "squad-chat" }, { exclude: [ctx.userId] });
@@ -143,6 +146,21 @@ const prizeSchema = z.object({
     // "12,50", "1.234,50" or "12.50".
     .transform((v) => (v === "" ? 0 : Math.round(Number(v.includes(",") ? v.replace(/\./g, "").replace(",", ".") : v) * 100)))
     .refine((v) => Number.isFinite(v) && v >= 0 && v <= 10_000_000, "Kosten in euro, bijvoorbeeld 12,50."),
+  sponsored: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((v) => (v === "" ? 0 : Math.round(Number(v.includes(",") ? v.replace(/\./g, "").replace(",", ".") : v) * 100)))
+    .refine((v) => Number.isFinite(v) && v >= 0 && v <= 10_000_000, "Gesponsord in euro, bijvoorbeeld 5 of 4,50."),
+  shipping: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((v) => (v === "" ? 0 : Math.round(Number(v.includes(",") ? v.replace(/\./g, "").replace(",", ".") : v) * 100)))
+    .refine((v) => Number.isFinite(v) && v >= 0 && v <= 10_000_000, "Verzendkosten in euro, bijvoorbeeld 4,95."),
+  weight: z.coerce.number().int("Gewicht: een heel getal.").min(1, "Gewicht: minimaal 1.").max(100, "Gewicht: maximaal 100."),
   active: z.string().optional(),
 });
 
@@ -176,6 +194,9 @@ export async function savePrize(formData: FormData): Promise<ActionResult<{ id: 
     stock: d.stock,
     weekly_max: d.weekly_max,
     cost_cents: d.cost,
+    sponsored_cents: d.sponsored,
+    shipping_cents: d.shipping,
+    weight: d.weight,
     active: d.active === "on",
     updated_at: new Date().toISOString(),
   };
@@ -211,7 +232,7 @@ export async function saveWeights(formData: FormData): Promise<ActionResult> {
   }
   const rows = WHEEL_CATEGORIES.map((key) => ({ key, weight: Number(formData.get(key)) }));
   const bad = rows.find((r) => !Number.isInteger(r.weight) || r.weight < 0 || r.weight > 100);
-  if (bad) return { ok: false, error: `${CATEGORY_META[bad.key].short}: een heel getal van 0 tot 100.` };
+  if (bad) return { ok: false, error: `${CATEGORY_META[bad.key].label}: een heel getal van 0 tot 100.` };
   if (rows.every((r) => r.weight === 0)) return { ok: false, error: "Minstens één categorie moet een kans hebben." };
   const supabase = await createClient();
   for (const r of rows) {
@@ -261,3 +282,23 @@ export async function setGiftCode(spinId: string, code: string): Promise<ActionR
   return { ok: true };
 }
 
+
+export async function saveBudget(formData: FormData): Promise<ActionResult> {
+  let ctx;
+  try {
+    ctx = await requireAdmin();
+  } catch {
+    return { ok: false, error: "Alleen de beheerder kan het budget instellen." };
+  }
+  const raw = String(formData.get("budget") ?? "").trim();
+  const period = formData.get("period") === "week" ? "week" : "month";
+  const cents = raw === "" ? null : Math.round(Number(raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw) * 100);
+  if (cents !== null && (!Number.isFinite(cents) || cents < 0 || cents > 100_000_000)) return { ok: false, error: "Budget in euro, bijvoorbeeld 150, of leeg voor geen budget." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("wheel_settings")
+    .upsert({ challenge_id: ctx.challenge.id, budget_cents: cents, budget_period: period, updated_at: new Date().toISOString() }, { onConflict: "challenge_id" });
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidateWheel();
+  return { ok: true };
+}
