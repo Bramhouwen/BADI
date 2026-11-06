@@ -2,11 +2,14 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
+import { firstName } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
 import { friendlyError } from "@/lib/errors";
 import { isOwnedMediaPath, signedUrl } from "@/lib/storage";
-import { CATEGORY_META, CHALLENGE_META, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
+import { CATEGORY_META, CHALLENGE_META, formatEuro, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
 import type { ActionResult } from "@/lib/types";
 
 export interface SpinOutcome {
@@ -50,6 +53,14 @@ export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
     url = (prize?.url as string | null) ?? null;
     variants = (prize?.variants as string[] | null) ?? [];
     variantLabel = variants.length ? ((prize?.variant_label as string | null) ?? "Keuze") : null;
+    // Shared with the squad right away, as a message from Baddy in the group chat.
+    const who = firstName(ctx.profile.display_name);
+    const worth = valueCents ? ` (t.w.v. ${formatEuro(valueCents)})` : "";
+    const body = `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
+    after(async () => {
+      await supabase.from("squad_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions: [], is_coach: true });
+      await sendPush(supabase, "chat", { title: "Weekrad", body, url: "/squad/chat", tag: "squad-chat" }, { exclude: [ctx.userId] });
+    });
     image = prize?.image_path ? await signedUrl("prizes", prize.image_path as string) : null;
   }
   // No revalidate here: the page would show the result before the wheel stops.

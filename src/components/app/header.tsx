@@ -5,7 +5,9 @@ import { Activity, Bell } from "lucide-react";
 import { getContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
-import { challengeDay, challengeLengthDays, challengePhase } from "@/lib/dates";
+import { challengeDay, challengeLengthDays, challengePhase, todayKey } from "@/lib/dates";
+import { weekStartOf } from "@/lib/checkin-plan";
+import { MiniWheel } from "@/components/wheel/mini-wheel";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isDemo } from "@/lib/demo";
@@ -14,10 +16,14 @@ async function HeaderStatus() {
   const ctx = await getContext();
   if (!ctx) return null;
   const supabase = await createClient();
-  const [{ count }, avatar] = await Promise.all([
+  const weekStart = weekStartOf(todayKey(new Date(), ctx.challenge.timezone));
+  const [{ count }, avatar, spins] = await Promise.all([
     supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).is("read_at", null),
     signedUrl("avatars", ctx.profile.avatar_path),
+    supabase.from("wheel_spins").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).eq("week_start", weekStart),
   ]);
+  // Without the Weekrad tables (migration 0024) the count fails: then no badge.
+  const spinsLeft = spins.error ? 0 : Math.max(0, 1 - (spins.count ?? 0));
   const phase = challengePhase(ctx.challenge);
   const day = challengeDay(ctx.challenge);
   const total = challengeLengthDays(ctx.challenge);
@@ -26,6 +32,20 @@ async function HeaderStatus() {
   return (
     <div className="flex items-center gap-2">
       {phase === "during" ? <span className="sr-only">Dag {day} van {total}</span> : null}
+      {phase === "during" ? (
+        <Link
+          href="/wheel"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm hover:bg-blush"
+          aria-label={spinsLeft > 0 ? `Weekrad: nog ${spinsLeft} draaibeurt deze week` : "Weekrad"}
+        >
+          <MiniWheel className="h-[22px] w-[22px]" />
+          {spinsLeft > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10.5px] font-bold leading-none text-white ring-2 ring-[#f6ece4]" aria-hidden>
+              {spinsLeft}
+            </span>
+          ) : null}
+        </Link>
+      ) : null}
       <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="Mijn performance">
         <Activity className="h-[18px] w-[18px]" strokeWidth={1.7} />
       </Link>
