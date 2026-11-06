@@ -170,76 +170,52 @@ export function budgetWarning(budgetLeft: number | null, prizes: readonly PrizeL
  * Extra week challenges
  * ------------------------------------------------------------------------ */
 
-export const WHEEL_CHALLENGES = ["hydration", "movement", "sleep", "food", "buddy"] as const;
+export const WHEEL_CHALLENGES = ["energizer", "buddy", "recipe", "lunch", "relax"] as const;
 export type WheelChallengeKey = (typeof WHEEL_CHALLENGES)[number];
 
-export const CHALLENGE_META: Record<WheelChallengeKey, { title: string; rule: string }> = {
-  hydration: { title: "Hydration Challenge", rule: "Haal elke dag tot en met zondag je waterdoel van 2,5 liter." },
-  movement: { title: "7 Days of Movement", rule: "Beweeg elke dag tot en met zondag: een training of 10.000 stappen." },
-  sleep: { title: "Sleep Reset Challenge", rule: "Vink elke dag tot en met zondag 7 tot 9 uur slaap af in je check-in." },
-  food: { title: "Healthy Food Challenge", rule: "Vink elke dag tot en met zondag whole foods én genoeg eiwit af." },
-  buddy: { title: "Badi Buddy Challenge", rule: "Stuur deze week iedereen in de squad een compliment." },
+/**
+ * The extra week challenges. "auto" ones the app checks itself; for "manual"
+ * ones the member taps Gedaan in the prize cabinet.
+ */
+export const CHALLENGE_META: Record<WheelChallengeKey, { title: string; rule: string; mode: "auto" | "manual" }> = {
+  energizer: { title: "Energizer", rule: "Doe deze week een korte workout van 5 minuten: planken, squats of burpees.", mode: "manual" },
+  buddy: { title: "Badi Buddy Challenge", rule: "Stuur deze week iedereen in de squad een compliment.", mode: "auto" },
+  recipe: { title: "Recept delen", rule: "Zet deze week een recept in de Kitchen: een eigen recept of eentje van internet.", mode: "auto" },
+  lunch: { title: "Squad Lunch", rule: "Maak deze week een gezamenlijke lunch voor de rest van de squad.", mode: "manual" },
+  relax: { title: "Me Time", rule: "Pak deze week een ontspanningsmoment: een bad, een massage, of een film met een healthy snack.", mode: "manual" },
 };
 
 export type DayState = "done" | "missed" | "open";
 
 export interface ChallengeProgress {
-  /** Per day from the spin to Sunday, or per squad member for the buddy challenge. */
+  /** One step per squad member for the buddy challenge, otherwise a single step. */
   steps: { key: string; label: string; state: DayState }[];
   done: number;
   total: number;
   complete: boolean;
-  /** A day passed without it: the challenge can no longer be completed. */
+  /** The week is over without it: the challenge can no longer be completed. */
   failed: boolean;
 }
 
 export interface ChallengeData {
-  water: Record<DateKey, number>;
-  checkins: Record<DateKey, readonly string[]>;
-  steps: Record<DateKey, number>;
-  workoutDates: ReadonlySet<DateKey>;
   /** Squad members (not yourself) and whether you sent them a compliment this week. */
   buddies: { id: string; name: string; sent: boolean }[];
+  /** Recipes you added this week. */
+  recipes: number;
+  /** When you tapped Gedaan (manual challenges), or null. */
+  completedAt: string | null;
 }
 
-const DAY_LABELS = ["ma", "di", "wo", "do", "vr", "za", "zo"];
-
-/** Days from the spin day up to and including Sunday of that week. */
-export function challengeDays(weekStart: DateKey, spinDate: DateKey): DateKey[] {
-  const out: DateKey[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStart, i);
-    if (d >= spinDate) out.push(d);
-  }
-  return out.length ? out : [addDays(weekStart, 6)];
-}
-
-export function challengeProgress(key: WheelChallengeKey, weekStart: DateKey, spinDate: DateKey, today: DateKey, data: ChallengeData): ChallengeProgress {
-  if (key === "buddy") {
-    const steps = data.buddies.map((b) => ({ key: b.id, label: b.name, state: (b.sent ? "done" : today > addDays(weekStart, 6) ? "missed" : "open") as DayState }));
-    const done = steps.filter((s) => s.state === "done").length;
-    const total = steps.length;
-    return { steps, done, total, complete: total > 0 && done === total, failed: steps.some((s) => s.state === "missed") };
-  }
-  const met = (d: DateKey): boolean => {
-    const acts = data.checkins[d] ?? [];
-    switch (key) {
-      case "hydration":
-        return (data.water[d] ?? 0) >= 2500;
-      case "movement":
-        return data.workoutDates.has(d) || (data.steps[d] ?? 0) >= 10_000 || acts.includes("run") || acts.includes("strength") || acts.includes("moved");
-      case "sleep":
-        return acts.includes("recovery");
-      case "food":
-        return acts.includes("nutrition") && acts.includes("protein");
-    }
-  };
-  const steps = challengeDays(weekStart, spinDate).map((d) => {
-    const idx = (new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7;
-    return { key: d, label: DAY_LABELS[idx], state: (met(d) ? "done" : d < today ? "missed" : "open") as DayState };
-  });
+export function challengeProgress(key: WheelChallengeKey, weekStart: DateKey, today: DateKey, data: ChallengeData): ChallengeProgress {
+  const over = today > addDays(weekStart, 6);
+  const state = (ok: boolean): DayState => (ok ? "done" : over ? "missed" : "open");
+  let steps: ChallengeProgress["steps"];
+  if (key === "buddy") steps = data.buddies.map((b) => ({ key: b.id, label: b.name, state: state(b.sent) }));
+  else if (key === "recipe") steps = [{ key: "recipe", label: "Recept", state: state(data.recipes > 0) }];
+  else steps = [{ key, label: "Gedaan", state: state(Boolean(data.completedAt)) }];
   const done = steps.filter((s) => s.state === "done").length;
-  return { steps, done, total: steps.length, complete: done === steps.length, failed: steps.some((s) => s.state === "missed") };
+  const total = steps.length;
+  return { steps, done, total, complete: total > 0 && done === total, failed: steps.some((s) => s.state === "missed") };
 }
 
 /* --------------------------------------------------------------------------

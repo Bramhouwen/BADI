@@ -7,6 +7,8 @@ import { sendPush } from "@/lib/push";
 import { firstName } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { requireContext } from "@/lib/data";
+import { todayKey } from "@/lib/dates";
+import { weekStartOf } from "@/lib/checkin-plan";
 import { friendlyError } from "@/lib/errors";
 import { isOwnedMediaPath, signedUrl } from "@/lib/storage";
 import { CATEGORY_META, CHALLENGE_META, formatEuro, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
@@ -23,7 +25,7 @@ export interface SpinOutcome {
   image: string | null;
   variantLabel: string | null;
   variants: string[];
-  challenge: { key: WheelChallengeKey; title: string; rule: string } | null;
+  challenge: { key: WheelChallengeKey; title: string; rule: string; mode: "auto" | "manual" } | null;
 }
 
 function revalidateWheel() {
@@ -298,6 +300,21 @@ export async function saveBudget(formData: FormData): Promise<ActionResult> {
   const { error } = await supabase
     .from("wheel_settings")
     .upsert({ challenge_id: ctx.challenge.id, budget_cents: cents, budget_period: period, updated_at: new Date().toISOString() }, { onConflict: "challenge_id" });
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidateWheel();
+  return { ok: true };
+}
+
+/** Marks a manual extra challenge (energizer, lunch, relax) as done, in the week it was spun. */
+export async function completeChallenge(spinId: string): Promise<ActionResult> {
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data: spin } = await supabase.from("wheel_spins").select("id, user_id, week_start, challenge_key, challenge_completed_at").eq("id", spinId).eq("user_id", ctx.userId).maybeSingle();
+  if (!spin || !spin.challenge_key) return { ok: false, error: "Deze challenge bestaat niet." };
+  if (CHALLENGE_META[spin.challenge_key as WheelChallengeKey]?.mode !== "manual") return { ok: false, error: "Deze challenge houdt de app zelf bij." };
+  const today = todayKey(new Date(), ctx.challenge.timezone);
+  if (weekStartOf(today) !== spin.week_start) return { ok: false, error: "Deze week is voorbij." };
+  const { error } = await supabase.rpc("complete_wheel_challenge", { p_spin: spinId });
   if (error) return { ok: false, error: friendlyError(error) };
   revalidateWheel();
   return { ok: true };

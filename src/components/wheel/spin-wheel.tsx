@@ -184,6 +184,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                     <p className="mt-2 text-[18px] font-semibold text-text">{outcome.challenge.title}</p>
                     <p className="mt-1.5 text-[13.5px] leading-snug text-muted">{outcome.challenge.rule}</p>
                     <p className="mt-2 text-[13px] font-medium text-ink">Voltooid: +5 bonuspunten deze week.</p>
+                    {outcome.challenge.mode === "manual" ? <p className="mt-1 text-[12.5px] text-muted">Tik in je prijzenkast op Gedaan zodra het gelukt is.</p> : <p className="mt-1 text-[12.5px] text-muted">De app houdt zelf bij of het gelukt is.</p>}
                   </div>
                   <Link href="/wheel/prizes" className="espresso flex h-[52px] w-full items-center justify-center rounded-full text-[15px] font-semibold">
                     Bekijk mijn challenge

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   availablePrizes,
   budgetWarning,
-  challengeDays,
   challengeProgress,
   countdownLabel,
   expectedCost,
@@ -117,32 +116,26 @@ describe("wheel face", () => {
 });
 
 describe("week challenges", () => {
-  const empty: ChallengeData = { water: {}, checkins: {}, steps: {}, workoutDates: new Set(), buddies: [] };
-
-  it("runs from the spin day to Sunday", () => {
-    expect(challengeDays("2026-11-02", "2026-11-06")).toEqual(["2026-11-06", "2026-11-07", "2026-11-08"]);
-  });
-
-  it("tracks daily goals and marks missed days", () => {
-    const data = { ...empty, water: { "2026-11-06": 2600, "2026-11-07": 1200 } };
-    const p = challengeProgress("hydration", "2026-11-02", "2026-11-06", "2026-11-08", data);
-    expect(p.steps.map((s) => s.state)).toEqual(["done", "missed", "open"]);
-    expect(p).toMatchObject({ done: 1, total: 3, complete: false, failed: true });
-  });
-
-  it("completes food when both habits are ticked every day", () => {
-    const data = { ...empty, checkins: { "2026-11-07": ["nutrition", "protein"], "2026-11-08": ["nutrition", "protein", "hydration"] } };
-    expect(challengeProgress("food", "2026-11-02", "2026-11-07", "2026-11-08", data).complete).toBe(true);
-  });
-
-  it("counts movement from a workout, 10.000 steps or a ticked training", () => {
-    const data = { ...empty, workoutDates: new Set(["2026-11-06"]), steps: { "2026-11-07": 10_500 }, checkins: { "2026-11-08": ["moved"] } };
-    expect(challengeProgress("movement", "2026-11-02", "2026-11-06", "2026-11-08", data).complete).toBe(true);
-  });
+  const empty: ChallengeData = { buddies: [], recipes: 0, completedAt: null };
 
   it("needs a compliment for every squad member for the buddy challenge", () => {
     const data = { ...empty, buddies: [{ id: "a", name: "Sam", sent: true }, { id: "b", name: "Noor", sent: false }] };
-    expect(challengeProgress("buddy", "2026-11-02", "2026-11-04", "2026-11-05", data)).toMatchObject({ done: 1, total: 2, complete: false, failed: false });
+    expect(challengeProgress("buddy", "2026-11-02", "2026-11-05", data)).toMatchObject({ done: 1, total: 2, complete: false, failed: false });
+    // After Sunday an open step is missed.
+    expect(challengeProgress("buddy", "2026-11-02", "2026-11-09", data)).toMatchObject({ complete: false, failed: true });
+  });
+
+  it("completes the recipe challenge with a recipe this week", () => {
+    expect(challengeProgress("recipe", "2026-11-02", "2026-11-05", empty).complete).toBe(false);
+    expect(challengeProgress("recipe", "2026-11-02", "2026-11-05", { ...empty, recipes: 1 }).complete).toBe(true);
+  });
+
+  it("completes a manual challenge once it is marked done", () => {
+    for (const key of ["energizer", "lunch", "relax"] as const) {
+      expect(challengeProgress(key, "2026-11-02", "2026-11-05", empty)).toMatchObject({ complete: false, failed: false });
+      expect(challengeProgress(key, "2026-11-02", "2026-11-05", { ...empty, completedAt: "2026-11-04T18:00:00Z" }).complete).toBe(true);
+      expect(challengeProgress(key, "2026-11-02", "2026-11-10", empty).failed).toBe(true);
+    }
   });
 });
 

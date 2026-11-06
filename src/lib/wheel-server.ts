@@ -123,31 +123,21 @@ export async function myChallengeProgress(ctx: AppContext, spin: SpinRow): Promi
   const weekStart = spin.week_start;
   const weekEnd = addDays(weekStart, 6);
   const today = todayKey(new Date(), ctx.challenge.timezone);
-  const spinDate = todayKey(new Date(spin.created_at), ctx.challenge.timezone);
-  const [{ data: water }, { data: checkins }, { data: steps }, { data: workouts }, { data: compliments }, squad] = await Promise.all([
-    supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", ctx.userId).gte("log_date", weekStart).lte("log_date", weekEnd),
-    supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id).gte("checkin_date", weekStart).lte("checkin_date", weekEnd),
-    supabase.from("step_logs").select("log_date, steps").eq("user_id", ctx.userId).gte("log_date", weekStart).lte("log_date", weekEnd),
-    supabase.from("workout_sessions").select("workout_date").eq("user_id", ctx.userId).eq("status", "completed").gte("workout_date", weekStart).lte("workout_date", weekEnd),
-    supabase.from("compliments").select("receiver_id, created_at").eq("sender_id", ctx.userId).gte("created_at", addDays(weekStart, -1)),
-    getSquad(ctx.challenge.id),
+  const key = spin.challenge_key;
+  const inWeek = (iso: string) => {
+    const d = todayKey(new Date(iso), ctx.challenge.timezone);
+    return d >= weekStart && d <= weekEnd;
+  };
+  const [{ data: compliments }, { data: recipes }, squad] = await Promise.all([
+    key === "buddy" ? supabase.from("compliments").select("receiver_id, created_at").eq("sender_id", ctx.userId).gte("created_at", addDays(weekStart, -1)) : Promise.resolve({ data: [] }),
+    key === "recipe" ? supabase.from("recipes").select("created_at").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id).gte("created_at", addDays(weekStart, -1)) : Promise.resolve({ data: [] }),
+    key === "buddy" ? getSquad(ctx.challenge.id) : Promise.resolve([]),
   ]);
-  const waterByDay: Record<string, number> = {};
-  for (const w of (water ?? []) as { log_date: string; amount_ml: number }[]) waterByDay[w.log_date] = (waterByDay[w.log_date] ?? 0) + w.amount_ml;
-  const sentTo = new Set(
-    ((compliments ?? []) as { receiver_id: string; created_at: string }[])
-      .filter((c) => {
-        const d = todayKey(new Date(c.created_at), ctx.challenge.timezone);
-        return d >= weekStart && d <= weekEnd;
-      })
-      .map((c) => c.receiver_id),
-  );
-  const progress = challengeProgress(spin.challenge_key, weekStart, spinDate, today, {
-    water: waterByDay,
-    checkins: Object.fromEntries(((checkins ?? []) as { checkin_date: string; activities: string[] }[]).map((c) => [c.checkin_date, c.activities])),
-    steps: Object.fromEntries(((steps ?? []) as { log_date: string; steps: number }[]).map((s) => [s.log_date, s.steps])),
-    workoutDates: new Set(((workouts ?? []) as { workout_date: string }[]).map((w) => w.workout_date)),
+  const sentTo = new Set(((compliments ?? []) as { receiver_id: string; created_at: string }[]).filter((c) => inWeek(c.created_at)).map((c) => c.receiver_id));
+  const progress = challengeProgress(key, weekStart, today, {
     buddies: squad.filter((m) => m.user_id !== ctx.userId).map((m) => ({ id: m.user_id, name: firstName(m.profile.display_name), sent: sentTo.has(m.user_id) })),
+    recipes: ((recipes ?? []) as { created_at: string }[]).filter((r) => inWeek(r.created_at)).length,
+    completedAt: spin.challenge_completed_at,
   });
   if (progress.complete && !spin.challenge_completed_at && spin.user_id === ctx.userId) {
     await supabase.rpc("complete_wheel_challenge", { p_spin: spin.id });

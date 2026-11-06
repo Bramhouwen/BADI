@@ -314,7 +314,7 @@ export function buildSeed(): Store {
   ];
   const wheel_spins: Row[] = [
     { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, week_start: d(11), category: "medium", prize_id: prizes[5].id, prize_brand: "Oot Granola", prize_name: "Cinnamon Bun granola", cost_cents: 690, challenge_key: null, challenge_completed_at: null, variant: null, status: "delivered", created_at: iso(d(11), 9), claimed_at: iso(d(11), 9), delivered_at: iso(d(8), 12) },
-    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, week_start: d(4), category: "challenge", prize_id: null, prize_brand: null, prize_name: null, cost_cents: 0, challenge_key: "hydration", challenge_completed_at: null, variant: null, status: "challenge", created_at: iso(d(4), 8), claimed_at: null, delivered_at: null },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, week_start: d(4), category: "challenge", prize_id: null, prize_brand: null, prize_name: null, cost_cents: 0, challenge_key: "relax", challenge_completed_at: null, variant: null, status: "challenge", created_at: iso(d(4), 8), claimed_at: null, delivered_at: null },
   ];
 
   return {

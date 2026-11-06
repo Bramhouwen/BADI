@@ -15,6 +15,7 @@ import { SectionTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryIcon } from "@/components/wheel/category-icon";
 import { ClaimForm } from "@/components/wheel/claim-form";
+import { ChallengeDoneButton } from "@/components/wheel/challenge-done";
 import { PrizeInfo } from "@/components/wheel/prize-info";
 
 export const metadata = { title: "Prijzenkast" };
@@ -40,7 +41,12 @@ function ProgressCard({ spin, progress, current }: { spin: SpinRow; progress: Ch
           {done ? "+5 bonus" : current && !progress?.failed ? "Bezig" : "Niet gehaald"}
         </span>
       </div>
-      {progress && current ? (
+      {current && !done && !progress?.failed && meta.mode === "manual" ? (
+        <div className="mt-3">
+          <ChallengeDoneButton spinId={spin.id} />
+        </div>
+      ) : null}
+      {progress && current && meta.mode === "auto" ? (
         <div className="mt-3">
           <ol className="flex flex-wrap gap-1.5" aria-label={`Voortgang: ${progress.done} van ${progress.total}`}>
             {progress.steps.map((s) => (
@@ -56,12 +62,10 @@ function ProgressCard({ spin, progress, current }: { spin: SpinRow; progress: Ch
               </li>
             ))}
           </ol>
-          <p className="mt-2 text-[12px] text-muted">
-            {progress.done} van {progress.total} {spin.challenge_key === "buddy" ? "complimenten" : "dagen"}
-            {done ? " · voltooid, +5 bonuspunten deze week 🎉" : ""}
-          </p>
+          {spin.challenge_key === "buddy" ? <p className="mt-2 text-[12px] text-muted">{progress.done} van {progress.total} complimenten</p> : null}
         </div>
       ) : null}
+      {done && current ? <p className="mt-2 text-[12px] text-muted">Voltooid: +5 bonuspunten deze week 🎉</p> : null}
     </li>
   );
 }

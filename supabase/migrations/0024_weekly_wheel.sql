@@ -91,7 +91,7 @@ create table public.wheel_spins (
   prize_name text,
   -- Expected cost at the moment of winning, for the budget.
   cost_cents int not null default 0,
-  challenge_key text check (challenge_key is null or challenge_key in ('hydration', 'movement', 'sleep', 'food', 'buddy')),
+  challenge_key text check (challenge_key is null or challenge_key in ('energizer', 'buddy', 'recipe', 'lunch', 'relax')),
   challenge_completed_at timestamptz,
   variant text check (variant is null or char_length(variant) <= 40),
   status text not null check (status in ('won', 'claimed', 'ordered', 'delivered', 'challenge')),
@@ -322,7 +322,7 @@ begin
 
   -- Step 2: one prize in that level by product weight, or a challenge.
   if v_category = 'challenge' then
-    v_challenge := (array['hydration', 'movement', 'sleep', 'food', 'buddy'])[1 + floor(random() * 5)::int];
+    v_challenge := (array['energizer', 'buddy', 'recipe', 'lunch', 'relax'])[1 + floor(random() * 5)::int];
     insert into public.wheel_spins (challenge_id, user_id, week_start, category, challenge_key, status)
     values (p_challenge, v_user, v_week, 'challenge', v_challenge, 'challenge')
     returning * into v_spin;
@@ -385,7 +385,8 @@ $$;
 revoke all on function public.claim_prize(uuid, text) from public, anon;
 grant execute on function public.claim_prize(uuid, text) to authenticated;
 
--- The winner marks an extra week challenge as completed (checked in the app).
+-- The winner marks an extra week challenge as completed: checked by the app
+-- (compliments, recipe) or tapped Gedaan (energizer, lunch, relax).
 create or replace function public.complete_wheel_challenge(p_spin uuid)
 returns void
 language sql
