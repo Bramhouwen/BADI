@@ -12,6 +12,7 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
 import { MemberAvatar } from "@/components/ui/member-avatar";
 import { stepsByDay, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { loadBonusItems } from "@/lib/bonus";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { PushPrompt } from "@/components/app/push-prompt";
 import { loadChatList, loadPeople } from "@/lib/chat-data";
@@ -28,13 +29,14 @@ async function Content() {
   const day = challengeDay(ctx.challenge, now);
 
   const weekStart = weekStartOf(today);
-  const [squad, people, { data: checkinRows }, { count: unreadCount }, { data: jokerRows }, { data: stepRows }] = await Promise.all([
+  const [squad, people, { data: checkinRows }, { count: unreadCount }, { data: jokerRows }, { data: stepRows }, bonusItems] = await Promise.all([
     getSquad(ctx.challenge.id),
     loadPeople(ctx),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
     supabase.from("step_logs").select("user_id, log_date, steps").eq("challenge_id", ctx.challenge.id).gte("log_date", weekStart),
+    loadBonusItems(ctx.challenge.id, weekStart, ctx.challenge.timezone),
   ]);
   const steps = (stepRows ?? []) as { user_id: string; log_date: string; steps: number }[];
   const chats = await loadChatList(ctx, people);
@@ -57,6 +59,7 @@ async function Content() {
         checkins.filter((c) => c.user_id === m.user_id && c.checkin_date >= weekStart),
         jokers.filter((j) => j.user_id === m.user_id).map((j) => j.exception_date),
         steps.filter((s) => s.user_id === m.user_id),
+        bonusItems.filter((b) => b.user_id === m.user_id),
       ),
     };
   });
@@ -67,7 +70,7 @@ async function Content() {
       return {
         id: m.id,
         streak: m.streak,
-        weekPoints: m.week.earned,
+        weekPoints: m.week.earned + m.week.bonus,
         weekSteps: Object.values(stepsByDay(weekStart, steps.filter((s) => s.user_id === m.id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
         totalDays: computeStreakStats(theirs.map((c) => c.checkin_date), today).total,
         checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,

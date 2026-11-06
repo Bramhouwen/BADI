@@ -110,3 +110,21 @@ describe("steps per week", () => {
     expect(Object.keys(days)).toHaveLength(7);
   });
 });
+
+describe("bonus points", () => {
+  it("gives 5 per kind once a week, on top of the ring", async () => {
+    const { weekBonus, weekScore } = await import("@/lib/checkin-plan");
+    const items = [
+      { kind: "wall" as const, date: "2026-11-03" },
+      { kind: "wall" as const, date: "2026-11-05" },
+      { kind: "recipe" as const, date: "2026-11-08" },
+      // Last week and next week do not count.
+      { kind: "recipe" as const, date: "2026-11-01" },
+      { kind: "wall" as const, date: "2026-11-09" },
+    ];
+    expect(weekBonus("2026-11-02", items)).toEqual({ kinds: ["wall", "recipe"], points: 10 });
+    expect(weekBonus("2026-11-02", items.slice(0, 2))).toEqual({ kinds: ["wall"], points: 5 });
+    const s = weekScore("2026-11-02", [], [], [], items);
+    expect(s).toEqual({ earned: 0, bonus: 10, total: 48, fraction: 0 });
+  });
+});

@@ -15,6 +15,7 @@ import {
 } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
 import { superBadi } from "@/lib/super-badi";
+import { loadBonusItems } from "@/lib/bonus";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
@@ -45,7 +46,7 @@ async function Content() {
   const day = challengeDay(ctx.challenge, now);
 
   const weekStart = weekStartOf(today);
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }, { data: weekJokerRows }, { data: weekStepRows }] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }, { data: weekJokerRows }, { data: weekStepRows }, bonusItems] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
@@ -55,6 +56,7 @@ async function Content() {
     supabase.from("alcohol_exceptions").select("id").eq("user_id", ctx.userId).eq("exception_date", today).maybeSingle(),
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
     supabase.from("step_logs").select("user_id, log_date, steps").eq("challenge_id", ctx.challenge.id).gte("log_date", weekStart),
+    loadBonusItems(ctx.challenge.id, weekStart, ctx.challenge.timezone),
   ]);
   const weekSteps = (weekStepRows ?? []) as { user_id: string; log_date: string; steps: number }[];
   const weekJokers = (weekJokerRows ?? []) as { user_id: string; exception_date: string }[];
@@ -80,6 +82,7 @@ async function Content() {
       theirs.filter((c) => c.checkin_date >= weekStart),
       weekJokers.filter((j) => j.user_id === m.user_id).map((j) => j.exception_date),
       weekSteps.filter((s) => s.user_id === m.user_id),
+      bonusItems.filter((b) => b.user_id === m.user_id),
     );
     return { ...m, stats, week, isMe: m.user_id === ctx.userId };
   });
@@ -108,14 +111,14 @@ async function Content() {
       return {
         id: m.user_id,
         streak: m.stats.current,
-        weekPoints: m.week.earned,
+        weekPoints: m.week.earned + m.week.bonus,
         weekSteps: Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === m.user_id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
         totalDays: m.stats.total,
         checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,
       };
     }),
   );
-  const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, total: 48 };
+  const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, bonus: 0, total: 48 };
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
 
@@ -141,7 +144,7 @@ async function Content() {
       {phase === "during" ? (
         <TodayCarousel label="Vandaag">
           <HeroCard checkedIn={Boolean(todayCheckin)} activities={dailyScore(todayCheckin?.activities ?? [], Boolean(jokerRow)).done} note={todayCheckin?.note ?? null} canEdit={canEditToday} />
-          <WeekSlide fraction={myWeek.fraction} earned={myWeek.earned} total={myWeek.total} streak={myStats.current} />
+          <WeekSlide fraction={myWeek.fraction} earned={myWeek.earned} bonus={myWeek.bonus} total={myWeek.total} streak={myStats.current} />
           <StepsSlide total={mySteps} goal={WEEKLY_STEPS_GOAL} points={stepPoints(mySteps)} maxPoints={WEEKLY_STEP_POINTS} />
           <WaterSlide total={waterTotal} goal={WATER_GOAL_ML} />
           <TrainingSlide run={thisTrainingWeek.run} strength={thisTrainingWeek.strength} runTarget={WEEKLY_TARGETS.run} strengthTarget={WEEKLY_TARGETS.strength} last={lastWorkout ? `${activityMeta(lastWorkout.activity_type).label}, ${formatDateNl(lastWorkout.workout_date, { weekday: "long", day: "numeric", month: "short" })}` : null} />

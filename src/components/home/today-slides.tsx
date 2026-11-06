@@ -72,7 +72,7 @@ function Eyebrow({ icon: Icon, children }: { icon: typeof Flame; children: React
 }
 
 /** Your week: score, points and streak; opens the performance dashboard. */
-export function WeekSlide({ fraction, earned, total, streak }: { fraction: number; earned: number; total: number; streak: number }) {
+export function WeekSlide({ fraction, earned, bonus = 0, total, streak }: { fraction: number; earned: number; bonus?: number; total: number; streak: number }) {
   return (
     <SlideShell href="/dashboard">
       <div>
@@ -88,7 +88,7 @@ export function WeekSlide({ fraction, earned, total, streak }: { fraction: numbe
         </div>
         <p className="mt-2 flex items-center justify-between gap-2">
           <span className="text-[12px] text-muted">
-            {earned} van {total} punten · streak {streak}
+            {earned} van {total} punten{bonus ? <span className="font-medium text-ink"> +{bonus} bonus</span> : null} · streak {streak}
           </span>
           <span className="flex items-center gap-0.5 text-[12px] font-medium text-ink">
             Performance <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />

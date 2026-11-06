@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, challengeDay, challengeLengthDays, challengePhase, formatDateNl, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
 import { WATER_GOAL_ML, MAX_ALCOHOL_EXCEPTIONS } from "@/lib/constants";
-import { DAILY_HABITS, WEEKLY_TARGETS, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { BONUS_KINDS, BONUS_LABELS, BONUS_POINTS, DAILY_HABITS, WEEKLY_TARGETS, weekBonus, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { loadBonusItems } from "@/lib/bonus";
 import { consistency, daysOnWaterGoal, delta, heatmap, pointsByDate, trainingWeeks, waterDays, weekDays, weekScoreSeries, type CheckinRow } from "@/lib/dashboard";
 import { formatDistance, formatDuration, formatKg, runningProgress, strengthRecords } from "@/lib/fitness";
 import { loadSessions, loadStrengthHistory } from "@/lib/fitness/data";
@@ -35,7 +36,7 @@ async function Content() {
   const start = weekStartOf(today);
   const lastWeekStart = addDays(start, -7);
 
-  const [{ data: checkinRows }, { data: jokerRows }, { data: waterRows }, sessions, strength, { data: habitRows }, { data: habitLogRows }, { data: stepRows }] = await Promise.all([
+  const [{ data: checkinRows }, { data: jokerRows }, { data: waterRows }, sessions, strength, { data: habitRows }, { data: habitLogRows }, { data: stepRows }, bonusItems] = await Promise.all([
     supabase.from("daily_checkins").select("checkin_date, activities").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
     supabase.from("alcohol_exceptions").select("exception_date").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
     supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", ctx.userId).gte("log_date", addDays(today, -13)),
@@ -44,6 +45,7 @@ async function Content() {
     supabase.from("custom_habits").select("id, name, emoji").eq("user_id", ctx.userId).order("sort_order"),
     supabase.from("custom_habit_logs").select("habit_id, log_date").eq("user_id", ctx.userId).gte("log_date", start),
     supabase.from("step_logs").select("log_date, steps").eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id),
+    loadBonusItems(ctx.challenge.id, lastWeekStart, ctx.challenge.timezone, ctx.userId),
   ]);
   const steps = (stepRows ?? []) as { log_date: string; steps: number }[];
 
@@ -51,12 +53,14 @@ async function Content() {
   const jokers = ((jokerRows ?? []) as { exception_date: string }[]).map((j) => j.exception_date);
   const points = pointsByDate(checkins, jokers);
   const streak = computeStreakStats(checkins.map((c) => c.checkin_date), today);
-  const thisWeek = weekScore(start, checkins.filter((c) => c.checkin_date >= start), jokers.filter((j) => j >= start), steps.filter((l) => l.log_date >= start));
+  const thisWeek = weekScore(start, checkins.filter((c) => c.checkin_date >= start), jokers.filter((j) => j >= start), steps.filter((l) => l.log_date >= start), bonusItems);
+  const bonusThisWeek = weekBonus(start, bonusItems).kinds;
   const prevWeek = weekScore(
     lastWeekStart,
     checkins.filter((c) => c.checkin_date >= lastWeekStart && c.checkin_date < start),
     jokers.filter((j) => j >= lastWeekStart && j < start),
     steps.filter((l) => l.log_date >= lastWeekStart && l.log_date < start),
+    bonusItems,
   );
   // Only Winter Arc weeks: a line through empty weeks before the start says nothing.
   const arcWeeks = Math.max(1, Math.min(8, Math.floor((Date.parse(start) - Date.parse(weekStartOf(ctx.challenge.start_date))) / (7 * 86400000)) + 1));
@@ -101,8 +105,20 @@ async function Content() {
           <span className="text-[22px] font-medium opacity-70">%</span>
         </p>
         <p className="mt-1.5 text-[12.5px] opacity-80">
-          {thisWeek.earned} van {thisWeek.total} punten · vorige week {Math.round(prevWeek.fraction * 100)}%
+          {thisWeek.earned} van {thisWeek.total} punten{thisWeek.bonus ? ` + ${thisWeek.bonus} bonus` : ""} · vorige week {Math.round(prevWeek.fraction * 100)}%
         </p>
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Bonus deze week">
+          {BONUS_KINDS.map((k) => {
+            const done = bonusThisWeek.includes(k);
+            return (
+              <li key={k} className={done ? "flex items-center gap-1 on-tile rounded-full bg-white/90 px-2.5 py-1 text-[11.5px] font-medium" : "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] opacity-75 ring-1 ring-white/30"}>
+                {done ? <Check className="h-3 w-3" strokeWidth={2.4} aria-hidden /> : null}
+                {BONUS_LABELS[k]} +{BONUS_POINTS}
+                <span className="sr-only">{done ? "(behaald)" : "(nog niet)"}</span>
+              </li>
+            );
+          })}
+        </ul>
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/15 pt-3.5 text-center">
           <div>
             <p className="font-sans text-[20px] font-semibold tabular-nums">{streak.current}</p>

@@ -16,6 +16,7 @@ import { MemberAvatar } from "@/components/ui/member-avatar";
 import { OnlineLine } from "@/components/ui/online-line";
 import { createClient } from "@/lib/supabase/server";
 import { WEEKLY_STEPS_GOAL, stepsByDay, weekScore } from "@/lib/checkin-plan";
+import { loadBonusItems } from "@/lib/bonus";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
@@ -56,7 +57,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const today = todayKey(new Date(), ctx.challenge.timezone);
   const weekStart = weekStartOf(today);
   const supabase = await createClient();
-  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }, { data: weekSteps }, { data: waterShared }, { data: waterRows }] = await Promise.all([
+  const [payload, minePayload, avatar, habits, { data: weekRows }, { data: weekJokers }, { data: weekSteps }, { data: waterShared }, { data: waterRows }, bonusItems] = await Promise.all([
     loadMemberStats(userId),
     isMe ? null : loadMemberStats(ctx.userId),
     signedUrl("avatars", member.profile.avatar_path),
@@ -68,6 +69,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
     isMe ? Promise.resolve({ data: true }) : supabase.rpc("shares_stat", { p_user: userId, p_key: "water" }),
     // RLS only returns water of members who share it.
     supabase.from("water_entries").select("log_date, amount_ml").eq("user_id", userId).gte("log_date", weekStart),
+    loadBonusItems(ctx.challenge.id, weekStart, ctx.challenge.timezone, userId),
   ]);
   if (!payload) notFound();
 
@@ -77,7 +79,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
   const status = activityStatus(stats, today);
   const showHabits = habits.shared && habits.habits.length > 0;
   const week = stats.checkin
-    ? weekScore(weekStart, (weekRows ?? []) as { checkin_date: string; activities: string[] }[], ((weekJokers ?? []) as { exception_date: string }[]).map((j) => j.exception_date), (weekSteps ?? []) as { log_date: string; steps: number }[])
+    ? weekScore(weekStart, (weekRows ?? []) as { checkin_date: string; activities: string[] }[], ((weekJokers ?? []) as { exception_date: string }[]).map((j) => j.exception_date), (weekSteps ?? []) as { log_date: string; steps: number }[], bonusItems)
     : null;
   // Steps are shared together with the check-ins.
   const weekStepsTotal = stats.checkin
@@ -123,7 +125,7 @@ async function Content({ params }: { params: Promise<{ userId: string }> }) {
             Lid sinds {formatDateNl(member.joined_at.slice(0, 10), { day: "numeric", month: "short" })}
           </p>
           <p className="mt-1 text-[12.5px] text-ink/80">{status ?? (isMe ? "Nog geen activiteit" : "Nog geen gedeelde activiteit")}</p>
-          <OnlineLine userId={userId} week={week ? `${week.earned} van ${week.total} weekpunten` : null} />
+          <OnlineLine userId={userId} week={week ? `${week.earned} van ${week.total} weekpunten${week.bonus ? ` + ${week.bonus} bonus` : ""}` : null} />
         </div>
       </section>
 

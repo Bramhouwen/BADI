@@ -106,8 +106,30 @@ export function stepPoints(total: number): number {
 /** Points available in one week: the daily habits on seven days, the steps goal and the run and strength targets. */
 export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_STEP_POINTS + WEEKLY_TARGETS.run + WEEKLY_TARGETS.strength;
 
+/**
+ * Bonus points on top of the week: something extra for the squad, such as a
+ * photo on the Wall or a shared recipe. Each kind counts once per week.
+ */
+export const BONUS_POINTS = 5;
+export const BONUS_KINDS = ["wall", "recipe"] as const;
+export type BonusKind = (typeof BONUS_KINDS)[number];
+export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld" };
+export interface BonusItem {
+  kind: BonusKind;
+  date: DateKey;
+}
+
+/** Bonus kinds earned in the week starting at `start`, each worth BONUS_POINTS once. */
+export function weekBonus(start: DateKey, items: readonly BonusItem[]): { kinds: BonusKind[]; points: number } {
+  const end = addDays(start, 6);
+  const kinds = BONUS_KINDS.filter((k) => items.some((i) => i.kind === k && i.date >= start && i.date <= end));
+  return { kinds, points: kinds.length * BONUS_POINTS };
+}
+
 export interface WeekScore {
   earned: number;
+  /** Bonus points on top of `earned`; not part of `total` or `fraction`. */
+  bonus: number;
   total: number;
   /** 0 to 1, for the ring around the profile photo. */
   fraction: number;
@@ -117,18 +139,19 @@ export interface WeekScore {
  * How far a member is this week: daily points done (a joker counts as no
  * alcohol), steps points over the week, plus run and strength sessions up to
  * the weekly target. Resets every Monday; the ring is full when everything for
- * the week is done.
+ * the week is done. Bonus points come on top and leave the ring alone.
  */
 export function weekScore(
   start: DateKey,
   checkins: { checkin_date: DateKey; activities: readonly string[] }[],
   jokers: DateKey[] = [],
   steps: { log_date: DateKey; steps: number }[] = [],
+  bonus: readonly BonusItem[] = [],
 ): WeekScore {
   const p = weekProgress(start, checkins, [], jokers);
   const habits = p.days.reduce((n, d) => n + d.habitsDone, 0);
   const training = TRAINING_KINDS.reduce((n, k) => n + Math.min(p.totals[k].done, WEEKLY_TARGETS[k]), 0);
   const walked = stepPoints(Object.values(stepsByDay(start, steps, checkins)).reduce((a, b) => a + b, 0));
   const earned = habits + walked + training;
-  return { earned, total: WEEK_POINTS, fraction: Math.min(1, earned / WEEK_POINTS) };
+  return { earned, bonus: weekBonus(start, bonus).points, total: WEEK_POINTS, fraction: Math.min(1, earned / WEEK_POINTS) };
 }
