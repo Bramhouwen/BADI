@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Crown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { spinWheel, type SpinOutcome } from "@/app/actions/wheel";
+import { respinWheel, spinWheel, type SpinOutcome } from "@/app/actions/wheel";
+import { DuplicateChoice } from "./duplicate-choice";
 import { CATEGORY_META, landingRotation, segments as toSegments, type Odds } from "@/lib/wheel";
 import { WheelGraphic } from "./wheel-graphic";
 import { CategoryIcon } from "./category-icon";
@@ -32,12 +33,13 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
   const [used, setUsed] = useState(!canSpin);
   const spinning = useRef(false);
 
-  async function spin() {
-    if (spinning.current || used) return;
+  /** `respinOf`: give back a duplicate prize and spin again. */
+  async function spin(respinOf?: string) {
+    if (spinning.current || (used && !respinOf)) return;
     spinning.current = true;
     setError(null);
     setPhase("spinning");
-    const res = await spinWheel();
+    const res = respinOf ? await respinWheel(respinOf) : await spinWheel();
     if (!res.ok || !res.data) {
       spinning.current = false;
       setPhase("idle");
@@ -85,7 +87,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
         </div>
         <button
           type="button"
-          onClick={spin}
+          onClick={() => spin()}
           disabled={used || phase === "spinning"}
           className="absolute left-1/2 top-1/2 flex h-[30%] w-[30%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-0.5 rounded-full bg-[#6e4034] text-[#fbf3ec] shadow-[0_8px_18px_-8px_rgba(60,30,20,0.7)] ring-[5px] ring-[#fbf3ec] transition-transform active:scale-95 disabled:cursor-default"
           aria-label={used ? "Je draaibeurt van deze week is gebruikt" : "Draai aan het rad"}
@@ -112,7 +114,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
           </p>
         ) : (
           <div className="space-y-2.5">
-            <button type="button" onClick={spin} className="espresso h-[52px] rounded-full px-8 text-[15px] font-semibold tracking-wide transition-transform active:scale-[0.98]">
+            <button type="button" onClick={() => spin()} className="espresso h-[52px] rounded-full px-8 text-[15px] font-semibold tracking-wide transition-transform active:scale-[0.98]">
               DRAAI HET RAD
             </button>
             <p className="text-[12.5px] text-muted">{unlimited ? "Demo: onbeperkt draaien." : "1 draaibeurt deze week. Vervalt zondag 23:59."}</p>
@@ -167,6 +169,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                   <div className={cn(jackpot && "rounded-[18px] bg-[#fbf7f2] p-3 text-text")}>
                     <PrizeInfo category={outcome.category} valueCents={outcome.valueCents} description={outcome.description} url={outcome.url} center />
                   </div>
+                  {outcome.duplicate ? <DuplicateChoice spinId={outcome.spinId} alternatives={outcome.alternatives} onRespin={() => spin(outcome.spinId)} dark={jackpot} /> : null}
                   <ClaimForm spinId={outcome.spinId} variantLabel={outcome.variantLabel} variants={outcome.variants} />
                   <Link href="/wheel/prizes" className={cn("block text-[13px] underline-offset-2 hover:underline", jackpot ? "text-[#f3d488]" : "text-muted")}>
                     Naar mijn prijzenkast

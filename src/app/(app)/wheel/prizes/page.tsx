@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryIcon } from "@/components/wheel/category-icon";
 import { ClaimForm } from "@/components/wheel/claim-form";
 import { ChallengeDoneButton } from "@/components/wheel/challenge-done";
+import { DuplicateChoice } from "@/components/wheel/duplicate-choice";
 import { PrizeInfo } from "@/components/wheel/prize-info";
 
 export const metadata = { title: "Prijzenkast" };
@@ -83,7 +84,16 @@ async function Content() {
   const myPrizes = mine.filter((s) => s.category !== "challenge");
   const myChallenges = mine.filter((s) => s.category === "challenge");
   const ids = myPrizes.map((s) => s.id);
-  const [images, { data: codeRows }] = await Promise.all([prizeImages(prizes), ids.length ? supabase.from("wheel_codes").select("spin_id, code").in("spin_id", ids) : Promise.resolve({ data: [] })]);
+  const [images, { data: codeRows }, { data: availableRows }] = await Promise.all([
+    prizeImages(prizes),
+    ids.length ? supabase.from("wheel_codes").select("spin_id, code").in("spin_id", ids) : Promise.resolve({ data: [] }),
+    supabase.rpc("wheel_available_ids", { p_challenge: ctx.challenge.id }),
+  ]);
+  // A prize won twice: until it is claimed, spin again or pick another one in the same level.
+  const available = new Set(((availableRows ?? []) as (string | { wheel_available_ids: string })[]).map((r) => (typeof r === "string" ? r : r.wheel_available_ids)));
+  const owned = new Set(myPrizes.map((s) => s.prize_id).filter(Boolean));
+  const isDuplicate = (s: SpinRow) => Boolean(s.prize_id) && myPrizes.some((o) => o.id !== s.id && o.prize_id === s.prize_id);
+  const alternativesFor = (s: SpinRow) => prizes.filter((p) => p.category === s.category && available.has(p.id) && !owned.has(p.id)).map((p) => ({ id: p.id, brand: p.brand, name: p.name }));
   const codes = new Map(((codeRows ?? []) as { spin_id: string; code: string }[]).map((c) => [c.spin_id, c.code]));
   const prizeOf = (id: string | null) => prizes.find((p) => p.id === id) ?? null;
   const current = myChallenges.find((s) => s.week_start === thisWeek) ?? null;
@@ -146,6 +156,11 @@ async function Content() {
                     <div className="mt-3 rounded-[14px] bg-white px-3 py-2.5 ring-1 ring-ink/10">
                       <p className="text-[11px] text-muted">Code</p>
                       <p className="select-all font-mono text-[15px] font-semibold tracking-wide text-text">{code}</p>
+                    </div>
+                  ) : null}
+                  {s.status === "won" && isDuplicate(s) ? (
+                    <div className="mt-3">
+                      <DuplicateChoice spinId={s.id} alternatives={alternativesFor(s)} />
                     </div>
                   ) : null}
                   {s.status === "won" ? (

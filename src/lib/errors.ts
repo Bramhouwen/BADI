@@ -21,6 +21,8 @@ export function friendlyError(error: unknown): string {
     OUT_OF_STOCK: "Die prijs was net op. Draai opnieuw.",
     ALREADY_CLAIMED: "Deze prijs is al geclaimd.",
     PICK_VARIANT: "Kies eerst een optie.",
+    NOT_DUPLICATE: "Opnieuw draaien of wisselen kan alleen bij een prijs die je al hebt.",
+    NOT_AVAILABLE: "Die prijs is niet meer beschikbaar. Kies een andere.",
     NOT_MEMBER: "Je bent geen lid van deze groep.",
   };
   for (const key of Object.keys(table)) {

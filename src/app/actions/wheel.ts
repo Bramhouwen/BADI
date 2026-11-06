@@ -14,6 +14,12 @@ import { isOwnedMediaPath, signedUrl } from "@/lib/storage";
 import { CATEGORY_META, CHALLENGE_META, formatEuro, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
 import type { ActionResult } from "@/lib/types";
 
+export interface PrizeChoice {
+  id: string;
+  brand: string;
+  name: string;
+}
+
 export interface SpinOutcome {
   spinId: string;
   category: WheelCategory;
@@ -25,6 +31,10 @@ export interface SpinOutcome {
   image: string | null;
   variantLabel: string | null;
   variants: string[];
+  /** This member already won this prize before. */
+  duplicate: boolean;
+  /** For a duplicate: other prizes in the same level to choose from. */
+  alternatives: PrizeChoice[];
   challenge: { key: WheelChallengeKey; title: string; rule: string; mode: "auto" | "manual"; image: string } | null;
 }
 
@@ -36,57 +46,113 @@ function revalidateWheel() {
   revalidatePath("/");
 }
 
-/** The spin: the database picks the category and prize and reserves stock. */
-export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
-  const ctx = await requireContext();
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("spin_wheel", { p_challenge: ctx.challenge.id });
-  if (error || !data) return { ok: false, error: friendlyError(error ?? "Draaien lukte niet.") };
-  const spin = (Array.isArray(data) ? data[0] : data) as { id: string; category: WheelCategory; prize_id: string | null; prize_brand: string | null; prize_name: string | null; challenge_key: WheelChallengeKey | null };
+type SpinRecord = { id: string; category: WheelCategory; prize_id: string | null; prize_brand: string | null; prize_name: string | null; challenge_key: WheelChallengeKey | null };
+type Ctx = Awaited<ReturnType<typeof requireContext>>;
+type Supa = Awaited<ReturnType<typeof createClient>>;
+
+/** Shares a prize in the squad chat, as a message from Baddy. */
+function shareWin(ctx: Ctx, supabase: Supa, spin: Pick<SpinRecord, "category" | "prize_brand" | "prize_name">, valueCents: number | null) {
+  const who = firstName(ctx.profile.display_name);
+  const worth = valueCents ? ` (t.w.v. ${formatEuro(valueCents)})` : "";
+  const body =
+    spin.category === "jackpot"
+      ? `👑 JACKPOT! ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`
+      : `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
+  after(async () => {
+    await supabase.from("squad_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions: [], is_coach: true });
+    await sendPush(supabase, "chat", { title: "Weekrad", body, url: "/squad/chat", tag: "squad-chat" }, { exclude: [ctx.userId] });
+  });
+}
+
+/** Other prizes in the same level that can be won now and that this member does not have yet. */
+async function alternativesFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<PrizeChoice[]> {
+  const [{ data: ids }, { data: prizes }, { data: mine }] = await Promise.all([
+    supabase.rpc("wheel_available_ids", { p_challenge: ctx.challenge.id }),
+    supabase.from("prizes").select("id, brand, name").eq("challenge_id", ctx.challenge.id).eq("category", spin.category),
+    supabase.from("wheel_spins").select("prize_id").eq("user_id", ctx.userId).not("prize_id", "is", null),
+  ]);
+  const available = new Set(((ids ?? []) as (string | { wheel_available_ids: string })[]).map((r) => (typeof r === "string" ? r : r.wheel_available_ids)));
+  const owned = new Set(((mine ?? []) as { prize_id: string }[]).map((r) => r.prize_id));
+  return ((prizes ?? []) as PrizeChoice[]).filter((p) => available.has(p.id) && !owned.has(p.id));
+}
+
+/**
+ * Everything the reveal needs. A prize this member already won before is a
+ * duplicate: it is not shared yet, and the member may spin again or pick
+ * another prize in the same level.
+ */
+async function outcomeFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<SpinOutcome> {
   let description: string | null = null;
   let valueCents: number | null = null;
   let url: string | null = null;
   let image: string | null = null;
   let variantLabel: string | null = null;
   let variants: string[] = [];
+  let duplicate = false;
+  let alternatives: PrizeChoice[] = [];
   if (spin.prize_id) {
-    const { data: prize } = await supabase.from("prizes").select("description, value_cents, url, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle();
+    const [{ data: prize }, { count }] = await Promise.all([
+      supabase.from("prizes").select("description, value_cents, url, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle(),
+      supabase.from("wheel_spins").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).eq("prize_id", spin.prize_id).neq("id", spin.id),
+    ]);
     description = (prize?.description as string | null) ?? null;
     valueCents = (prize?.value_cents as number | null) ?? null;
     url = (prize?.url as string | null) ?? null;
     variants = (prize?.variants as string[] | null) ?? [];
     variantLabel = variants.length ? ((prize?.variant_label as string | null) ?? "Keuze") : null;
-    // Shared with the squad right away, as a message from Baddy in the group chat.
-    const who = firstName(ctx.profile.display_name);
-    const worth = valueCents ? ` (t.w.v. ${formatEuro(valueCents)})` : "";
-    const body =
-      spin.category === "jackpot"
-        ? `👑 JACKPOT! ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`
-        : `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
-    after(async () => {
-      await supabase.from("squad_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions: [], is_coach: true });
-      await sendPush(supabase, "chat", { title: "Weekrad", body, url: "/squad/chat", tag: "squad-chat" }, { exclude: [ctx.userId] });
-    });
     image = prize?.image_path ? await signedUrl("prizes", prize.image_path as string) : null;
+    duplicate = (count ?? 0) > 0;
+    if (duplicate) alternatives = await alternativesFor(ctx, supabase, spin);
+    else shareWin(ctx, supabase, spin, valueCents);
   }
+  return {
+    spinId: spin.id,
+    category: spin.category,
+    brand: spin.prize_brand,
+    name: spin.prize_name,
+    description,
+    valueCents,
+    url,
+    image,
+    variantLabel,
+    variants,
+    duplicate,
+    alternatives,
+    challenge: spin.challenge_key ? { key: spin.challenge_key, ...CHALLENGE_META[spin.challenge_key] } : null,
+  };
+}
+
+/** The spin: the database picks the level and prize and reserves stock. */
+export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("spin_wheel", { p_challenge: ctx.challenge.id });
+  if (error || !data) return { ok: false, error: friendlyError(error ?? "Draaien lukte niet.") };
   // No revalidate here: the page would show the result before the wheel stops.
   // The wheel refreshes the page itself after the reveal.
-  return {
-    ok: true,
-    data: {
-      spinId: spin.id,
-      category: spin.category,
-      brand: spin.prize_brand,
-      name: spin.prize_name,
-      description,
-      valueCents,
-      url,
-      image,
-      variantLabel,
-      variants,
-      challenge: spin.challenge_key ? { key: spin.challenge_key, ...CHALLENGE_META[spin.challenge_key] } : null,
-    },
-  };
+  return { ok: true, data: await outcomeFor(ctx, supabase, (Array.isArray(data) ? data[0] : data) as SpinRecord) };
+}
+
+/** A prize you already have: give it back and spin again. */
+export async function respinWheel(spinId: string): Promise<ActionResult<SpinOutcome>> {
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("wheel_respin", { p_spin: spinId });
+  if (error || !data) return { ok: false, error: friendlyError(error ?? "Opnieuw draaien lukte niet.") };
+  return { ok: true, data: await outcomeFor(ctx, supabase, (Array.isArray(data) ? data[0] : data) as SpinRecord) };
+}
+
+/** A prize you already have: swap it for another one in the same level. */
+export async function swapPrize(spinId: string, prizeId: string): Promise<ActionResult> {
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("wheel_swap_prize", { p_spin: spinId, p_prize: prizeId });
+  if (error || !data) return { ok: false, error: friendlyError(error ?? "Wisselen lukte niet.") };
+  const spin = (Array.isArray(data) ? data[0] : data) as SpinRecord;
+  const { data: prize } = await supabase.from("prizes").select("value_cents").eq("id", prizeId).maybeSingle();
+  shareWin(ctx, supabase, spin, (prize?.value_cents as number | null) ?? null);
+  revalidateWheel();
+  return { ok: true };
 }
 
 export async function claimPrize(spinId: string, variant: string | null): Promise<ActionResult> {

@@ -326,6 +326,27 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
       return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
     }
+    case "wheel_respin":
+    case "wheel_swap_prize": {
+      const spin = s.wheel_spins.find((x) => x.id === args.p_spin && x.user_id === DEMO_USER_ID);
+      const fail = (message: string) => Promise.resolve({ data: null, error: { message }, count: null });
+      if (!spin) return fail("NOT_FOUND");
+      if (spin.status !== "won") return fail("ALREADY_CLAIMED");
+      const owned = s.wheel_spins.filter((x) => x.user_id === DEMO_USER_ID && x.prize_id);
+      if (!owned.some((x) => x.id !== spin.id && x.prize_id === spin.prize_id)) return fail("NOT_DUPLICATE");
+      const old = s.prizes.find((p) => p.id === spin.prize_id);
+      if (name === "wheel_respin") {
+        if (old) old.stock = Number(old.stock) + 1;
+        s.wheel_spins.splice(s.wheel_spins.indexOf(spin), 1);
+        return Promise.resolve(spinWheelTwin(s));
+      }
+      const next = demoAvailable(s).find((p) => p.id === args.p_prize && p.category === spin.category && !owned.some((x) => x.prize_id === p.id));
+      if (!next) return fail("NOT_AVAILABLE");
+      if (old) old.stock = Number(old.stock) + 1;
+      next.stock = Number(next.stock) - 1;
+      Object.assign(spin, { prize_id: next.id, prize_brand: next.brand, prize_name: next.name, cost_cents: expectedCost(next) });
+      return Promise.resolve(ok(spin));
+    }
     case "wheel_available_ids":
       return Promise.resolve(ok(demoAvailable(s).map((p) => p.id)));
     case "wheel_budget_status":
