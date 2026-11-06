@@ -269,6 +269,8 @@ export function buildSeed(): Store {
     brand,
     name,
     description: null,
+    value_cents: null,
+    url: null,
     image_path: null,
     variant_label: null,
     variants: [],
@@ -282,11 +284,11 @@ export function buildSeed(): Store {
     ...extra,
   });
   const prizes: Row[] = [
-    prize("food", "Frank & Charlie", "Drankje naar keuze", { variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], cost_cents: 350 }),
-    prize("food", "Oot Granola", "Ontbijtpakket", { description: "Granola en muesli voor een week ontbijt.", cost_cents: 2500 }),
-    prize("hydration", "Cabau Lifestyle", "Bloom Waterfles", { variant_label: "Kleur", variants: ["Zand", "Salie"], cost_cents: 3500 }),
-    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 2, cost_cents: 6000 }),
-    prize("voucher", "ELVOU", "Tegoedbon", { cost_cents: 2500 }),
+    prize("food", "Frank & Charlie", "Drankje naar keuze", { variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], cost_cents: 350, description: "Demotekst: een fris drankje na je training. Je kiest zelf de smaak.", url: "https://example.com" }),
+    prize("food", "Oot Granola", "Ontbijtpakket", { description: "Demotekst: granola en muesli voor een week ontbijt, met havermout, noten en zaden.", value_cents: 2500, cost_cents: 2500, url: "https://example.com" }),
+    prize("hydration", "Cabau Lifestyle", "Bloom Waterfles", { variant_label: "Kleur", variants: ["Zand", "Salie"], cost_cents: 3500, value_cents: 3500, description: "Demotekst: een herbruikbare waterfles die je de hele dag meeneemt, zodat je je 2,5 liter makkelijker haalt.", url: "https://example.com" }),
+    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 2, cost_cents: 6000, value_cents: 6000, description: "Demotekst: een top en legging die bij elkaar horen. Je kiest je maat bij het claimen.", url: "https://example.com" }),
+    prize("voucher", "ELVOU", "Tegoedbon", { cost_cents: 2500, value_cents: 2500, description: "Demotekst: een tegoedbon om online te besteden. De code verschijnt in je prijzenkast zodra hij klaarstaat.", url: "https://example.com" }),
     prize("sport", "Flowee", "Relaxpakket", { active: false, stock: 0 }),
   ];
   const wheel_spins: Row[] = [

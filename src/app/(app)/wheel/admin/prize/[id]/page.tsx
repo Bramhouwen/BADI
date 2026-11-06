@@ -22,6 +22,8 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         brand: prize.brand,
         name: prize.name,
         description: prize.description ?? "",
+        value: prize.value_cents ? (prize.value_cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: prize.value_cents % 100 ? 2 : 0 }) : "",
+        url: prize.url ?? "",
         image_path: prize.image_path,
         image_url: await signedUrl("prizes", prize.image_path),
         variant_label: prize.variant_label ?? "",
@@ -32,7 +34,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         cost: prize.cost_cents ? (prize.cost_cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2 }) : "",
         active: prize.active,
       }
-    : { id: "", category: "food", brand: "", name: "", description: "", image_path: null, image_url: null, variant_label: "", variants: "", needs_code: false, stock: 1, weekly_max: "", cost: "", active: true };
+    : { id: "", category: "food", brand: "", name: "", description: "", value: "", url: "", image_path: null, image_url: null, variant_label: "", variants: "", needs_code: false, stock: 1, weekly_max: "", cost: "", active: true };
   return (
     <Page>
       <PageTitle title={prize ? `${prize.brand}: ${prize.name}` : "Nieuwe prijs"} back="/wheel/admin#prijzen" />

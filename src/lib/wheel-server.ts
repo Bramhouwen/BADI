@@ -27,6 +27,8 @@ export interface PrizeRow {
   brand: string;
   name: string;
   description: string | null;
+  value_cents: number | null;
+  url: string | null;
   image_path: string | null;
   variant_label: string | null;
   variants: string[];

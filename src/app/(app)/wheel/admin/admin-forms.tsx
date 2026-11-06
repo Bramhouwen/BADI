@@ -87,6 +87,8 @@ export interface PrizeFormValue {
   brand: string;
   name: string;
   description: string;
+  value: string;
+  url: string;
   image_path: string | null;
   image_url: string | null;
   variant_label: string;
@@ -138,8 +140,16 @@ export function PrizeForm({ value, pathPrefix }: { value: PrizeFormValue; pathPr
           <input name="name" defaultValue={value.name} required maxLength={80} className={input} />
         </label>
         <label className="col-span-2 block">
-          <span className="mb-1 block text-[12.5px] text-muted">Korte beschrijving</span>
-          <textarea name="description" defaultValue={value.description} maxLength={400} rows={2} className={cn(input, "h-auto py-2.5")} />
+          <span className="mb-1 block text-[12.5px] text-muted">Introductie voor de winnaar</span>
+          <textarea name="description" defaultValue={value.description} maxLength={600} rows={4} placeholder="Wie is het merk en wat krijg je precies?" className={cn(input, "h-auto py-2.5")} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Waarde (€)</span>
+          <input name="value" inputMode="decimal" defaultValue={value.value} placeholder="Bijv. 25" className={input} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12.5px] text-muted">Website</span>
+          <input name="url" type="url" inputMode="url" defaultValue={value.url} placeholder="https://" maxLength={300} className={input} />
         </label>
         <label className="block">
           <span className="mb-1 block text-[12.5px] text-muted">Keuze heet</span>

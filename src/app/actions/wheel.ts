@@ -15,6 +15,8 @@ export interface SpinOutcome {
   brand: string | null;
   name: string | null;
   description: string | null;
+  valueCents: number | null;
+  url: string | null;
   image: string | null;
   variantLabel: string | null;
   variants: string[];
@@ -36,12 +38,16 @@ export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
   if (error || !data) return { ok: false, error: friendlyError(error ?? "Draaien lukte niet.") };
   const spin = (Array.isArray(data) ? data[0] : data) as { id: string; category: WheelCategory; prize_id: string | null; prize_brand: string | null; prize_name: string | null; challenge_key: WheelChallengeKey | null };
   let description: string | null = null;
+  let valueCents: number | null = null;
+  let url: string | null = null;
   let image: string | null = null;
   let variantLabel: string | null = null;
   let variants: string[] = [];
   if (spin.prize_id) {
-    const { data: prize } = await supabase.from("prizes").select("description, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle();
+    const { data: prize } = await supabase.from("prizes").select("description, value_cents, url, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle();
     description = (prize?.description as string | null) ?? null;
+    valueCents = (prize?.value_cents as number | null) ?? null;
+    url = (prize?.url as string | null) ?? null;
     variants = (prize?.variants as string[] | null) ?? [];
     variantLabel = variants.length ? ((prize?.variant_label as string | null) ?? "Keuze") : null;
     image = prize?.image_path ? await signedUrl("prizes", prize.image_path as string) : null;
@@ -56,6 +62,8 @@ export async function spinWheel(): Promise<ActionResult<SpinOutcome>> {
       brand: spin.prize_brand,
       name: spin.prize_name,
       description,
+      valueCents,
+      url,
       image,
       variantLabel,
       variants,
@@ -88,7 +96,15 @@ const prizeSchema = z.object({
   category: z.enum(PRIZE_CATEGORIES as [string, ...string[]]),
   brand: z.string().trim().min(1, "Vul een merk in.").max(60, "Maximaal 60 tekens."),
   name: z.string().trim().min(1, "Vul een productnaam in.").max(80, "Maximaal 80 tekens."),
-  description: z.string().trim().max(400, "Maximaal 400 tekens.").optional().default(""),
+  description: z.string().trim().max(600, "Introductie: maximaal 600 tekens.").optional().default(""),
+  url: z
+    .string()
+    .trim()
+    .max(300, "Link is te lang.")
+    .optional()
+    .default("")
+    .transform((v) => (v && !/^https?:\/\//i.test(v) ? `https://${v}` : v))
+    .refine((v) => v === "" || /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(v), "Dat is geen geldige link."),
   image_path: z.string().optional().default(""),
   variant_label: z.string().trim().max(30).optional().default(""),
   variants: z.string().trim().max(400).optional().default(""),
@@ -101,6 +117,13 @@ const prizeSchema = z.object({
     .default("")
     .transform((v) => (v === "" ? null : Number(v)))
     .refine((v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 100), "Maximum per week: een heel getal vanaf 1, of leeg."),
+  value: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((v) => (v === "" ? null : Math.round(Number(v.includes(",") ? v.replace(/\./g, "").replace(",", ".") : v) * 100)))
+    .refine((v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 10_000_000), "Waarde in euro, bijvoorbeeld 25 of 12,50."),
   cost: z
     .string()
     .trim()
@@ -133,6 +156,8 @@ export async function savePrize(formData: FormData): Promise<ActionResult<{ id: 
     brand: d.brand,
     name: d.name,
     description: d.description || null,
+    url: d.url || null,
+    value_cents: d.value,
     image_path: d.image_path || null,
     variant_label: variants.length ? d.variant_label || "Keuze" : d.variant_label || null,
     variants,

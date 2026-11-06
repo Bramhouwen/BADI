@@ -11,6 +11,7 @@ import { CATEGORY_META, landingRotation, segments as toSegments, type Odds } fro
 import { WheelGraphic } from "./wheel-graphic";
 import { CategoryIcon } from "./category-icon";
 import { ClaimForm } from "./claim-form";
+import { PrizeInfo } from "./prize-info";
 import { Confetti } from "./confetti";
 import { Countdown } from "./countdown";
 
@@ -140,8 +141,8 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                     </h2>
                     <p className="mt-2 text-[12px] font-medium uppercase tracking-[0.16em] text-muted">{outcome.brand}</p>
                     <p className="text-[18px] font-semibold text-text">{outcome.name}</p>
-                    {outcome.description ? <p className="mt-1.5 text-[13.5px] leading-snug text-muted">{outcome.description}</p> : null}
                   </div>
+                  <PrizeInfo category={outcome.category} valueCents={outcome.valueCents} description={outcome.description} url={outcome.url} center />
                   <ClaimForm spinId={outcome.spinId} variantLabel={outcome.variantLabel} variants={outcome.variants} />
                   <Link href="/wheel/prizes" className="block text-[13px] text-muted underline-offset-2 hover:underline">
                     Naar mijn prijzenkast

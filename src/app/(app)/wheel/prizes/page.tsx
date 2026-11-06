@@ -15,6 +15,7 @@ import { SectionTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryIcon } from "@/components/wheel/category-icon";
 import { ClaimForm } from "@/components/wheel/claim-form";
+import { PrizeInfo } from "@/components/wheel/prize-info";
 
 export const metadata = { title: "Prijzenkast" };
 
@@ -134,6 +135,11 @@ async function Content() {
                       {STATUS_LABELS[s.status as keyof typeof STATUS_LABELS]}
                     </span>
                   </div>
+                  {prize ? (
+                    <div className="mt-3">
+                      <PrizeInfo category={s.category} valueCents={prize.value_cents} description={prize.description} url={prize.url} />
+                    </div>
+                  ) : null}
                   {code ? (
                     <div className="mt-3 rounded-[14px] bg-white px-3 py-2.5 ring-1 ring-ink/10">
                       <p className="text-[11px] text-muted">Code</p>

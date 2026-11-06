@@ -43,7 +43,11 @@ create table public.prizes (
   category text not null check (category in ('food', 'hydration', 'sport', 'voucher')),
   brand text not null check (char_length(brand) between 1 and 60),
   name text not null check (char_length(name) between 1 and 80),
-  description text check (description is null or char_length(description) <= 400),
+  -- Short introduction of the brand and product for the winner.
+  description text check (description is null or char_length(description) <= 600),
+  -- What it is worth, e.g. the amount on a gift card; shown to the winner.
+  value_cents int check (value_cents is null or value_cents >= 0),
+  url text check (url is null or url ~* '^https?://'),
   image_path text,
   -- Choice the winner makes when claiming, e.g. "Maat" with S, M, L.
   variant_label text check (variant_label is null or char_length(variant_label) <= 30),
