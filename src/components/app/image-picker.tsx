@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  bucket: "wall" | "recipes" | "avatars";
+  bucket: "wall" | "recipes" | "avatars" | "prizes";
   /** Folder the current member may write to, e.g. `${challengeId}/${userId}` or `${userId}`. */
   pathPrefix: string;
   name?: string;

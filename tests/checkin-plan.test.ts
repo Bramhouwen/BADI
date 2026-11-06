@@ -128,7 +128,7 @@ describe("bonus points", () => {
       { kind: "wall" as const, date: "2026-11-09" },
     ];
     // Wall on 2 days, recipe on 1, records capped at 3: 6 x 5.
-    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 2, recipe: 1, record: 3 }, points: 30 });
+    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 2, recipe: 1, record: 3, challenge: 0 }, points: 30 });
     expect(weekScore("2026-11-02", [], [], [], items)).toEqual({ earned: 0, bonus: 30, total: 48, fraction: 0 });
   });
 

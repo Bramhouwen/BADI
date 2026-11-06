@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronRight, Link2, LogOut, Sparkles } from "lucide-react";
+import { BookOpen, ChevronRight, Link2, LogOut, Sparkles, Trophy } from "lucide-react";
 import { loadSharing } from "@/lib/squad/data";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -57,6 +57,7 @@ async function Content() {
       <section>
         <SectionTitle>BADI</SectionTitle>
         <div className="space-y-2.5">
+          <Row href="/wheel/prizes" icon={Trophy} title="Prijzenkast" body="Je prijzen uit het Weekrad en wat je nog krijgt." />
           <Row href="/profile/principles" icon={BookOpen} title="De zeven principes" body="Waar deze winter om draait." />
           {ctx.membership.role === "admin" ? <Row href="/profile/invite" icon={Link2} title="Squad uitnodigen" body="Maak uitnodigingslinks voor je vrienden." /> : null}
           <Row

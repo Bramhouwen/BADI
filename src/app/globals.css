@@ -237,3 +237,20 @@ h2,
 main:has(.chat-thread) {
   padding-bottom: 0 !important;
 }
+
+/* Weekrad confetti */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 360deg));
+    opacity: 0.9;
+  }
+}
+.confetti-bit {
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1);
+  animation-fill-mode: forwards;
+}

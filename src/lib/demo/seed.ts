@@ -253,7 +253,52 @@ export function buildSeed(): Store {
   const checkin_sources: Row[] = [];
   for (const c of daily_checkins) for (const a of c.activities as string[]) checkin_sources.push({ id: demoId(), user_id: c.user_id, challenge_id: DEMO_CHALLENGE_ID, checkin_date: c.checkin_date, activity: a, source: "manual", workout_session_id: null, created_at: c.created_at });
 
+  const wheel_categories: Row[] = (
+    [
+      ["food", 40],
+      ["hydration", 10],
+      ["sport", 5],
+      ["voucher", 10],
+      ["challenge", 35],
+    ] as const
+  ).map(([key, weight]) => ({ challenge_id: DEMO_CHALLENGE_ID, key, weight }));
+  const prize = (category: string, brand: string, name: string, extra: Partial<Row> = {}): Row => ({
+    id: demoId(),
+    challenge_id: DEMO_CHALLENGE_ID,
+    category,
+    brand,
+    name,
+    description: null,
+    image_path: null,
+    variant_label: null,
+    variants: [],
+    needs_code: category === "voucher",
+    stock: 2,
+    weekly_max: null,
+    cost_cents: 1500,
+    active: true,
+    created_at: iso(start),
+    updated_at: iso(start),
+    ...extra,
+  });
+  const prizes: Row[] = [
+    prize("food", "Frank & Charlie", "Drankje naar keuze", { variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], cost_cents: 350 }),
+    prize("food", "Oot Granola", "Ontbijtpakket", { description: "Granola en muesli voor een week ontbijt.", cost_cents: 2500 }),
+    prize("hydration", "Cabau Lifestyle", "Bloom Waterfles", { variant_label: "Kleur", variants: ["Zand", "Salie"], cost_cents: 3500 }),
+    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 1, cost_cents: 6000 }),
+    prize("voucher", "ELVOU", "Tegoedbon", { cost_cents: 2500 }),
+    prize("sport", "Flowee", "Relaxpakket", { active: false, stock: 0 }),
+  ];
+  const wheel_spins: Row[] = [
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: SAM, week_start: d(11), category: "food", prize_id: prizes[1].id, prize_brand: "Oot Granola", prize_name: "Ontbijtpakket", challenge_key: null, challenge_completed_at: null, variant: null, status: "delivered", created_at: iso(d(11), 9), claimed_at: iso(d(11), 9), delivered_at: iso(d(8), 12) },
+    { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: NOOR, week_start: d(4), category: "challenge", prize_id: null, prize_brand: null, prize_name: null, challenge_key: "hydration", challenge_completed_at: null, variant: null, status: "challenge", created_at: iso(d(4), 8), claimed_at: null, delivered_at: null },
+  ];
+
   return {
+    wheel_categories,
+    prizes,
+    wheel_spins,
+    wheel_codes: [],
     profiles,
     water_entries,
     step_logs,

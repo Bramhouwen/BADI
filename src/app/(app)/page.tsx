@@ -16,6 +16,9 @@ import {
 import { computeStreakStats } from "@/lib/streaks";
 import { superBadi } from "@/lib/super-badi";
 import { loadBonusItems } from "@/lib/bonus";
+import { myChallengeProgress, SPIN_COLUMNS, type SpinRow } from "@/lib/wheel-server";
+import { CATEGORY_META, CHALLENGE_META } from "@/lib/wheel";
+import { CategoryIcon } from "@/components/wheel/category-icon";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
@@ -46,7 +49,7 @@ async function Content() {
   const day = challengeDay(ctx.challenge, now);
 
   const weekStart = weekStartOf(today);
-  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }, { data: weekJokerRows }, { data: weekStepRows }, bonusItems] = await Promise.all([
+  const [squad, { data: checkinRows }, { data: postRows }, { data: recipeRows }, { data: waterRows }, workouts, { data: jokerRow }, { data: weekJokerRows }, { data: weekStepRows }, bonusItems, { data: mySpinRow }] = await Promise.all([
     getSquad(ctx.challenge.id),
     supabase.from("daily_checkins").select("user_id, checkin_date, activities, note, created_at").eq("challenge_id", ctx.challenge.id),
     supabase.from("wall_posts").select("id, user_id, image_path, caption, created_at").eq("challenge_id", ctx.challenge.id).order("created_at", { ascending: false }).limit(2),
@@ -57,7 +60,12 @@ async function Content() {
     supabase.from("alcohol_exceptions").select("user_id, exception_date").eq("challenge_id", ctx.challenge.id).gte("exception_date", weekStart),
     supabase.from("step_logs").select("user_id, log_date, steps").eq("challenge_id", ctx.challenge.id).gte("log_date", weekStart),
     loadBonusItems(ctx.challenge.id, weekStart, ctx.challenge.timezone),
+    supabase.from("wheel_spins").select(SPIN_COLUMNS).eq("user_id", ctx.userId).eq("week_start", weekStart).maybeSingle(),
   ]);
+  const mySpin = (mySpinRow ?? null) as SpinRow | null;
+  // An open week challenge: check it, so a completed one counts as bonus right away.
+  const challengeProgress = mySpin?.category === "challenge" && !mySpin.challenge_completed_at ? await myChallengeProgress(ctx, mySpin) : null;
+  if (challengeProgress?.complete) bonusItems.push({ user_id: ctx.userId, kind: "challenge", date: weekStart });
   const weekSteps = (weekStepRows ?? []) as { user_id: string; log_date: string; steps: number }[];
   const weekJokers = (weekJokerRows ?? []) as { user_id: string; exception_date: string }[];
   const lastWorkout = workouts[0] ?? null;
@@ -166,6 +174,25 @@ async function Content() {
           </Link>
         </Card>
       )}
+
+      {phase === "during" ? (
+        <Link href={mySpin ? "/wheel/prizes" : "/wheel"} className="glass flex items-center gap-3 rounded-[20px] p-3 hover:bg-blush/40">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: mySpin ? CATEGORY_META[mySpin.category].color : CATEGORY_META.voucher.color }}>
+            <CategoryIcon category={mySpin ? mySpin.category : "voucher"} className="h-5 w-5 text-white" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11.5px] text-muted">Weekrad</span>
+            <span className="block truncate text-[14px] font-semibold text-text">
+              {!mySpin
+                ? "Je draaibeurt staat klaar"
+                : mySpin.challenge_key
+                  ? `${CHALLENGE_META[mySpin.challenge_key].title}${challengeProgress ? ` · ${challengeProgress.done} van ${challengeProgress.total}` : mySpin.challenge_completed_at ? " · voltooid" : ""}`
+                  : `${mySpin.prize_brand}: ${mySpin.prize_name}`}
+            </span>
+          </span>
+          <span className="shrink-0 text-[12.5px] font-medium text-ink">{!mySpin ? "Draai" : mySpin.status === "won" ? "Claimen" : "Bekijk"}</span>
+        </Link>
+      ) : null}
 
       {wrapped !== "not_yet" && phase !== "after" ? (
         <Link href="/wrapped" className="block">

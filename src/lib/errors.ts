@@ -17,6 +17,11 @@ export function friendlyError(error: unknown): string {
     COMPLIMENT_TOO_FAST: "Rustig aan, wacht even voor je nog een compliment stuurt.",
     COMPLIMENT_RATE_LIMIT: "Je hebt dit uur al veel complimenten gestuurd. Probeer het straks weer.",
     ALCOHOL_EXCEPTION_LIMIT: "Je hebt je twee jokers al ingezet.",
+    ALREADY_SPUN: "Je hebt deze week al gedraaid. Maandag om 00:00 staat je nieuwe beurt klaar.",
+    OUT_OF_STOCK: "Die prijs was net op. Draai opnieuw.",
+    ALREADY_CLAIMED: "Deze prijs is al geclaimd.",
+    PICK_VARIANT: "Kies eerst een optie.",
+    NOT_MEMBER: "Je bent geen lid van deze groep.",
   };
   for (const key of Object.keys(table)) {
     if (message.includes(key)) return table[key];

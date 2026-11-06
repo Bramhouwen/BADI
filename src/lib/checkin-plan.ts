@@ -109,14 +109,15 @@ export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_STEP_POINTS + WEEKLY
 /**
  * Bonus points on top of the week: something extra for the squad. A photo on
  * the Wall and a shared recipe count once per day each; every new personal
- * record counts, up to RECORDS_PER_WEEK a week.
+ * record counts, up to RECORDS_PER_WEEK a week; so does a completed extra
+ * week challenge from the Weekrad.
  */
 export const BONUS_POINTS = 5;
 export const RECORDS_PER_WEEK = 3;
-export const BONUS_KINDS = ["wall", "recipe", "record"] as const;
+export const BONUS_KINDS = ["wall", "recipe", "record", "challenge"] as const;
 export type BonusKind = (typeof BONUS_KINDS)[number];
-export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld", record: "Persoonlijk record" };
-export const BONUS_RULES: Record<BonusKind, string> = { wall: "+5 per dag", recipe: "+5 per dag", record: "+5, max 3 per week" };
+export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld", record: "Persoonlijk record", challenge: "Weekchallenge" };
+export const BONUS_RULES: Record<BonusKind, string> = { wall: "+5 per dag", recipe: "+5 per dag", record: "+5, max 3 per week", challenge: "+5 via het Weekrad" };
 export interface BonusItem {
   kind: BonusKind;
   date: DateKey;
@@ -131,8 +132,9 @@ export function weekBonus(start: DateKey, items: readonly BonusItem[]): { counts
     wall: days("wall"),
     recipe: days("recipe"),
     record: Math.min(RECORDS_PER_WEEK, inWeek.filter((i) => i.kind === "record").length),
+    challenge: Math.min(1, inWeek.filter((i) => i.kind === "challenge").length),
   };
-  return { counts, points: (counts.wall + counts.recipe + counts.record) * BONUS_POINTS };
+  return { counts, points: (counts.wall + counts.recipe + counts.record + counts.challenge) * BONUS_POINTS };
 }
 
 export interface WeekScore {

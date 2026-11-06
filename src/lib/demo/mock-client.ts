@@ -5,7 +5,9 @@
  */
 import { buildSeed, demoId, type Row, type Store } from "./seed";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
-import { personalRecords, type RecordSession } from "@/lib/checkin-plan";
+import { personalRecords, weekStartOf, type RecordSession } from "@/lib/checkin-plan";
+import { todayKey } from "@/lib/dates";
+import { availablePrizes, wheelOdds, WHEEL_CHALLENGES, type PrizeLike, type WheelCategory } from "@/lib/wheel";
 
 type Result = { data: unknown; error: { message: string } | null; count: number | null };
 
@@ -324,6 +326,22 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
       return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
     }
+    case "spin_wheel":
+      return Promise.resolve(spinWheelTwin(s));
+    case "claim_prize": {
+      const spin = s.wheel_spins.find((x) => x.id === args.p_spin && x.user_id === DEMO_USER_ID);
+      if (!spin) return Promise.resolve({ data: null, error: { message: "NOT_FOUND" }, count: null });
+      if (spin.status !== "won") return Promise.resolve({ data: null, error: { message: "ALREADY_CLAIMED" }, count: null });
+      const variants = (s.prizes.find((p) => p.id === spin.prize_id)?.variants as string[] | undefined) ?? [];
+      if (variants.length && !variants.includes(String(args.p_variant))) return Promise.resolve({ data: null, error: { message: "PICK_VARIANT" }, count: null });
+      Object.assign(spin, { status: "claimed", claimed_at: new Date().toISOString(), variant: variants.length ? args.p_variant : null });
+      return Promise.resolve(ok(null));
+    }
+    case "complete_wheel_challenge": {
+      const spin = s.wheel_spins.find((x) => x.id === args.p_spin && x.user_id === DEMO_USER_ID);
+      if (spin && !spin.challenge_completed_at) spin.challenge_completed_at = new Date().toISOString();
+      return Promise.resolve(ok(null));
+    }
     case "week_records":
       return Promise.resolve(ok(weekRecords(s, String(args.p_from))));
     case "member_habits":
@@ -331,6 +349,38 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
     default:
       return Promise.resolve({ data: null, error: { message: `unknown rpc ${name}` }, count: null });
   }
+}
+
+/** Twin of the SQL function spin_wheel: weighted category, then a random available prize. */
+function spinWheelTwin(s: ReturnType<typeof store>): Result {
+  const week = weekStartOf(todayKey());
+  if (s.wheel_spins.some((x) => x.user_id === DEMO_USER_ID && x.week_start === week)) return { data: null, error: { message: "ALREADY_SPUN" }, count: null };
+  const wins: Record<string, number> = {};
+  for (const x of s.wheel_spins) if (x.week_start === week && x.prize_id) wins[String(x.prize_id)] = (wins[String(x.prize_id)] ?? 0) + 1;
+  const available = availablePrizes(s.prizes as unknown as (PrizeLike & Row)[], wins);
+  const weights = Object.fromEntries(s.wheel_categories.map((c) => [c.key, c.weight])) as Record<WheelCategory, number>;
+  const odds = wheelOdds(weights, available);
+  let pick = Math.random();
+  let category: WheelCategory = odds[odds.length - 1].category;
+  for (const o of odds) {
+    if (pick < o.chance) {
+      category = o.category;
+      break;
+    }
+    pick -= o.chance;
+  }
+  const base = { id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: DEMO_USER_ID, week_start: week, created_at: new Date().toISOString(), claimed_at: null, delivered_at: null, challenge_completed_at: null, variant: null };
+  let row: Row;
+  if (category === "challenge") {
+    row = { ...base, category, prize_id: null, prize_brand: null, prize_name: null, challenge_key: WHEEL_CHALLENGES[Math.floor(Math.random() * WHEEL_CHALLENGES.length)], status: "challenge" };
+  } else {
+    const pool = available.filter((p) => p.category === category);
+    const prize = pool[Math.floor(Math.random() * pool.length)];
+    prize.stock = Number(prize.stock) - 1;
+    row = { ...base, category, prize_id: prize.id, prize_brand: prize.brand, prize_name: prize.name, challenge_key: null, status: "won" };
+  }
+  s.wheel_spins.push(row);
+  return { data: row, error: null, count: null };
 }
 
 /** Twin of the SQL function week_records: new personal records since a date. */
