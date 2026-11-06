@@ -104,7 +104,7 @@ export async function loadWheelState(ctx: AppContext): Promise<WheelState> {
   const available = availablePrizes(prizes, wins);
   const pool = { food: [], hydration: [], sport: [], voucher: [] } as WheelState["pool"];
   for (const p of available) pool[p.category].push({ brand: p.brand, name: p.name });
-  return { weekStart, today, now: Date.now(), odds: wheelOdds(weights, available), mySpin: spins.find((s) => s.user_id === ctx.userId) ?? null, pool };
+  return { weekStart, today, now: Date.now(), odds: wheelOdds(weights, available), mySpin: spins.filter((s) => s.user_id === ctx.userId).at(-1) ?? null, pool };
 }
 
 /**

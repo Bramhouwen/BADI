@@ -16,7 +16,8 @@ import { Countdown } from "./countdown";
 
 type Phase = "idle" | "spinning" | "revealed";
 
-export function SpinWheel({ odds, canSpin, nextAt, serverNow }: { odds: Odds[]; canSpin: boolean; nextAt: string; serverNow: number }) {
+/** `unlimited`: demo only, the wheel can be spun again after every reveal. */
+export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow }: { odds: Odds[]; canSpin: boolean; unlimited?: boolean; nextAt: string; serverNow: number }) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const segs = useMemo(() => toSegments(odds), [odds]);
@@ -40,7 +41,7 @@ export function SpinWheel({ odds, canSpin, nextAt, serverNow }: { odds: Odds[]; 
       return;
     }
     setOutcome(res.data);
-    setUsed(true);
+    setUsed(!unlimited);
     setRotation((r) => landingRotation(segs, res.data!.category, r, Math.random(), reduce ? 1 : 6));
     // transitionend does not fire in a background tab: reveal on a timer as well.
     setTimeout(landed, (reduce ? 600 : 5200) + 250);
@@ -105,7 +106,7 @@ export function SpinWheel({ odds, canSpin, nextAt, serverNow }: { odds: Odds[]; 
             maandag 00:00
           </p>
         ) : (
-          <p className="text-[13px] text-muted">1 draaibeurt deze week. Vervalt zondag 23:59.</p>
+          <p className="text-[13px] text-muted">{unlimited ? "Demo: onbeperkt draaien." : "1 draaibeurt deze week. Vervalt zondag 23:59."}</p>
         )}
       </div>
 

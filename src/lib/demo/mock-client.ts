@@ -354,7 +354,7 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
 /** Twin of the SQL function spin_wheel: weighted category, then a random available prize. */
 function spinWheelTwin(s: ReturnType<typeof store>): Result {
   const week = weekStartOf(todayKey());
-  if (s.wheel_spins.some((x) => x.user_id === DEMO_USER_ID && x.week_start === week)) return { data: null, error: { message: "ALREADY_SPUN" }, count: null };
+  // Demo: unlimited spins, to walk through every outcome. The real function allows one per week.
   const wins: Record<string, number> = {};
   for (const x of s.wheel_spins) if (x.week_start === week && x.prize_id) wins[String(x.prize_id)] = (wins[String(x.prize_id)] ?? 0) + 1;
   const available = availablePrizes(s.prizes as unknown as (PrizeLike & Row)[], wins);

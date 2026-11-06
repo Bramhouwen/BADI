@@ -273,7 +273,7 @@ export function buildSeed(): Store {
     variant_label: null,
     variants: [],
     needs_code: category === "voucher",
-    stock: 2,
+    stock: 5,
     weekly_max: null,
     cost_cents: 1500,
     active: true,
@@ -285,7 +285,7 @@ export function buildSeed(): Store {
     prize("food", "Frank & Charlie", "Drankje naar keuze", { variant_label: "Smaak", variants: ["Mango", "Framboos", "Citroen"], cost_cents: 350 }),
     prize("food", "Oot Granola", "Ontbijtpakket", { description: "Granola en muesli voor een week ontbijt.", cost_cents: 2500 }),
     prize("hydration", "Cabau Lifestyle", "Bloom Waterfles", { variant_label: "Kleur", variants: ["Zand", "Salie"], cost_cents: 3500 }),
-    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 1, cost_cents: 6000 }),
+    prize("sport", "Loavies", "Compleet sportpak", { variant_label: "Maat", variants: ["S", "M", "L"], stock: 2, cost_cents: 6000 }),
     prize("voucher", "ELVOU", "Tegoedbon", { cost_cents: 2500 }),
     prize("sport", "Flowee", "Relaxpakket", { active: false, stock: 0 }),
   ];

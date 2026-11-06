@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ArrowLeft, Settings2, Trophy } from "lucide-react";
 import { requireContext } from "@/lib/data";
+import { isDemo } from "@/lib/demo";
 import { loadWheelState } from "@/lib/wheel-server";
 import { CATEGORY_META, CHALLENGE_META, WHEEL_CHALLENGES, nextSpinAt } from "@/lib/wheel";
 import { Page } from "@/components/ui/page";
@@ -46,7 +47,7 @@ async function Content() {
         <p className="mx-auto mt-3 w-fit rounded-full bg-white/80 px-4 py-2 text-[13.5px] font-medium text-text shadow-sm">Elke week één kans op een prijs</p>
       </header>
 
-      <SpinWheel odds={state.odds} canSpin={!spin} nextAt={nextAt} serverNow={state.now} />
+      <SpinWheel odds={state.odds} canSpin={!spin || isDemo()} unlimited={isDemo()} nextAt={nextAt} serverNow={state.now} />
 
       {spin ? (
         <Link href="/wheel/prizes" className="glass flex items-center gap-3 rounded-[20px] p-3.5 hover:bg-blush/40">
