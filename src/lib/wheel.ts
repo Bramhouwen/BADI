@@ -177,12 +177,12 @@ export type WheelChallengeKey = (typeof WHEEL_CHALLENGES)[number];
  * The extra week challenges. "auto" ones the app checks itself; for "manual"
  * ones the member taps Gedaan in the prize cabinet.
  */
-export const CHALLENGE_META: Record<WheelChallengeKey, { title: string; rule: string; mode: "auto" | "manual" }> = {
-  energizer: { title: "Energizer", rule: "Doe deze week een korte workout van 5 minuten: planken, squats of burpees.", mode: "manual" },
-  buddy: { title: "Badi Buddy Challenge", rule: "Stuur deze week iedereen in de squad een compliment.", mode: "auto" },
-  recipe: { title: "Recept delen", rule: "Zet deze week een recept in de Kitchen: een eigen recept of eentje van internet.", mode: "auto" },
-  lunch: { title: "Squad Lunch", rule: "Maak deze week een gezamenlijke lunch voor de rest van de squad.", mode: "manual" },
-  relax: { title: "Me Time", rule: "Pak deze week een ontspanningsmoment: een bad, een massage, of een film met een healthy snack.", mode: "manual" },
+export const CHALLENGE_META: Record<WheelChallengeKey, { title: string; rule: string; mode: "auto" | "manual"; image: string }> = {
+  energizer: { title: "Energizer", rule: "Doe deze week een korte workout van 5 minuten: planken, squats of burpees.", mode: "manual", image: "/challenges/energizer.jpg" },
+  buddy: { title: "Geef een compliment", rule: "Geef deze week iedereen in je squad een oprecht compliment.", mode: "auto", image: "/challenges/buddy.jpg" },
+  recipe: { title: "Deel een recept", rule: "Zet deze week een eigen recept in de Kitchen, of een lekker, gezond recept van internet.", mode: "auto", image: "/challenges/recipe.jpg" },
+  lunch: { title: "Squad Lunch", rule: "Maak deze week een gezamenlijke lunch voor de andere squads.", mode: "manual", image: "/challenges/lunch.jpg" },
+  relax: { title: "Ontspanningsmoment", rule: "Pak deze week bewust een moment voor ontspanning: in bad, met een massage of een goede film, met een gezonde snack erbij.", mode: "manual", image: "/challenges/relax.jpg" },
 };
 
 export type DayState = "done" | "missed" | "open";

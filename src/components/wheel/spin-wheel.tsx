@@ -174,9 +174,13 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                 </div>
               ) : outcome.challenge ? (
                 <div className="space-y-4 text-center">
-                  <div className="mx-auto mt-2 flex h-24 w-24 items-center justify-center rounded-full" style={{ background: CATEGORY_META.challenge.color }}>
-                    <CategoryIcon category="challenge" className="h-11 w-11 text-white" strokeWidth={1.6} />
-                  </div>
+                  <Image
+                    src={outcome.challenge.image}
+                    alt={`${outcome.challenge.title}: ${outcome.challenge.rule}`}
+                    width={480}
+                    height={480}
+                    className="mx-auto mt-2 aspect-square w-full max-w-[240px] rounded-[22px] object-cover shadow-[0_14px_30px_-18px_rgba(95,53,41,0.5)]"
+                  />
                   <div>
                     <h2 id="wheel-reveal-title" className="font-display text-[26px] leading-tight text-text">
                       Nieuwe challenge unlocked! 🔥

@@ -25,7 +25,7 @@ export interface SpinOutcome {
   image: string | null;
   variantLabel: string | null;
   variants: string[];
-  challenge: { key: WheelChallengeKey; title: string; rule: string; mode: "auto" | "manual" } | null;
+  challenge: { key: WheelChallengeKey; title: string; rule: string; mode: "auto" | "manual"; image: string } | null;
 }
 
 function revalidateWheel() {

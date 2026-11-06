@@ -29,9 +29,7 @@ function ProgressCard({ spin, progress, current }: { spin: SpinRow; progress: Ch
   return (
     <li className="glass rounded-[22px] p-4">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: CATEGORY_META.challenge.color }}>
-          <CategoryIcon category="challenge" className="h-5 w-5 text-white" strokeWidth={1.8} />
-        </span>
+        <Image src={meta.image} alt="" width={128} height={128} className="h-16 w-16 shrink-0 rounded-[14px] object-cover" />
         <div className="min-w-0 flex-1">
           <p className="text-[11.5px] text-muted">{weekLabel(spin.week_start)}</p>
           <p className="text-[15px] font-semibold text-text">{meta.title}</p>
