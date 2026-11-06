@@ -32,6 +32,7 @@ function revalidateWheel() {
   revalidatePath("/wheel");
   revalidatePath("/wheel/prizes");
   revalidatePath("/wheel/admin");
+  revalidatePath("/checkin");
   revalidatePath("/");
 }
 
