@@ -112,24 +112,37 @@ describe("steps per week", () => {
 });
 
 describe("bonus points", () => {
-  it("counts Wall and recipe once a week and records up to 3 a week, on top of the ring", async () => {
+  it("counts the Wall on up to 3 days and recipe, steps and challenge once, on top of the ring", async () => {
     const { weekBonus, weekScore } = await import("@/lib/checkin-plan");
     const items = [
       { kind: "wall" as const, date: "2026-11-03" },
       { kind: "wall" as const, date: "2026-11-03" },
+      { kind: "wall" as const, date: "2026-11-04" },
       { kind: "wall" as const, date: "2026-11-05" },
+      { kind: "wall" as const, date: "2026-11-06" },
+      { kind: "recipe" as const, date: "2026-11-07" },
       { kind: "recipe" as const, date: "2026-11-08" },
-      { kind: "record" as const, date: "2026-11-04" },
-      { kind: "record" as const, date: "2026-11-04" },
-      { kind: "record" as const, date: "2026-11-06" },
-      { kind: "record" as const, date: "2026-11-07" },
+      { kind: "steps" as const, date: "2026-11-02" },
       // Last week and next week do not count.
       { kind: "recipe" as const, date: "2026-11-01" },
       { kind: "wall" as const, date: "2026-11-09" },
     ];
-    // Wall on 2 days still counts once, recipe once, records capped at 3: 5 x 5.
-    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 1, recipe: 1, record: 3, challenge: 0 }, points: 25 });
+    // Wall on 4 days counts 3, recipe once, steps once: 5 x 5.
+    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 3, recipe: 1, steps: 1, challenge: 0 }, points: 25 });
     expect(weekScore("2026-11-02", [], [], [], items)).toEqual({ earned: 0, bonus: 25, total: 48, fraction: 0 });
+  });
+
+  it("finds the weeks with the steps goal reached", async () => {
+    const { stepsGoalWeeks } = await import("@/lib/checkin-plan");
+    const logs = [
+      { log_date: "2026-11-02", steps: 30_000 },
+      { log_date: "2026-11-04", steps: 30_000 },
+      { log_date: "2026-11-10", steps: 12_000 },
+    ];
+    // Week of 02-11: 60.000 typed + a ticked day without a count (10.000) = 70.000.
+    const checkins = [{ checkin_date: "2026-11-06", activities: ["steps"] }];
+    expect(stepsGoalWeeks("2026-11-02", "2026-11-12", logs, checkins)).toEqual(["2026-11-02"]);
+    expect(stepsGoalWeeks("2026-11-02", "2026-11-12", logs, [])).toEqual([]);
   });
 
   it("finds personal records against earlier sessions only", async () => {
