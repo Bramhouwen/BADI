@@ -112,7 +112,7 @@ describe("steps per week", () => {
 });
 
 describe("bonus points", () => {
-  it("counts Wall and recipes per day and records up to 3 a week, on top of the ring", async () => {
+  it("counts Wall and recipe once a week and records up to 3 a week, on top of the ring", async () => {
     const { weekBonus, weekScore } = await import("@/lib/checkin-plan");
     const items = [
       { kind: "wall" as const, date: "2026-11-03" },
@@ -127,9 +127,9 @@ describe("bonus points", () => {
       { kind: "recipe" as const, date: "2026-11-01" },
       { kind: "wall" as const, date: "2026-11-09" },
     ];
-    // Wall on 2 days, recipe on 1, records capped at 3: 6 x 5.
-    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 2, recipe: 1, record: 3, challenge: 0 }, points: 30 });
-    expect(weekScore("2026-11-02", [], [], [], items)).toEqual({ earned: 0, bonus: 30, total: 48, fraction: 0 });
+    // Wall on 2 days still counts once, recipe once, records capped at 3: 5 x 5.
+    expect(weekBonus("2026-11-02", items)).toEqual({ counts: { wall: 1, recipe: 1, record: 3, challenge: 0 }, points: 25 });
+    expect(weekScore("2026-11-02", [], [], [], items)).toEqual({ earned: 0, bonus: 25, total: 48, fraction: 0 });
   });
 
   it("finds personal records against earlier sessions only", async () => {

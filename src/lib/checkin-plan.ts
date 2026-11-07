@@ -108,7 +108,7 @@ export const WEEK_POINTS = DAILY_HABITS.length * 7 + WEEKLY_STEP_POINTS + WEEKLY
 
 /**
  * Bonus points on top of the week: something extra for the squad. A photo on
- * the Wall and a shared recipe count once per day each; every new personal
+ * the Wall and a shared recipe count once a week each; every new personal
  * record counts, up to RECORDS_PER_WEEK a week; so does a completed extra
  * week challenge from the Weekrad.
  */
@@ -117,20 +117,20 @@ export const RECORDS_PER_WEEK = 3;
 export const BONUS_KINDS = ["wall", "recipe", "record", "challenge"] as const;
 export type BonusKind = (typeof BONUS_KINDS)[number];
 export const BONUS_LABELS: Record<BonusKind, string> = { wall: "Foto op de Wall", recipe: "Recept gedeeld", record: "Persoonlijk record", challenge: "Weekchallenge" };
-export const BONUS_RULES: Record<BonusKind, string> = { wall: "+5 per dag", recipe: "+5 per dag", record: "+5, max 3 per week", challenge: "+5 via het Weekrad" };
+export const BONUS_RULES: Record<BonusKind, string> = { wall: "+5, 1x per week", recipe: "+5, 1x per week", record: "+5, max 3 per week", challenge: "+5 via het Weekrad" };
 export interface BonusItem {
   kind: BonusKind;
   date: DateKey;
 }
 
-/** Bonus per kind in the week starting at `start`: distinct days for Wall and recipes, records capped at RECORDS_PER_WEEK. */
+/** Bonus per kind in the week starting at `start`: Wall and recipe once, records capped at RECORDS_PER_WEEK. */
 export function weekBonus(start: DateKey, items: readonly BonusItem[]): { counts: Record<BonusKind, number>; points: number } {
   const end = addDays(start, 6);
   const inWeek = items.filter((i) => i.date >= start && i.date <= end);
-  const days = (kind: BonusKind) => new Set(inWeek.filter((i) => i.kind === kind).map((i) => i.date)).size;
+  const once = (kind: BonusKind) => Math.min(1, inWeek.filter((i) => i.kind === kind).length);
   const counts: Record<BonusKind, number> = {
-    wall: days("wall"),
-    recipe: days("recipe"),
+    wall: once("wall"),
+    recipe: once("recipe"),
     record: Math.min(RECORDS_PER_WEEK, inWeek.filter((i) => i.kind === "record").length),
     challenge: Math.min(1, inWeek.filter((i) => i.kind === "challenge").length),
   };
