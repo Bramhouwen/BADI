@@ -37,7 +37,7 @@ async function Content() {
     supabase.from("custom_habits").select("id, name, emoji, sort_order").eq("user_id", ctx.userId).order("sort_order"),
     supabase.from("custom_habit_logs").select("habit_id, log_date").eq("user_id", ctx.userId).in("log_date", dates),
     supabase.from("stat_sharing").select("share_habits").eq("user_id", ctx.userId).maybeSingle(),
-    supabase.from("step_logs").select("log_date, steps").eq("user_id", ctx.userId).gte("log_date", addDays(weekStart, -1)).lte("log_date", today),
+    supabase.from("step_logs").select("log_date, steps").eq("user_id", ctx.userId).gte("log_date", addDays(weekStart, -7)).lte("log_date", today),
     // An extra challenge from this week's Weekrad belongs to this week's check-in.
     supabase.from("wheel_spins").select(SPIN_COLUMNS).eq("user_id", ctx.userId).eq("week_start", weekStart).eq("category", "challenge").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -93,7 +93,7 @@ async function Content() {
       <CheckinBoard
         today={today}
         dates={dates}
-        checkins={checkins.filter((c) => c.checkin_date >= addDays(weekStart, -1))}
+        checkins={checkins.filter((c) => c.checkin_date >= addDays(weekStart, -7))}
         auto={auto}
         water={water}
         planned={(planRows ?? []) as { plan_date: string; kind: "run" | "strength" }[]}
