@@ -225,7 +225,6 @@ export function CheckinBoard(props: Props) {
         today={today}
         weekStart={weekStart}
         date={date}
-        editable={dates}
         challengeStart={challengeStart}
         challengeEnd={challengeEnd}
         logs={props.steps}

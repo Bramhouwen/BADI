@@ -14,15 +14,14 @@ const StepsIcon = ACTIVITY_ICONS.steps;
 
 /**
  * Steps as a weekly goal: the week total against 70.000 (1 point per 10.000,
- * at most 7), a bar per day and one field to type the count of a day. Days of
- * this week up to today, plus yesterday, can be filled in. Last week folds out
- * below, so on Monday Sunday's steps can still be added.
+ * at most 7), a bar per day and one field to type the count of a day. Every
+ * day of this week up to today and every day of last week can be filled in;
+ * last week folds out below.
  */
 export function StepsCard({
   today,
   weekStart,
   date,
-  editable,
   challengeStart,
   challengeEnd,
   logs: initialLogs,
@@ -33,8 +32,6 @@ export function StepsCard({
   weekStart: string;
   /** The day picked at the top of the check-in (today or yesterday). */
   date: string;
-  /** Today and yesterday. */
-  editable: string[];
   challengeStart: string;
   challengeEnd: string;
   logs: { log_date: string; steps: number }[];
@@ -43,7 +40,7 @@ export function StepsCard({
   onStreak: (streak: number) => void;
 }) {
   const [logs, setLogs] = useState(initialLogs);
-  const canEdit = (d: string) => d >= challengeStart && d <= challengeEnd && d <= today && (d >= weekStart || editable.includes(d));
+  const canEdit = (d: string) => d >= challengeStart && d <= challengeEnd && d <= today && d >= addDays(weekStart, -7);
   const [day, setDay] = useState(date);
   const [seenDate, setSeenDate] = useState(date);
   // Switching between today and yesterday at the top also moves the field.
@@ -56,8 +53,8 @@ export function StepsCard({
   const prevPerDay = stepsByDay(prevStart, logs, ticks);
   const prevTotal = weekDates(prevStart).reduce((n, d) => n + (prevPerDay[d] ?? 0), 0);
   const showPrev = prevStart >= addDays(challengeStart, -6);
-  // Open by default while a day of last week can still be filled in (on Monday: Sunday).
-  const [prevOpen, setPrevOpen] = useState(() => weekDates(prevStart).some((d) => canEdit(d)));
+  // Open by default on Monday, when last week has only just ended.
+  const [prevOpen, setPrevOpen] = useState(() => today === weekStart);
   const [seenDayForPrev, setSeenDayForPrev] = useState(day);
   if (seenDayForPrev !== day) {
     setSeenDayForPrev(day);

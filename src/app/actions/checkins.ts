@@ -55,9 +55,10 @@ export async function setSteps(input: { date: string; steps: number | null }): P
   const { date, steps } = parsed.data;
   const ctx = await requireContext();
   const today = todayKey(new Date(), ctx.challenge.timezone);
-  const inWeek = date >= weekStartOf(today) && date <= today;
-  if ((!inWeek && !isEditableDate(ctx.challenge, date)) || date < ctx.challenge.start_date || date > ctx.challenge.end_date) {
-    return { ok: false, error: "Je vult stappen in voor deze week en gisteren." };
+  // Steps of this week and all of last week can be filled in, up to today.
+  const inRange = date >= addDays(weekStartOf(today), -7) && date <= today;
+  if (!inRange || date < ctx.challenge.start_date || date > ctx.challenge.end_date) {
+    return { ok: false, error: "Je vult stappen in voor deze week en vorige week." };
   }
   const supabase = await createClient();
   const { error } =
