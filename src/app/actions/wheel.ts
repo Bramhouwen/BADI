@@ -58,6 +58,17 @@ function shareWin(ctx: Ctx, supabase: Supa, spin: Pick<SpinRecord, "category" | 
     spin.category === "jackpot"
       ? `👑 JACKPOT! ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`
       : `🎉 ${who} heeft ${spin.prize_brand} ${spin.prize_name}${worth} gewonnen met het Weekrad!`;
+  postAsBaddy(ctx, supabase, body);
+}
+
+/** Shares an extra week challenge from the Weekrad in the squad chat. */
+function shareChallenge(ctx: Ctx, supabase: Supa, key: WheelChallengeKey) {
+  const who = firstName(ctx.profile.display_name);
+  const meta = CHALLENGE_META[key];
+  postAsBaddy(ctx, supabase, `🔥 ${who} heeft de Extra Challenge ${meta.title} gedraaid: ${meta.rule} Voltooid is +5 bonuspunten.`);
+}
+
+function postAsBaddy(ctx: Ctx, supabase: Supa, body: string) {
   after(async () => {
     await supabase.from("squad_messages").insert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, body, mentions: [], is_coach: true });
     await sendPush(supabase, "chat", { title: "Weekrad", body, url: "/squad/chat", tag: "squad-chat" }, { exclude: [ctx.userId] });
@@ -104,6 +115,8 @@ async function outcomeFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<S
     duplicate = (count ?? 0) > 0;
     if (duplicate) alternatives = await alternativesFor(ctx, supabase, spin);
     else shareWin(ctx, supabase, spin, valueCents);
+  } else if (spin.challenge_key) {
+    shareChallenge(ctx, supabase, spin.challenge_key);
   }
   return {
     spinId: spin.id,
