@@ -1,34 +1,42 @@
 /**
- * Super Badi: the most involved member of the squad, shown with a gold crown.
- * The longest current streak wins. On a tie: the most week points, then the
- * most steps this week, then the most check-in days in total, then whoever
- * checked in first today. Members still level after all that share it.
- * Nobody gets it while nobody has a streak.
+ * Super Badi: the member who did best in the week that just ended, shown with
+ * a gold crown all of this week. Most week points (including bonus) win; on a
+ * tie the most steps, then the most check-in days. Members still level share
+ * it. Nobody gets it in a week without points.
  */
 /** Gold of the Super Badi badge: light, mid and deep, like polished metal. */
 export const GOLD = { light: "#f9e29a", mid: "#d9a63c", deep: "#8f6418" };
 
-export interface SuperBadiInput {
+export interface WeekResult {
   id: string;
-  streak: number;
-  weekPoints: number;
-  weekSteps: number;
-  totalDays: number;
-  /** When today's check-in was first saved (ISO), or null. Earlier wins. */
-  checkedInAt: string | null;
+  /** Week points plus bonus. */
+  points: number;
+  steps: number;
+  /** Days with a check-in that week. */
+  days: number;
 }
 
-function compare(a: SuperBadiInput, b: SuperBadiInput): number {
-  // Not checked in today sorts last; Infinity minus Infinity would be NaN, so compare instead of subtract.
-  const early = (x: SuperBadiInput) => (x.checkedInAt ? Date.parse(x.checkedInAt) : Number.POSITIVE_INFINITY);
-  const ea = early(a);
-  const eb = early(b);
-  return b.streak - a.streak || b.weekPoints - a.weekPoints || b.weekSteps - a.weekSteps || b.totalDays - a.totalDays || (ea === eb ? 0 : ea < eb ? -1 : 1);
+function compare(a: WeekResult, b: WeekResult): number {
+  return b.points - a.points || b.steps - a.steps || b.days - a.days;
 }
 
-export function superBadi(members: SuperBadiInput[]): Set<string> {
-  const ranked = [...members].sort(compare);
+export function weekWinners(results: readonly WeekResult[]): string[] {
+  const ranked = [...results].sort(compare);
   const top = ranked[0];
-  if (!top || top.streak < 1) return new Set();
-  return new Set(ranked.filter((m) => compare(m, top) === 0).map((m) => m.id));
+  if (!top || top.points < 1) return [];
+  return ranked.filter((r) => compare(r, top) === 0).map((r) => r.id);
+}
+
+/** "Sam", "Sam en Noor", "Sam, Noor en Alex". */
+export function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} en ${names[names.length - 1]}`;
+}
+
+/** Baddy's message in the squad chat. */
+export function superBadiMessage(names: readonly string[], points: number): string {
+  const who = joinNames(names);
+  return names.length > 1
+    ? `🏆 Gefeliciteerd ${who}, jullie waren samen de Super Badi van vorige week met ${points} punten! Houden jullie de kroon vast, of geven jullie de troon deze week aan iemand anders?`
+    : `🏆 Gefeliciteerd ${who}, jij was de Super Badi van vorige week met ${points} punten! Hou je de kroon vast, of geef je de troon deze week aan iemand anders?`;
 }

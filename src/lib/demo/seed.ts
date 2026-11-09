@@ -322,6 +322,7 @@ export function buildSeed(): Store {
     prizes,
     wheel_spins,
     wheel_codes: [],
+    super_badi_awards: [],
     wheel_settings: [{ challenge_id: DEMO_CHALLENGE_ID, budget_cents: 15000, budget_period: "month", updated_at: iso(start) }],
     profiles,
     water_entries,

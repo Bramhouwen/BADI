@@ -326,6 +326,13 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const row = s.stat_sharing.find((r) => r.user_id === String(args.p_user));
       return Promise.resolve(ok(row ? row[`share_${String(args.p_key)}`] !== false : true));
     }
+    case "award_super_badi": {
+      if (s.super_badi_awards.some((x) => x.week_start === args.p_week)) return Promise.resolve(ok(false));
+      s.super_badi_awards.push({ challenge_id: DEMO_CHALLENGE_ID, week_start: args.p_week, user_ids: args.p_users, created_at: new Date().toISOString() });
+      const users = (args.p_users as string[]) ?? [];
+      if (users.length && args.p_body) s.squad_messages.push({ id: demoId(), challenge_id: DEMO_CHALLENGE_ID, user_id: DEMO_USER_ID, body: String(args.p_body), mentions: [], is_coach: true, recipient_id: null, attachment_type: null, attachment_path: null, attachment_name: null, ref_id: null, created_at: new Date().toISOString() });
+      return Promise.resolve(ok(true));
+    }
     case "wheel_respin":
     case "wheel_swap_prize": {
       const spin = s.wheel_spins.find((x) => x.id === args.p_spin && x.user_id === DEMO_USER_ID);

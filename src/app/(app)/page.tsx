@@ -14,7 +14,7 @@ import {
   wrappedStatus,
 } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
-import { superBadi } from "@/lib/super-badi";
+import { currentSuperBadi } from "@/lib/super-badi-server";
 import { loadBonusItems } from "@/lib/bonus";
 import { myChallengeProgress, SPIN_COLUMNS, type SpinRow } from "@/lib/wheel-server";
 import { firstName } from "@/lib/utils";
@@ -111,19 +111,8 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge, now);
   const finale = daysUntilFinale(ctx.challenge, now);
   const canEditToday = isEditableDate(ctx.challenge, today, now);
-  const crowned = superBadi(
-    members.map((m) => {
-      const theirs = checkins.filter((c) => c.user_id === m.user_id);
-      return {
-        id: m.user_id,
-        streak: m.stats.current,
-        weekPoints: m.week.earned + m.week.bonus,
-        weekSteps: Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === m.user_id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
-        totalDays: m.stats.total,
-        checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,
-      };
-    }),
-  );
+  // Super Badi: the winner of last week, all week long.
+  const crowned = await currentSuperBadi(ctx);
   const myWeek = members.find((m) => m.isMe)?.week ?? { fraction: 0, earned: 0, bonus: 0, total: 48 };
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];

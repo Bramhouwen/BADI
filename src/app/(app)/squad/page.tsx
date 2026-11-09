@@ -5,13 +5,13 @@ import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { challengeDay, todayKey } from "@/lib/dates";
 import { computeStreakStats } from "@/lib/streaks";
-import { superBadi } from "@/lib/super-badi";
+import { currentSuperBadi } from "@/lib/super-badi-server";
 import { firstName } from "@/lib/utils";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/ui/avatar";
 import { MemberAvatar } from "@/components/ui/member-avatar";
-import { stepsByDay, weekScore, weekStartOf } from "@/lib/checkin-plan";
+import { weekScore, weekStartOf } from "@/lib/checkin-plan";
 import { loadBonusItems } from "@/lib/bonus";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { PushPrompt } from "@/components/app/push-prompt";
@@ -64,19 +64,8 @@ async function Content() {
     };
   });
 
-  const crowned = superBadi(
-    members.map((m) => {
-      const theirs = checkins.filter((c) => c.user_id === m.id);
-      return {
-        id: m.id,
-        streak: m.streak,
-        weekPoints: m.week.earned + m.week.bonus,
-        weekSteps: Object.values(stepsByDay(weekStart, steps.filter((s) => s.user_id === m.id), theirs.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0),
-        totalDays: computeStreakStats(theirs.map((c) => c.checkin_date), today).total,
-        checkedInAt: theirs.find((c) => c.checkin_date === today)?.created_at ?? null,
-      };
-    }),
-  );
+  // Super Badi: the winner of last week, all week long.
+  const crowned = await currentSuperBadi(ctx);
 
   return (
     <Page className="space-y-5">
