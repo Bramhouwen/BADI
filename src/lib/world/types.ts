@@ -36,6 +36,8 @@ export interface SpriteManifest {
   frameWidth: number;
   frameHeight: number;
   mirrorForLeft: boolean;
+  /** Where the hips rest in the sitting frame; put on the seat's hip point when sitting. */
+  zitAnker: { x: number; y: number };
   animations: Record<string, { frames: string[]; fps: number; loop: boolean; anchor: { x: number; y: number }; withChair?: boolean }>;
 }
 

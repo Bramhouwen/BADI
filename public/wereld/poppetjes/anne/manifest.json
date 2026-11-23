@@ -3,6 +3,10 @@
   "frameWidth": 320,
   "frameHeight": 272,
   "mirrorForLeft": true,
+  "zitAnker": {
+    "x": 160,
+    "y": 168
+  },
   "animations": {
     "staan": {
       "frames": [

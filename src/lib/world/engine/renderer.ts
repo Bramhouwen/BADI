@@ -8,7 +8,8 @@ import { backToFront, occludersOver } from "./depth";
 import type { Grid } from "./grid";
 import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
-import type { SceneDef } from "./scene";
+import type { SceneDef, Seat } from "./scene";
+import { seatOccluder } from "./seats";
 
 export interface Camera {
   x: number;
@@ -35,10 +36,16 @@ export function screenToScene(sx: number, sy: number, cam: Camera, view: View): 
   return [cam.x + (sx - view.width / 2) / cam.zoom, cam.y + (sy - view.height / 2) / cam.zoom];
 }
 
+/** Where the frame's anchor goes, in frame pixels: the feet when standing, the hips (zitAnker) when sitting. */
+function anchorOf(c: LoadedCharacter, a: Avatar) {
+  if (a.state === "sit" && a.pose === "zitten" && c.manifest.zitAnker) return c.manifest.zitAnker;
+  return (c.manifest.animations[animationOf(a)] ?? c.manifest.animations.staan).anchor;
+}
+
 function characterBox(c: LoadedCharacter, a: Avatar, height: number) {
-  const anim = c.manifest.animations[animationOf(a)] ?? c.manifest.animations.staan;
   const s = height / c.manifest.frameHeight;
-  return { x: a.feet[0] - c.manifest.frameWidth * s * 0.5, y: a.feet[1] - anim.anchor.y * s, w: c.manifest.frameWidth * s, h: anim.anchor.y * s };
+  const anchor = anchorOf(c, a);
+  return { x: a.feet[0] - c.manifest.frameWidth * s * 0.5, y: a.feet[1] - anchor.y * s, w: c.manifest.frameWidth * s, h: c.manifest.frameHeight * s };
 }
 
 function drawCharacter(ctx: CanvasRenderingContext2D, c: LoadedCharacter, a: Avatar, height: number, now: number, deviceScale: number) {
@@ -60,9 +67,11 @@ function drawCharacter(ctx: CanvasRenderingContext2D, c: LoadedCharacter, a: Ava
   ctx.save();
   ctx.imageSmoothingEnabled = deviceScale * s <= 1.05;
   ctx.imageSmoothingQuality = "high";
+  // Standing: the feet anchor on the feet. Sitting: the zitAnker (hips) on the seat's hip point.
+  const anchor = anchorOf(c, a);
   ctx.translate(a.feet[0], a.feet[1]);
   if (a.facing === "left") ctx.scale(-1, 1);
-  ctx.drawImage(c.atlas, cell.sx, cell.sy, fw, fh, -anim.anchor.x * s, -anim.anchor.y * s, fw * s, fh * s);
+  ctx.drawImage(c.atlas, cell.sx, cell.sy, fw, fh, -anchor.x * s, -anchor.y * s, fw * s, fh * s);
   ctx.restore();
 }
 
@@ -97,7 +106,7 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
     if (!c) continue;
     drawCharacter(ctx, c, a, scene.characterHeight, now, z);
     const seat = a.seat ? scene.seats.find((s) => s.id === a.seat) : null;
-    for (const o of occludersOver(a.feet, characterBox(c, a, scene.characterHeight), scene.occluders, seat?.sitsOn ?? a.ignore)) {
+    for (const o of occludersOver(a.feet, characterBox(c, a, scene.characterHeight), scene.occluders, seat ? seatOccluder(scene.occluders, seat) : a.ignore)) {
       const path = outlines.get(o.id);
       if (!path) continue;
       ctx.save();
@@ -136,11 +145,39 @@ function drawDebug(ctx: CanvasRenderingContext2D, scene: SceneDef, grid: Grid, o
     ctx.stroke();
     ctx.strokeStyle = "#1e6fd9";
   }
-  ctx.fillStyle = "#d9338a";
-  for (const s of scene.seats) {
-    ctx.beginPath();
-    ctx.arc(s.feet[0], s.feet[1], 10, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  for (const s of scene.seats) drawSeatMarker(ctx, s, false);
+  ctx.restore();
+}
+
+/** A seat as the placement mode shows it: the hip point, the facing and the walking spot. */
+export function drawSeatMarker(ctx: CanvasRenderingContext2D, s: Seat, selected: boolean) {
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = selected ? "#ffffff" : "rgba(255,255,255,0.8)";
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath();
+  ctx.moveTo(s.hip[0], s.hip[1]);
+  ctx.lineTo(s.approach[0], s.approach[1]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#3f8f4f";
+  ctx.beginPath();
+  ctx.arc(s.approach[0], s.approach[1], selected ? 16 : 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = selected ? "#d9338a" : "#b52f74";
+  ctx.beginPath();
+  ctx.arc(s.hip[0], s.hip[1], selected ? 20 : 15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // facing arrow
+  const dir = s.facing === "left" ? -1 : 1;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(s.hip[0] + dir * 46, s.hip[1]);
+  ctx.lineTo(s.hip[0] + dir * 26, s.hip[1] - 12);
+  ctx.lineTo(s.hip[0] + dir * 26, s.hip[1] + 12);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 }

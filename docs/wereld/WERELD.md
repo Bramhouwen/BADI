@@ -194,3 +194,22 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 - Zolang `WORLD_OPEN` in `src/lib/world/types.ts` op `false` staat, ziet alleen de beheerder het kaart-icoon en `/wereld`. Voor de anderen geeft `/wereld` een 404 en wordt hun plek niet opgeslagen.
 - Openzetten voor de squad: `WORLD_OPEN = true`, pushen.
 - Lokaal bekijken zonder te pushen: `npm run dev` en dan http://localhost:3000/wereld (demo met `NEXT_PUBLIC_WINTER_ARC_DEMO=1`).
+
+### Tussendoor: zitplekken plaatsen (23-11-2026)
+
+Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fase 1b ligt stil tot dit staat.
+
+**Gedaan**
+- Plaatsingsmodus op `/wereld?bewerken`, alleen voor de beheerder. Toont het loopgrid, de uitgeknipte meubels en alle zitplekken.
+  - Tik op de zitting van een bank of stoel: daar komt een nieuwe zitplek, met de heupen op het punt waar je tikt (roze punt). De looptegel (groen punt) wordt de dichtstbijzijnde vrije tegel.
+  - Sleep het roze punt om de heupen te verplaatsen, sleep het groene punt om de looptegel te kiezen (springt naar het midden van een vrije tegel). Slepen naast de punten kijkt rond, knijpen of scrollen zoomt.
+  - Per zitplek: kijkrichting wisselen, "Probeer met je poppetje" (je loopt erheen en gaat zitten), verwijderen (knop of Delete-toets).
+  - Opslaan schrijft `src/lib/world/scenes/<ruimte>.zitplekken.json` (route `src/app/api/wereld/zitplekken`, alleen bij `npm run dev` en voor de beheerder). Online kopieert de knop de JSON naar het klembord.
+- Een zitplek is nu `{ id, hip, facing, approach }` in pixels van de achtergrond. Op welk meubel je zit, volgt uit het meubel waar de heupen in liggen.
+- Per poppetje een `zitAnker` in het manifest (in `scripts/make-wereld-poppetjes.mjs`): het punt in het zit-frame waar de heupen zitten. Bij zitten komt dat punt precies op de zitplek, op dezelfde schaal als staan. Anne (160, 168), Daphne (162, 166), Irene (135, 168), Bram (130, 203).
+- Getest op telefoonformaat: zitplek toevoegen, slepen, verwijderen, proberen, opslaan. Tests voor het inlezen van zitplekken, raken, het meubel onder een zitplek en het zitAnker.
+
+**Open**
+- Uitgeknipte voorgrondlaag per meubel met arm- of rugleuning, boven het zittende poppetje (stap 3 van deze tussendoor), na akkoord op de plaatsingsmodus.
+- De vier zitplekken in `woonkamer.zitplekken.json` zijn nog de oude schattingen: opnieuw plaatsen in de plaatsingsmodus.
+- De zitAnkers zijn gemeten op de frames; per poppetje controleren met "Probeer".

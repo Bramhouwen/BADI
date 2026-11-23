@@ -6,11 +6,16 @@ export interface InputHandlers {
   tap(x: number, y: number): void;
   pan(dx: number, dy: number): void;
   zoom(factor: number, x: number, y: number): void;
+  /** Return true to take this press as a drag of something (placement mode) instead of panning. */
+  grab?(x: number, y: number): boolean;
+  drag?(x: number, y: number): void;
+  drop?(): void;
 }
 
 export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
   const pointers = new Map<number, { x: number; y: number; sx: number; sy: number }>();
   let dragging = false;
+  let grabbing = false;
   let pinchDist = 0;
   const local = (e: PointerEvent | WheelEvent) => {
     const r = el.getBoundingClientRect();
@@ -21,7 +26,10 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     el.setPointerCapture?.(e.pointerId);
     const p = local(e);
     pointers.set(e.pointerId, { x: p.x, y: p.y, sx: p.x, sy: p.y });
+    if (pointers.size === 1 && h.grab?.(p.x, p.y)) grabbing = true;
     if (pointers.size === 2) {
+      if (grabbing) h.drop?.();
+      grabbing = false;
       const [a, b] = [...pointers.values()];
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
       dragging = true;
@@ -33,7 +41,8 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     const q = local(e);
     if (pointers.size === 1) {
       if (!dragging && Math.hypot(q.x - p.sx, q.y - p.sy) > 8) dragging = true;
-      if (dragging) h.pan(q.x - p.x, q.y - p.y);
+      if (dragging && grabbing) h.drag?.(q.x, q.y);
+      else if (dragging) h.pan(q.x - p.x, q.y - p.y);
     }
     p.x = q.x;
     p.y = q.y;
@@ -49,6 +58,8 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     pointers.delete(e.pointerId);
     if (p && !dragging && pointers.size === 0 && e.type === "pointerup") h.tap(p.x, p.y);
     if (pointers.size === 0) {
+      if (grabbing) h.drop?.();
+      grabbing = false;
       dragging = false;
       pinchDist = 0;
     }

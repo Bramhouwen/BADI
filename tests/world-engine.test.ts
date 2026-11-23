@@ -6,6 +6,7 @@ import { backToFront, occludersOver } from "@/lib/world/engine/depth";
 import { frameIndex } from "@/lib/world/engine/sprites";
 import { newAvatar, sit, step, walk } from "@/lib/world/engine/avatar";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
+import { readSeats, seatAt, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
 
 const grid = buildGrid(WOONKAMER);
 
@@ -84,8 +85,8 @@ describe("depth", () => {
     expect(over.map((o) => o.id)).not.toContain("eettafel");
   });
   it("leaves out the seat you sit on, but keeps the coffee table in front of your legs", () => {
-    const seat = WOONKAMER.seats.find((s) => s.id === "bank-midden")!;
-    const over = occludersOver(seat.feet, box(...seat.feet), WOONKAMER.occluders, seat.sitsOn).map((o) => o.id);
+    const seat = WOONKAMER.seats.find((s) => s.id === "zit-2")!;
+    const over = occludersOver(seat.hip, box(seat.hip[0], seat.hip[1]), WOONKAMER.occluders, seatOccluder(WOONKAMER.occluders, seat)).map((o) => o.id);
     expect(over).not.toContain("sofa");
     expect(over).toContain("salontafel");
   });
@@ -120,5 +121,32 @@ describe("characters", () => {
     walk(a, [[800, 704]], 10, null, "sofa");
     expect(a.seat).toBeNull();
     expect(a.ignore).toBe("sofa");
+  });
+});
+
+describe("seats", () => {
+  it("reads the placed seats and leaves out broken ones", () => {
+    const seats = readSeats({ seats: [{ id: "a", hip: [1, 2], facing: "left", approach: [3, 4] }, { id: "b", hip: [1], facing: "left", approach: [3, 4] }, { id: "c", hip: [1, 2], facing: "up", approach: [3, 4] }] });
+    expect(seats.map((s) => s.id)).toEqual(["a"]);
+    expect(readSeats(null)).toEqual([]);
+  });
+  it("every seat in the living room sits on furniture and is reached over the floor", () => {
+    const grid = buildGrid(WOONKAMER);
+    expect(WOONKAMER.seats.length).toBeGreaterThan(0);
+    for (const seat of WOONKAMER.seats) {
+      expect(seatOccluder(WOONKAMER.occluders, seat)).not.toBeNull();
+      const t = grid.tileAt(seat.approach);
+      expect(t && grid.isWalkable(...t)).toBe(true);
+    }
+  });
+  it("finds the seat nearest to a tap", () => {
+    const seat = WOONKAMER.seats[0];
+    expect(seatAt(WOONKAMER, [seat.hip[0] + 10, seat.hip[1] - 10])?.id).toBe(seat.id);
+    expect(seatAt(WOONKAMER, [200, 1400])).toBeNull();
+  });
+  it("puts the zitAnker exactly on the hip point at the standing scale", () => {
+    const [x, y] = sitOrigin([1000, 600], { x: 160, y: 168 }, 1.25);
+    expect(x + 160 * 1.25).toBe(1000);
+    expect(y + 168 * 1.25).toBe(600);
   });
 });

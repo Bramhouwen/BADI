@@ -2,9 +2,12 @@
  * The shared living room in the BADI house. Measured on
  * public/wereld/scenes/woonkamer.webp (2000 x 1493): the floor diamond, the
  * floor taken by furniture, the outline and front edge of every piece you
- * can stand behind, the seats and the door. Check with /wereld?debug=1.
+ * can stand behind and the door. The seats are placed by hand in the
+ * placement mode (/wereld?bewerken) and live in woonkamer.zitplekken.json.
  */
 import type { SceneDef } from "../engine/scene";
+import { readSeats } from "../engine/seats";
+import zitplekken from "./woonkamer.zitplekken.json";
 
 export const WOONKAMER: SceneDef = {
   id: "woonkamer",
@@ -73,20 +76,7 @@ export const WOONKAMER: SceneDef = {
       front: [[1790, 925], [1900, 920]],
     },
   ],
-  seats: [
-    { id: "bank-links", label: "op de bank", feet: [855, 650], approach: [800, 704], facing: "right", sitsOn: "sofa", tap: [[700, 390], [905, 390], [905, 668], [700, 668]] },
-    { id: "bank-midden", label: "op de bank", feet: [985, 642], approach: [800, 704], facing: "right", sitsOn: "sofa", tap: [[905, 380], [1060, 380], [1060, 660], [905, 660]] },
-    { id: "bank-rechts", label: "op de bank", feet: [1125, 634], approach: [1258, 690], facing: "left", sitsOn: "sofa", tap: [[1060, 380], [1246, 380], [1246, 645], [1060, 645]] },
-    {
-      id: "fauteuil",
-      label: "in de stoel",
-      feet: [1440, 738],
-      approach: [1395, 805],
-      facing: "left",
-      sitsOn: "fauteuil",
-      tap: [[1322, 600], [1345, 530], [1370, 505], [1470, 498], [1552, 508], [1577, 548], [1575, 640], [1505, 716], [1450, 770], [1402, 772], [1330, 692]],
-    },
-  ],
+  seats: readSeats(zitplekken),
   doors: [{ id: "voordeur", label: "Naar buiten", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [215, 932], to: null }],
   spawn: [262, 948],
   characterHeight: 340,

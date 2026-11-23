@@ -1,0 +1,43 @@
+/** Seats: hit testing and which piece of furniture you sit on. */
+import { dist, pointInPolygon, type Pt } from "./geometry";
+import type { Occluder, SceneDef, Seat } from "./scene";
+
+/** The furniture whose outline holds the seat: not drawn over the one sitting on it. */
+export function seatOccluder(occluders: readonly Occluder[], seat: Seat): string | null {
+  return occluders.find((o) => pointInPolygon(seat.hip, o.outline))?.id ?? null;
+}
+
+/** The seat whose hip point is nearest to a tap, within `radius` background pixels. */
+export function seatAt(scene: SceneDef, p: Pt, radius = 90): Seat | null {
+  let best: Seat | null = null;
+  let bestD = radius;
+  for (const s of scene.seats) {
+    const d = dist(s.hip, p);
+    if (d <= bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+  return best;
+}
+
+/** Where a sitting character's frame goes: its zitAnker on the hip point. */
+export function sitOrigin(hip: Pt, zitAnker: { x: number; y: number }, scale: number): Pt {
+  return [hip[0] - zitAnker.x * scale, hip[1] - zitAnker.y * scale];
+}
+
+/** Seats from a <scene>.zitplekken.json file; anything malformed is left out. */
+export function readSeats(data: unknown): Seat[] {
+  const list = (data as { seats?: unknown })?.seats;
+  if (!Array.isArray(list)) return [];
+  const pt = (v: unknown): Pt | null => (Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === "number" && Number.isFinite(n)) ? [v[0], v[1]] : null);
+  const out: Seat[] = [];
+  for (const raw of list) {
+    const r = raw as Record<string, unknown>;
+    const hip = pt(r.hip);
+    const approach = pt(r.approach);
+    if (typeof r.id !== "string" || !hip || !approach || (r.facing !== "left" && r.facing !== "right")) continue;
+    out.push({ id: r.id, hip, approach, facing: r.facing });
+  }
+  return out;
+}

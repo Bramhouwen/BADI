@@ -22,9 +22,11 @@ const SCENE_NAMES: Record<string, string> = {
 /**
  * BADI Wereld. Fase 1a: the living room, where you walk, sit and stand behind
  * furniture. /wereld?debug=1 shows the walking grid; ?debug=2 only enables the
- * test hook window.__wereld. See docs/wereld/WERELD.md.
+ * test hook window.__wereld. ?bewerken is the placement mode for seats
+ * (admin only, saves to the scene's JSON on your own computer). See
+ * docs/wereld/WERELD.md.
  */
-async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[] }> }) {
+async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[]; bewerken?: string | string[] }> }) {
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
@@ -44,11 +46,11 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
           <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-muted">BADI Wereld · {WOONKAMER.name}</p>
           <h1 className="truncate font-display text-[28px] leading-tight text-text">{name}</h1>
         </div>
-        <p className="shrink-0 pb-1 text-[12.5px] text-muted">Tik om te lopen</p>
+        <p className="shrink-0 pb-1 text-[12.5px] text-muted">{sp.bewerken !== undefined ? "Zitplekken plaatsen" : "Tik om te lopen"}</p>
       </div>
 
       {sprite ? (
-        <WorldCanvas scene={WOONKAMER} me={{ id: ctx.userId, name, character: sprite }} startX={inRoom ? profile!.x : null} startY={inRoom ? profile!.y : null} debug={sp.debug === "1" || sp.debug === "2"} overlay={sp.debug === "1"} />
+        <WorldCanvas scene={WOONKAMER} me={{ id: ctx.userId, name, character: sprite }} startX={inRoom ? profile!.x : null} startY={inRoom ? profile!.y : null} debug={sp.debug === "1" || sp.debug === "2"} overlay={sp.debug === "1"} edit={sp.bewerken !== undefined} />
       ) : (
         <p className="rounded-[20px] bg-white/80 p-4 text-[14px] text-muted">Je poppetje voor de wereld is er nog niet.</p>
       )}

@@ -12,18 +12,17 @@ export interface Occluder {
   front: Polygon;
 }
 
+/**
+ * A place to sit, set in the placement mode (/wereld?bewerken) and saved in
+ * <scene>.zitplekken.json. The character's zitAnker goes exactly on `hip`.
+ */
 export interface Seat {
   id: string;
-  label: string;
-  /** Where the feet go while sitting. */
-  feet: Pt;
-  /** A free floor spot to walk to first. */
-  approach: Pt;
+  /** Where the hips rest, in background pixels. */
+  hip: Pt;
   facing: "left" | "right";
-  /** Occluder the sitter is drawn in front of (the seat itself). */
-  sitsOn: string;
-  /** Tapping inside this outline means: go sit here. */
-  tap: Polygon;
+  /** Free floor (a tile centre) to walk to before sitting down. */
+  approach: Pt;
 }
 
 export interface Door {

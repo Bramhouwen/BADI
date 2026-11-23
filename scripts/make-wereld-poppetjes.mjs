@@ -48,11 +48,16 @@ const BRAM = {
   sprongsquat: { cells: [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]], fps: 7 },
 };
 
+/**
+ * zitAnker: the point in the sitting frame where the hips rest on the seat
+ * (frame pixels). When sitting, this point goes exactly on the seat's hip
+ * point, at the same scale as standing. Measured on each zitten-01.png.
+ */
 const PEOPLE = [
-  { key: "anne", name: "Anne", layout: STANDARD },
-  { key: "daphne", name: "Daphne", layout: STANDARD },
-  { key: "irene", name: "Irene", layout: STANDARD },
-  { key: "bram", name: "Bram", layout: BRAM },
+  { key: "anne", name: "Anne", layout: STANDARD, zitAnker: { x: 160, y: 168 } },
+  { key: "daphne", name: "Daphne", layout: STANDARD, zitAnker: { x: 162, y: 166 } },
+  { key: "irene", name: "Irene", layout: STANDARD, zitAnker: { x: 135, y: 168 } },
+  { key: "bram", name: "Bram", layout: BRAM, zitAnker: { x: 130, y: 203 } },
 ];
 
 /**
@@ -146,7 +151,7 @@ for (const person of PEOPLE) {
     }
     animations[anim] = { frames: files, fps: def.fps, loop: true, anchor: anchorOf(frames), ...(def.withChair ? { withChair: true } : {}) };
   }
-  const manifest = { name: person.name, frameWidth: CW, frameHeight: CH, mirrorForLeft: true, animations };
+  const manifest = { name: person.name, frameWidth: CW, frameHeight: CH, mirrorForLeft: true, zitAnker: person.zitAnker, animations };
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   console.log(`${person.name}: ${Object.values(animations).reduce((n, a) => n + a.frames.length, 0)} frames`);
 }
