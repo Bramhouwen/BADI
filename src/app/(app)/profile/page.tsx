@@ -19,7 +19,7 @@ import { AnnouncementControls } from "./announcement-controls";
 import { SpriteReleaseControls, type SpriteRow } from "./sprite-release-controls";
 import { BuddySettings } from "./buddy-settings";
 import { memberSprite } from "@/lib/sprites-server";
-import { SPRITE_SHEETS, spriteKey, unreleasedKeys } from "@/lib/sprites";
+import { SPRITE_SHEETS, SPRITES_LIVE, spriteKey, unreleasedKeys } from "@/lib/sprites";
 import { announcementSent } from "@/lib/announcement-server";
 import { PushSettings } from "./push-settings";
 import { settingsFromRow } from "@/lib/notification-kinds";
@@ -92,14 +92,14 @@ async function Content() {
         </div>
       </section>
 
-      {isAdmin ? (
+      {isAdmin && SPRITES_LIVE ? (
         <section aria-label="Aankondiging">
           <SectionTitle>Aankondiging</SectionTitle>
           <AnnouncementControls sent={announced} />
         </section>
       ) : null}
 
-      {spriteRows.length > 0 ? (
+      {SPRITES_LIVE && spriteRows.length > 0 ? (
         <section aria-label="Poppetjes vrijgeven">
           <SectionTitle>Poppetjes vrijgeven</SectionTitle>
           <SpriteReleaseControls rows={spriteRows} />

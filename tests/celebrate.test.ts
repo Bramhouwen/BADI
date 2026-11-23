@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { celebrationText, isStreakMilestone } from "@/lib/celebrate";
-import { SPRITE_CELL, SPRITE_SHEETS, sheetFor, spriteKey, unreleasedKeys } from "@/lib/sprites";
+import { SPRITE_CELL, SPRITE_SHEETS, SPRITES_LIVE, sheetFor, spriteKey, unreleasedKeys } from "@/lib/sprites";
 
 describe("celebrations", () => {
   it("celebrates every full week of check-ins", () => {
@@ -19,14 +19,19 @@ describe("celebrations", () => {
 });
 
 describe("characters", () => {
-  it("finds a live character by first name", () => {
+  it("shows nobody a character while they are switched off, even when released", () => {
+    if (SPRITES_LIVE) return;
+    for (const name of ["Anne", "Irene", "Daphne", "Bram"]) expect(sheetFor(name, new Set(["anne", "irene", "daphne", "bram"]))).toBeNull();
+  });
+
+  it.skipIf(!SPRITES_LIVE)("finds a live character by first name", () => {
     expect(sheetFor("Anne de Vries")?.src).toBe("/sprites/anne.webp");
     expect(sheetFor("anne")?.face).toBe("/sprites/anne-face.png");
     expect(sheetFor("Onbekend")).toBeNull();
     expect(spriteKey("  Irene  van Dam")).toBe("irene");
   });
 
-  it("keeps a character out until the admin released it", () => {
+  it.skipIf(!SPRITES_LIVE)("keeps a character out until the admin released it", () => {
     expect(sheetFor("Irene")).toBeNull();
     expect(sheetFor("Daphne")).toBeNull();
     expect(sheetFor("Bram")).toBeNull();

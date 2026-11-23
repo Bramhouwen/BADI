@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { pushConfigured, sendPush, sendToSubscriptions, type PushSubscriptionKeys } from "@/lib/push";
-import { SPRITE_SHEETS, spriteKey } from "@/lib/sprites";
+import { SPRITE_SHEETS, SPRITES_LIVE, spriteKey } from "@/lib/sprites";
 import { OWN_SPRITE_PREVIEW, ownSpriteIntro } from "@/lib/announcement";
 import { firstName } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
@@ -21,6 +21,7 @@ function validKey(key: string): boolean {
 
 /** The member's own push, sent to the admin's devices; tapping it opens their introduction. */
 export async function sendSpriteTest(key: string): Promise<ActionResult<{ devices: number }>> {
+  if (!SPRITES_LIVE) return { ok: false, error: "De poppetjes staan uit (SPRITES_LIVE in src/lib/sprites.ts)." };
   let ctx;
   try {
     ctx = await requireAdmin();
@@ -41,6 +42,7 @@ export async function sendSpriteTest(key: string): Promise<ActionResult<{ device
 
 /** Releases a member's character: it goes live for everyone and its member gets a push. Once only. */
 export async function releaseSprite(key: string): Promise<ActionResult> {
+  if (!SPRITES_LIVE) return { ok: false, error: "De poppetjes staan uit (SPRITES_LIVE in src/lib/sprites.ts)." };
   let ctx;
   try {
     ctx = await requireAdmin();

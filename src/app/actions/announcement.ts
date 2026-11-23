@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { SPRITE_SHEETS } from "@/lib/sprites";
+import { SPRITE_SHEETS, SPRITES_LIVE } from "@/lib/sprites";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { pushConfigured, sendPush, sendToSubscriptions, type PushSubscriptionKeys } from "@/lib/push";
@@ -17,6 +17,7 @@ async function requireAdmin() {
 
 /** Sends the announcement's push to the admin's own devices only; tapping it opens the preview. */
 export async function sendAnnouncementTest(): Promise<ActionResult<{ devices: number }>> {
+  if (!SPRITES_LIVE) return { ok: false, error: "De poppetjes staan uit (SPRITES_LIVE in src/lib/sprites.ts)." };
   let ctx;
   try {
     ctx = await requireAdmin();
@@ -35,6 +36,7 @@ export async function sendAnnouncementTest(): Promise<ActionResult<{ devices: nu
 
 /** Baddy posts the announcement in the squad chat and everyone else gets a push. Once only. */
 export async function sendAnnouncement(): Promise<ActionResult> {
+  if (!SPRITES_LIVE) return { ok: false, error: "De poppetjes staan uit (SPRITES_LIVE in src/lib/sprites.ts)." };
   let ctx;
   try {
     ctx = await requireAdmin();

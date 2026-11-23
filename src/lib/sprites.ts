@@ -61,11 +61,21 @@ export function spriteKey(displayName: string | null | undefined): string {
 }
 
 /**
+ * Master switch for the characters in the app (welcome, buddy card,
+ * celebrations, characters with messages, faces in push notifications, the
+ * announcement). Off: nobody sees them, nothing is deleted, and the admin
+ * cannot release or announce them; set to true to bring everything back.
+ * BADI Wereld has its own characters and is not affected.
+ */
+export const SPRITES_LIVE = false;
+
+/**
  * The sheet of a member, or null. A character is live when the code says so
  * or when the admin released it (`released`, from the database). In demo mode
  * everyone borrows the first sheet.
  */
 export function sheetFor(displayName: string | null | undefined, released: ReadonlySet<string> = new Set()): SpriteSheet | null {
+  if (!SPRITES_LIVE) return null;
   const key = spriteKey(displayName);
   const sheet = SPRITE_SHEETS[key];
   if (sheet && (sheet.live !== false || released.has(key))) return sheet;

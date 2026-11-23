@@ -38,7 +38,7 @@ import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
 import { WelcomeSplash } from "@/components/sprite/welcome-splash";
-import { SPRITE_SHEETS, spriteKey } from "@/lib/sprites";
+import { SPRITE_SHEETS, SPRITES_LIVE, spriteKey } from "@/lib/sprites";
 import { memberSprite, releasedSprites } from "@/lib/sprites-server";
 import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW, OWN_SPRITE_PREVIEW, ownSpriteIntro } from "@/lib/announcement";
 import { announcementSent } from "@/lib/announcement-server";
@@ -132,7 +132,8 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
   // An announcement first (the admin can preview it with ?aankondiging=1), then your own character's daily hello.
   const announceSheet = SPRITE_SHEETS[ANNOUNCEMENT.sprite];
   const previewAnnouncement = ctx.membership.role === "admin" && sp[ANNOUNCEMENT_PREVIEW] === "1";
-  const showAnnouncement = Boolean(announceSheet) && (previewAnnouncement || (await announcementSent(supabase, ctx.challenge.id)));
+  // With the characters switched off only the admin's explicit preview still shows it.
+  const showAnnouncement = Boolean(announceSheet) && (previewAnnouncement || (SPRITES_LIVE && (await announcementSent(supabase, ctx.challenge.id))));
 
   // Your own character says hello once a day, with a line about your day.
   const mySprite = await memberSprite(ctx.challenge.id, ctx.profile.display_name);
