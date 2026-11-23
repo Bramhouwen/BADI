@@ -169,3 +169,22 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 - Bram's `zitten` en `slapen` zitten in zijn eigen leunstoel (in het manifest gemarkeerd met `withChair`). Voor de bank en stoelen in de wereld is een losse zitpose nodig: 1 of 2 frames "Bram zittend, zonder stoel, transparant, 320 x 272".
 - Eigen kamers per persoon: vier extra achtergronden nodig (fase 4).
 - De kat staat niet in de buitenillustratie.
+
+### Fase 1a: proef in de woonkamer (23-11-2026)
+
+**Gedaan**
+- Engine als losse modules in `src/lib/world/engine/`: `geometry`, `scene` (formaat van een ruimte), `grid` (tegelgrid over de getekende vloer, 24 x 24), `pathfinding` (A* in acht richtingen zonder hoeken af te snijden, daarna rechtgetrokken), `sprites` (manifest lezen, atlas bij het laden), `avatar` (lopen, zitten, kijkrichting, snelheid passend bij de loopanimatie), `depth` (welk meubel over wie getekend wordt), `renderer` (canvas, scherp op elk scherm, camera) en `input` (tikken, slepen, knijpen, scrollen).
+- De woonkamer in `src/lib/world/scenes/woonkamer.ts`, opgemeten op de illustratie: vloer, loopgebied, meubels die vloer innemen, uitgeknipte lagen voor bank, salontafel, fauteuil, eettafel, plant op kruk en monstera, vier zitplekken (drie op de bank, de fauteuil) en de deur.
+- Diepte: een poppetje achter een meubel krijgt dat stuk van de illustratie opnieuw over zich heen. Wie op de bank zit, zit voor de bank en achter de salontafel, zoals in het stijlvoorbeeld.
+- `/wereld` toont de woonkamer: tik om te lopen, tik op de bank of stoel om te gaan zitten, tik op de deur om ernaartoe te lopen. Je plek wordt bewaard (`x`, `y` in pixels van de achtergrond).
+- Controleweergave: `/wereld?debug=1` toont grid, loopvlak, uitgeknipte meubels (blauw), voorranden (oranje) en zitplekken. `?debug=2&als=anne` speelt als een ander poppetje en zet een testhaak `window.__wereld` aan.
+- Getest in de demo op desktop en telefoonformaat: lopen om meubels heen, achter de eettafel langs, zitten op bank en fauteuil, opstaan, naar de deur. Tests voor grid, routes, diepte, frames en lopen.
+
+**Anders gegaan**
+- Posities worden bewaard als pixels in de achtergrond, niet als tegelnummer: dat werkt ook voor buiten, waar geen zuiver tegelgrid ligt.
+- Zitten op de eettafelstoelen zit er nog niet in: je zou met je rug naar de kijker zitten en er is geen achteraanzicht.
+
+**Open**
+- Bram kan nog niet zitten: zijn zitpose zit in zijn eigen leunstoel. Hij loopt naar de zitplek en blijft staan, met een melding.
+- De deur leidt nog nergens heen: buiten, kantoor en sportschool zijn stap 1b.
+- Snelheid op een echte telefoon nog meten (doel 60 fps).
