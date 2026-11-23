@@ -91,6 +91,10 @@ export interface SceneDef {
   characterHeight: number;
   /** Walking speed in background pixels per second, so steps match the walk animation at this size. */
   walkSpeed?: number;
-  /** Zoom the camera starts at, relative to the zoom where the picture just fills the screen; outside starts closer. */
-  startZoom?: number;
+  /**
+   * Camera. `start`: the whole picture (rooms, the default) or close to your
+   * character (outside, where the picture is too large for one screen).
+   * `close`: how much closer the close-up zoom is than usual.
+   */
+  camera?: { start?: "overview" | "close"; close?: number };
 }

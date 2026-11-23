@@ -7,6 +7,7 @@ import { frameIndex } from "@/lib/world/engine/sprites";
 import { newAvatar, sit, step, walk } from "@/lib/world/engine/avatar";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
 import { SCENES } from "@/lib/world/scenes";
+import { ease, followTarget, heading, startZoom, toggledZoom, zoomLevels } from "@/lib/world/engine/camera";
 import { readSeats, seatAt, seatForeground, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
 
 const grid = buildGrid(WOONKAMER);
@@ -202,4 +203,41 @@ describe("scenes", () => {
       });
     });
   }
+});
+
+describe("camera", () => {
+  const phone = { width: 390, height: 844, dpr: 3 };
+  const desktop = { width: 1440, height: 800, dpr: 2 };
+  it("shows a whole room at the start, also on a phone held upright", () => {
+    for (const view of [phone, desktop]) {
+      const z = startZoom(WOONKAMER, zoomLevels(WOONKAMER, view));
+      expect(WOONKAMER.width * z).toBeLessThanOrEqual(view.width + 0.5);
+      expect(WOONKAMER.height * z).toBeLessThanOrEqual(view.height + 0.5);
+    }
+  });
+  it("starts outside close to your character, because the village does not fit one screen", () => {
+    const l = zoomLevels(SCENES.buiten, phone);
+    expect(startZoom(SCENES.buiten, l)).toBe(l.close);
+    expect(l.close).toBeGreaterThan(l.overview * 2);
+  });
+  it("switches between the whole picture and close by with a double tap", () => {
+    const l = zoomLevels(WOONKAMER, phone);
+    expect(toggledZoom(l.overview, l)).toBe(l.close);
+    expect(toggledZoom(l.close, l)).toBe(l.overview);
+    expect(l.close).toBeLessThanOrEqual(l.max);
+  });
+  it("looks ahead in the direction you walk", () => {
+    const h = heading([100, 100], [300, 100]);
+    expect(h).toEqual([1, 0]);
+    const ahead = followTarget([100, 100], h, WOONKAMER, phone, 0.5);
+    const still = followTarget([100, 100], [0, 0], WOONKAMER, phone, 0.5);
+    expect(ahead[0]).toBeGreaterThan(still[0] + 100);
+    expect(heading([5, 5], undefined)).toEqual([0, 0]);
+  });
+  it("eases the same amount over a second at any frame rate", () => {
+    let a = 0, b = 0;
+    for (let i = 0; i < 60; i++) a = ease(a, 1, 3, 1 / 60);
+    for (let i = 0; i < 30; i++) b = ease(b, 1, 3, 1 / 30);
+    expect(Math.abs(a - b)).toBeLessThan(1e-9);
+  });
 });

@@ -5,6 +5,7 @@ import { saveWorldPosition } from "@/app/actions/world";
 import { act, newAvatar, sit, step, walk, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
 import { dist, pointInPolygon, type Pt } from "@/lib/world/engine/geometry";
 import { buildGrid, type Grid } from "@/lib/world/engine/grid";
+import { ease, followTarget, heading, startZoom, toggledZoom, zoomLevels } from "@/lib/world/engine/camera";
 import { attachInput } from "@/lib/world/engine/input";
 import { findPath, smoothPath } from "@/lib/world/engine/pathfinding";
 import { clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
@@ -145,14 +146,13 @@ export function WorldCanvas({
     );
     const view: View = { width: 1, height: 1, dpr: 1 };
     let cam: Camera = { x: scene.width / 2, y: scene.height / 2, zoom: 0.5 };
-    let lastPan = -Infinity;
-    const zoomLimits = () => {
-      // The picture always fills the screen: never zoom out past the point where empty edges show.
-      const min = Math.max(view.width / scene.width, view.height / scene.height);
-      // The closest zoom keeps a character as large as it can be in the rooms, also outside where characters are drawn smaller.
-      const max = Math.max(min, (1.3 * 340) / scene.characterHeight);
-      return { min, max, start: Math.min(max, min * (scene.startZoom ?? 1)) };
-    };
+    // The camera follows you (looking ahead while you walk) until you look around yourself; the next tap brings it back.
+    let follow = false;
+    // A zoom on its way after a double tap, eased per frame.
+    let zoomTo: number | null = null;
+    let lead: Pt = [0, 0];
+    let page = PAGE;
+    const zoomLimits = () => zoomLevels(scene, view);
     const resize = () => {
       const r = box.getBoundingClientRect();
       view.width = Math.max(1, r.width);
@@ -171,6 +171,17 @@ export function WorldCanvas({
         const [background, character] = await Promise.all([loadImage(scene.background), loadCharacter(me.character!)]);
         if (!alive) return;
         const characters = new Map<string, LoadedCharacter>([[character.key, character]]);
+        // Around the picture (zoomed out on a tall screen): the colour of the picture's own edge, so it runs on seamlessly.
+        try {
+          const probe = document.createElement("canvas");
+          probe.width = probe.height = 1;
+          const pc = probe.getContext("2d");
+          if (pc) {
+            pc.drawImage(background, 4, 4, 1, 1, 0, 0, 1, 1);
+            const [r, g, b] = pc.getImageData(0, 0, 1, 1).data;
+            page = `rgb(${r}, ${g}, ${b})`;
+          }
+        } catch {}
         const now0 = performance.now();
         const door = arriveAt ? scene.doors.find((d) => d.id === arriveAt) : null;
         const start: Pt | null = door ? door.approach : startX !== null && startY !== null ? [startX, startY] : null;
@@ -182,7 +193,8 @@ export function WorldCanvas({
         const avatars = [me0];
 
         resize();
-        cam = clampCamera({ x: feet[0], y: feet[1] - scene.characterHeight * 0.4, zoom: edit ? zoomLimits().min : zoomLimits().start }, scene, view);
+        cam = clampCamera({ x: feet[0], y: feet[1] - scene.characterHeight * 0.4, zoom: edit ? zoomLimits().overview : startZoom(scene, zoomLimits()) }, scene, view);
+        follow = !edit;
         ro = new ResizeObserver(resize);
         ro.observe(box);
 
@@ -291,9 +303,20 @@ export function WorldCanvas({
         };
         let dragging: { id: string; part: "hip" | "approach" } | null = null;
 
+        let lastTap = { t: -Infinity, x: 0, y: 0 };
         detach = attachInput(canvas, {
           tap(x, y) {
             if (!edit) {
+              const now = performance.now();
+              // Double tap: switch between the whole picture and close to your character.
+              if (now - lastTap.t < 320 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40) {
+                lastTap = { t: -Infinity, x: 0, y: 0 };
+                zoomTo = toggledZoom(cam.zoom, zoomLimits());
+                follow = true;
+                return;
+              }
+              lastTap = { t: now, x, y };
+              follow = true;
               tapScene(screenToScene(x, y, cam, view));
               return;
             }
@@ -339,11 +362,13 @@ export function WorldCanvas({
             commit(next, id);
           },
           pan(dx, dy) {
-            lastPan = performance.now();
+            follow = false;
+            zoomTo = null;
             cam = clampCamera({ ...cam, x: cam.x - dx / cam.zoom, y: cam.y - dy / cam.zoom }, scene, view);
           },
           zoom(factor, x, y) {
-            lastPan = performance.now();
+            follow = false;
+            zoomTo = null;
             const { min, max } = zoomLimits();
             const before = screenToScene(x, y, cam, view);
             const zoom = Math.min(max, Math.max(min, cam.zoom * factor));
@@ -374,13 +399,26 @@ export function WorldCanvas({
             }
           }
           step(me0, dt, now);
-          // Follow your character, unless you just looked around yourself (never in the placement mode).
-          if (!edit && now - lastPan > 2500) {
-            const k = Math.min(1, dt * 3);
-            cam = clampCamera({ ...cam, x: cam.x + (me0.feet[0] - cam.x) * k, y: cam.y + (me0.feet[1] - scene.characterHeight * 0.4 - cam.y) * k }, scene, view);
+          // Camera: ease to the zoom asked for, and follow your character a bit ahead of where it walks.
+          let zoom = cam.zoom;
+          if (zoomTo !== null) {
+            zoom = ease(zoom, zoomTo, 9, dt);
+            if (Math.abs(zoom - zoomTo) < zoomTo * 0.002) {
+              zoom = zoomTo;
+              zoomTo = null;
+            }
           }
+          let { x, y } = cam;
+          if (follow && !edit) {
+            const h = me0.state === "walk" ? heading(me0.feet, me0.path[0]) : ([0, 0] as Pt);
+            lead = [ease(lead[0], h[0], 2.2, dt), ease(lead[1], h[1], 2.2, dt)];
+            const [tx, ty] = followTarget(me0.feet, lead, scene, view, zoom);
+            x = ease(x, tx, 3.5, dt);
+            y = ease(y, ty, 3.5, dt);
+          }
+          if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page: PAGE });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

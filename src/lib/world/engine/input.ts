@@ -1,6 +1,6 @@
 /**
  * Touch and mouse on the world canvas: a tap walks, a drag looks around,
- * two fingers or the mouse wheel zoom.
+ * two fingers zoom and move the picture along, the mouse wheel zooms.
  */
 export interface InputHandlers {
   tap(x: number, y: number): void;
@@ -17,6 +17,7 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
   let dragging = false;
   let grabbing = false;
   let pinchDist = 0;
+  let pinchMid = { x: 0, y: 0 };
   const local = (e: PointerEvent | WheelEvent) => {
     const r = el.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -32,6 +33,7 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
       grabbing = false;
       const [a, b] = [...pointers.values()];
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      pinchMid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       dragging = true;
     }
   };
@@ -49,8 +51,12 @@ export function attachInput(el: HTMLElement, h: InputHandlers): () => void {
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchDist > 0 && d > 0) h.zoom(d / pinchDist, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      // The picture moves along with both fingers, and zooms around the point between them.
+      h.pan(mid.x - pinchMid.x, mid.y - pinchMid.y);
+      if (pinchDist > 0 && d > 0) h.zoom(d / pinchDist, mid.x, mid.y);
       pinchDist = d;
+      pinchMid = mid;
     }
   };
   const up = (e: PointerEvent) => {

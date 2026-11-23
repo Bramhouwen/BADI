@@ -259,5 +259,15 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 
 - `/wereld` vult het hele scherm, zoals een game. Kop, tabbalk en Baddy's bubbel zijn daar weg (`isFullscreenPath` in `src/components/app/hide-on-chat.tsx`).
 - Linksboven een terugknop naar de app en de naam van de ruimte. De plaatsingsmodus ligt als paneel onderin over de wereld.
-- De camera zoomt nooit verder uit dan het punt waarop de illustratie het scherm vult, dus er zijn geen lege randen. Je start op die zoom en de camera volgt je poppetje; buiten start iets dichterbij (`startZoom`).
+- ~~De camera zoomt nooit verder uit dan het punt waarop de illustratie het scherm vult~~ Vervangen, zie hieronder: zo zag je op een telefoon maar een derde van een kamer.
 - De squadlijst onder de wereld is weg. Wie waar is, komt in fase 2 in de wereld zelf.
+
+### Tussendoor: camera zoals in een game (23-11-2026)
+
+- Twee zoomstanden (`src/lib/world/engine/camera.ts`):
+  - **overzicht:** de hele illustratie in beeld. Kamers starten hier, zodat je ziet waar je heen kunt tikken;
+  - **dichtbij:** je poppetje groot in beeld. Buiten start hier (`camera: { start: "close" }` in de ruimte), omdat het dorp niet op één scherm past.
+- **Dubbeltik** wisselt tussen overzicht en dichtbij, met een vloeiende overgang. Knijpen zoomt alles daartussen, en het beeld schuift met je vingers mee.
+- **Volgen:** de camera volgt je poppetje en kijkt vooruit in de richting waarin je loopt. Kijk je zelf rond (slepen of knijpen), dan blijft de camera daar tot je weer tikt om te lopen; geen terugspringen meer na 2,5 seconde.
+- Om de illustratie heen staat de kleur van de rand van de tekening, zodat het overzicht naadloos overloopt in de achtergrond.
+- Getest op telefoon- en desktopformaat; tests voor de zoomstanden, de dubbeltik, het vooruitkijken en het vloeiend bewegen.
