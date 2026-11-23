@@ -34,5 +34,6 @@ describe("release", () => {
   it("keeps a character that is not released yet out of the app", () => {
     expect(spriteFor("Irene")).toBeNull();
     expect(pushIconFor("Irene")).toBeUndefined();
+    expect(spriteFor("Daphne")).toBeNull();
   });
 });

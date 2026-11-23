@@ -51,6 +51,7 @@ export interface SpriteSheet {
 export const SPRITE_SHEETS: Record<string, SpriteSheet> = {
   anne: { src: "/sprites/anne.webp", face: "/sprites/anne-face.png", anims: SPRITE_ANIMS },
   irene: { src: "/sprites/irene.webp", face: "/sprites/irene-face.png", anims: SPRITE_ANIMS, live: false },
+  daphne: { src: "/sprites/daphne.webp", face: "/sprites/daphne-face.png", anims: SPRITE_ANIMS, live: false },
 };
 void BRAM_ANIMS;
 
