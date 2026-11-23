@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { celebrationText, isStreakMilestone } from "@/lib/celebrate";
-import { pushIconFor, spriteFor } from "@/lib/sprites";
+import { sheetFor, spriteKey, unreleasedKeys } from "@/lib/sprites";
 
 describe("celebrations", () => {
   it("celebrates every full week of check-ins", () => {
@@ -19,21 +19,18 @@ describe("celebrations", () => {
 });
 
 describe("characters", () => {
-  it("finds a character by first name", () => {
-    expect(spriteFor("Anne de Vries")?.src).toBe("/sprites/anne.webp");
-    expect(spriteFor("anne")?.face).toBe("/sprites/anne-face.png");
+  it("finds a live character by first name", () => {
+    expect(sheetFor("Anne de Vries")?.src).toBe("/sprites/anne.webp");
+    expect(sheetFor("anne")?.face).toBe("/sprites/anne-face.png");
+    expect(sheetFor("Onbekend")).toBeNull();
+    expect(spriteKey("  Irene  van Dam")).toBe("irene");
   });
 
-  it("uses the face as push icon only for members with a character", () => {
-    expect(pushIconFor("Anne")).toBe("/sprites/anne-face.png");
-    expect(pushIconFor("Onbekend")).toBeUndefined();
-  });
-});
-
-describe("release", () => {
-  it("keeps a character that is not released yet out of the app", () => {
-    expect(spriteFor("Irene")).toBeNull();
-    expect(pushIconFor("Irene")).toBeUndefined();
-    expect(spriteFor("Daphne")).toBeNull();
+  it("keeps a character out until the admin released it", () => {
+    expect(sheetFor("Irene")).toBeNull();
+    expect(sheetFor("Daphne")).toBeNull();
+    expect(sheetFor("Irene", new Set(["irene"]))?.src).toBe("/sprites/irene.webp");
+    expect(unreleasedKeys()).toEqual(expect.arrayContaining(["irene", "daphne"]));
+    expect(unreleasedKeys()).not.toContain("anne");
   });
 });

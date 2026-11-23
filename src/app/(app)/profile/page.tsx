@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, Link2, LogOut, Sparkles, Trophy } from "lucide-react";
 import { loadSharing } from "@/lib/squad/data";
-import { requireContext } from "@/lib/data";
+import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
 import { formatDateNl, wrappedStatus } from "@/lib/dates";
@@ -16,6 +16,8 @@ import { ProfileForm } from "./profile-form";
 import { SharingSettings } from "./sharing-settings";
 import { BaddyMemory } from "./baddy-memory";
 import { AnnouncementControls } from "./announcement-controls";
+import { SpriteReleaseControls, type SpriteRow } from "./sprite-release-controls";
+import { SPRITE_SHEETS, spriteKey, unreleasedKeys } from "@/lib/sprites";
 import { announcementSent } from "@/lib/announcement-server";
 import { PushSettings } from "./push-settings";
 import { settingsFromRow } from "@/lib/notification-kinds";
@@ -52,6 +54,19 @@ async function Content() {
   const wrapped = wrappedStatus(ctx.challenge);
   const isAdmin = ctx.membership.role === "admin";
   const announced = isAdmin ? await announcementSent(supabase, ctx.challenge.id) : false;
+  let spriteRows: SpriteRow[] = [];
+  if (isAdmin && unreleasedKeys().length > 0) {
+    const [squad, { data: releaseRows }] = await Promise.all([getSquad(ctx.challenge.id), supabase.from("sprite_releases").select("sprite, released_at").eq("challenge_id", ctx.challenge.id)]);
+    const releasedAt = new Map(((releaseRows ?? []) as { sprite: string; released_at: string }[]).map((r) => [r.sprite, r.released_at]));
+    const names = new Set(squad.map((m) => spriteKey(m.profile.display_name)));
+    spriteRows = unreleasedKeys().map((key) => ({
+      key,
+      name: key.charAt(0).toUpperCase() + key.slice(1),
+      face: SPRITE_SHEETS[key].face,
+      memberFound: names.has(key),
+      releasedAt: releasedAt.get(key) ?? null,
+    }));
+  }
 
   return (
     <Page className="space-y-6">
@@ -78,6 +93,13 @@ async function Content() {
         <section aria-label="Aankondiging">
           <SectionTitle>Aankondiging</SectionTitle>
           <AnnouncementControls sent={announced} />
+        </section>
+      ) : null}
+
+      {spriteRows.length > 0 ? (
+        <section aria-label="Poppetjes vrijgeven">
+          <SectionTitle>Poppetjes vrijgeven</SectionTitle>
+          <SpriteReleaseControls rows={spriteRows} />
         </section>
       ) : null}
 

@@ -55,17 +55,27 @@ export const SPRITE_SHEETS: Record<string, SpriteSheet> = {
 };
 void BRAM_ANIMS;
 
-/** The sheet of a member by display name, or null. In demo mode everyone borrows the first sheet. */
-export function spriteFor(displayName: string | null | undefined): SpriteSheet | null {
-  const first = (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-  if (SPRITE_SHEETS[first] && SPRITE_SHEETS[first].live !== false) return SPRITE_SHEETS[first];
+/** The key of a member's character: their lower-case first name. */
+export function spriteKey(displayName: string | null | undefined): string {
+  return (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+}
+
+/**
+ * The sheet of a member, or null. A character is live when the code says so
+ * or when the admin released it (`released`, from the database). In demo mode
+ * everyone borrows the first sheet.
+ */
+export function sheetFor(displayName: string | null | undefined, released: ReadonlySet<string> = new Set()): SpriteSheet | null {
+  const key = spriteKey(displayName);
+  const sheet = SPRITE_SHEETS[key];
+  if (sheet && (sheet.live !== false || released.has(key))) return sheet;
   if (isDemo()) return Object.values(SPRITE_SHEETS)[0] ?? null;
   return null;
 }
 
-/** Notification icon for a push from this member: their character's face, or the app icon. */
-export function pushIconFor(displayName: string | null | undefined): string | undefined {
-  const first = (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-  const sheet = SPRITE_SHEETS[first];
-  return sheet && sheet.live !== false ? sheet.face : undefined;
+/** Characters that are ready but wait for the admin to release them. */
+export function unreleasedKeys(): string[] {
+  return Object.entries(SPRITE_SHEETS)
+    .filter(([, s]) => s.live === false)
+    .map(([k]) => k);
 }

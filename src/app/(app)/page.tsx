@@ -38,8 +38,9 @@ import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
 import { WelcomeSplash } from "@/components/sprite/welcome-splash";
-import { SPRITE_SHEETS, spriteFor } from "@/lib/sprites";
-import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW } from "@/lib/announcement";
+import { SPRITE_SHEETS, spriteKey } from "@/lib/sprites";
+import { memberSprite, releasedSprites } from "@/lib/sprites-server";
+import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW, OWN_SPRITE_PREVIEW, ownSpriteIntro } from "@/lib/announcement";
 import { announcementSent } from "@/lib/announcement-server";
 import type { SplashItem } from "@/components/sprite/welcome-splash";
 import { HomeBuddy } from "@/components/sprite/home-buddy";
@@ -135,7 +136,13 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
   const showAnnouncement = Boolean(announceSheet) && (previewAnnouncement || (await announcementSent(supabase, ctx.challenge.id)));
 
   // Your own character says hello once a day, with a line about your day.
-  const mySprite = spriteFor(ctx.profile.display_name);
+  const mySprite = await memberSprite(ctx.challenge.id, ctx.profile.display_name);
+  // Your own character, released by the admin: it introduces itself once.
+  const myKey = spriteKey(ctx.profile.display_name);
+  const ownReleased = Boolean(mySprite) && (await releasedSprites(ctx.challenge.id)).has(myKey);
+  // The admin can look at anyone's introduction first: /?poppetje=irene.
+  const previewKey = ctx.membership.role === "admin" && typeof sp[OWN_SPRITE_PREVIEW] === "string" ? (sp[OWN_SPRITE_PREVIEW] as string).toLowerCase() : null;
+  const previewSheet = previewKey ? SPRITE_SHEETS[previewKey] ?? null : null;
   const welcome = mySprite && phase === "during" ? await loadWelcome() : null;
   async function loadWelcome() {
     const [{ data: toMe }, { data: reads }] = await Promise.all([
@@ -181,6 +188,19 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
       <WelcomeToast />
       {(() => {
         const items: SplashItem[] = [];
+        const ownIntro = (name: string, sheet: NonNullable<typeof mySprite>, force: boolean): SplashItem => {
+          const intro = ownSpriteIntro(name);
+          return {
+            storageKey: "badi:own-sprite",
+            value: `${ctx.userId}:${spriteKey(name)}`,
+            force,
+            sheet,
+            message: { greeting: intro.greeting, line: intro.line, anim: "cheer", action: null },
+            announcement: { label: intro.label, title: intro.title, intro: intro.intro, features: intro.features, cta: intro.cta },
+          };
+        };
+        if (previewSheet && previewKey) items.push(ownIntro(previewKey.charAt(0).toUpperCase() + previewKey.slice(1), previewSheet, true));
+        if (ownReleased && mySprite) items.push(ownIntro(firstName(ctx.profile.display_name), mySprite, false));
         if (showAnnouncement && announceSheet) {
           items.push({
             storageKey: "badi:announce",

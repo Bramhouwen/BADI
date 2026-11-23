@@ -29,3 +29,25 @@ export const ANNOUNCEMENT = {
 
 /** Query string that shows the announcement on this device, also before it was sent. */
 export const ANNOUNCEMENT_PREVIEW = "aankondiging";
+
+/** Shows a member's own introduction on this device (admin only): /?poppetje=<name>. */
+export const OWN_SPRITE_PREVIEW = "poppetje";
+
+/** What a member sees once when the admin released their own character. */
+export function ownSpriteIntro(name: string) {
+  return {
+    greeting: `Hoi ${name}!`,
+    line: "Ik ben jouw eigen poppetje. Vanaf nu sta ik op Home, zeg ik je elke dag gedag en vier ik mee als je iets haalt.",
+    label: "Nieuw voor jou",
+    title: `Hier is je poppetje, ${name}!`,
+    intro: "Dit doe ik voor je:",
+    features: [
+      { icon: "👋", title: "Elke dag een begroeting", body: "Als je de app opent, vertel ik wat er vandaag voor je klaarstaat." },
+      { icon: "🏠", title: "Altijd op Home", body: "Aan mij zie je hoe je dag gaat. Tik op me voor je bericht van vandaag." },
+      { icon: "🎉", title: "Ik vier mee", body: "Alles afgevinkt, je stappendoel, een training of een week op rij: ik ga los." },
+      { icon: "💬", title: "Ik breng je berichten", body: "Stuur je iemand een bericht, dan loop ik bij diegene binnen." },
+    ],
+    cta: "Leuk, laten we gaan!",
+    push: { title: "Je poppetje is er! 🎉", body: "Open BADI en maak kennis met je eigen poppetje." },
+  };
+}
