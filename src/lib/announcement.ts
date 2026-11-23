@@ -11,6 +11,17 @@ export const ANNOUNCEMENT = {
   sprite: "anne",
   greeting: "Jongens!",
   line: "Ik wil me even voorstellen. Ik ben Anne, het eerste poppetje van BADI. Jullie krijgen allemaal een melding zodra dat van jullie er is.",
+  /** The big announcement screen. */
+  label: "Nieuw in BADI",
+  title: "Maak kennis met Anne",
+  intro: "Iedereen krijgt een eigen poppetje. Dit doet jouw poppetje voor je:",
+  features: [
+    { icon: "👋", title: "Elke dag een begroeting", body: "Bij het openen van de app hoor je wat er vandaag voor je klaarstaat: stappen, je check-in, het Weekrad of een nieuw bericht." },
+    { icon: "🏠", title: "Altijd op Home", body: "Je poppetje laat zien hoe je dag gaat: slapen, bezig of alles gedaan. Tik erop voor je bericht van vandaag." },
+    { icon: "🎉", title: "Viert mee", body: "Alles afgevinkt, je stappendoel gehaald, een training of een week op rij: je poppetje gaat los." },
+    { icon: "💬", title: "Brengt berichten", body: "Stuurt iemand je een bericht, dan loopt diens poppetje binnen. Tik erop en de chat gaat open." },
+  ],
+  cta: "Leuk, Anne!",
   /** Baddy's message in the squad chat; also the marker that it was sent. */
   chat: "👋 Nieuw in BADI: jullie eigen poppetje! Anne is de eerste. Open de app en ze stelt zich even voor. Jullie krijgen een melding zodra jouw poppetje er is.",
   push: { title: "Anne stelt zich voor 👋", body: "Jullie eigen poppetje is er! Anne is de eerste. Open de app en maak kennis." },

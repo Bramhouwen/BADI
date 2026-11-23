@@ -6,6 +6,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { WelcomeMessage } from "@/lib/welcome";
 import type { SpriteSheet } from "@/lib/sprites";
 import { Sprite } from "./sprite";
+import { AnnouncementView } from "./announcement-view";
+import { useTyped } from "./use-typed";
 
 /** One character moment: shown once per `value` of `storageKey`, or always when `force` is set. */
 export interface SplashItem {
@@ -14,6 +16,16 @@ export interface SplashItem {
   force?: boolean;
   sheet: SpriteSheet;
   message: WelcomeMessage;
+  /** A one-off announcement: shown as the big screen with confetti and a feature list. */
+  announcement?: AnnouncementContent;
+}
+
+export interface AnnouncementContent {
+  label: string;
+  title: string;
+  intro: string;
+  features: readonly { icon: string; title: string; body: string }[];
+  cta: string;
 }
 
 function seen(item: SplashItem): boolean {
@@ -30,18 +42,6 @@ function markSeen(item: SplashItem) {
   } catch {
     // Private mode: the splash may show again, which is harmless.
   }
-}
-
-/** Types `text` out letter by letter once `start` is true. */
-function useTyped(text: string, start: boolean, instant: boolean): string {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    if (!start || instant) return;
-    const id = setInterval(() => setN((v) => (v >= text.length ? v : v + 1)), 28);
-    return () => clearInterval(id);
-  }, [start, instant, text]);
-  if (instant) return start ? text : "";
-  return text.slice(0, n);
 }
 
 /** Event that opens today's welcome again, e.g. from your character on Home. */
@@ -92,7 +92,17 @@ export function WelcomeSplash({ items }: { items: SplashItem[] }) {
     return () => window.removeEventListener(SPLASH_OPEN_EVENT, reopen);
   }, []);
 
-  return <AnimatePresence>{shown ? <SplashView key={openId} item={shown} onClose={() => setShown(null)} /> : null}</AnimatePresence>;
+  return (
+    <AnimatePresence>
+      {shown ? (
+        shown.announcement ? (
+          <AnnouncementView key={openId} sheet={shown.sheet} message={shown.message} content={shown.announcement} onClose={() => setShown(null)} />
+        ) : (
+          <SplashView key={openId} item={shown} onClose={() => setShown(null)} />
+        )
+      ) : null}
+    </AnimatePresence>
+  );
 }
 
 function SplashView({ item, onClose }: { item: SplashItem; onClose: () => void }) {

@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "motion/react";
 import { SPRITE_CELL, type SpriteAnim, type SpriteSheet } from "@/lib/sprites";
 import { cn } from "@/lib/utils";
 
+const noop = () => () => {};
+
 /**
  * One squad character from a sprite sheet, playing `anim`. `height` is the
  * drawn height in px; the width follows the cell ratio. With reduced motion
- * the first frame stays still.
+ * the first frame stays still. When the screen would enlarge the art (a big
+ * character on a sharp phone screen), it keeps hard pixel edges instead of
+ * smoothing them, like pixel art should look.
  */
 export function Sprite({ sheet, anim, height = 160, className, label }: { sheet: SpriteSheet; anim: SpriteAnim; height?: number; className?: string; label?: string }) {
   const reduce = useReducedMotion();
@@ -23,6 +27,8 @@ export function Sprite({ sheet, anim, height = 160, className, label }: { sheet:
 
   const [row, col] = frames[tick % frames.length];
   const scale = height / SPRITE_CELL.h;
+  const dpr = useSyncExternalStore(noop, () => window.devicePixelRatio || 1, () => 1);
+  const enlarged = scale * dpr > 1.05;
   const w = Math.round(SPRITE_CELL.w * scale);
   return (
     <div
@@ -34,6 +40,7 @@ export function Sprite({ sheet, anim, height = 160, className, label }: { sheet:
         width: w,
         height,
         backgroundImage: `url(${sheet.src})`,
+        imageRendering: enlarged ? "pixelated" : "auto",
         backgroundSize: `${Math.round(SPRITE_CELL.w * SPRITE_CELL.cols * scale)}px ${Math.round(SPRITE_CELL.h * SPRITE_CELL.rows * scale)}px`,
         backgroundPosition: `${-Math.round(col * SPRITE_CELL.w * scale)}px ${-Math.round(row * SPRITE_CELL.h * scale)}px`,
       }}

@@ -187,7 +187,8 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
             value: ANNOUNCEMENT.id,
             force: previewAnnouncement,
             sheet: announceSheet,
-            message: { greeting: ANNOUNCEMENT.greeting, line: ANNOUNCEMENT.line, anim: "wave", action: null },
+            message: { greeting: ANNOUNCEMENT.greeting, line: ANNOUNCEMENT.line, anim: "cheer", action: null },
+            announcement: { label: ANNOUNCEMENT.label, title: ANNOUNCEMENT.title, intro: ANNOUNCEMENT.intro, features: ANNOUNCEMENT.features, cta: ANNOUNCEMENT.cta },
           });
         }
         if (welcome && mySprite) items.push({ storageKey: "badi:welcome", value: `${ctx.userId}:${today}`, sheet: mySprite, message: welcome });

@@ -111,7 +111,8 @@ if (poses.length < COLS || poses.length > COLS * ROWS) {
 }
 if (poses.length !== COLS * ROWS) console.log(`Let op: ${poses.length} poses in plaats van ${COLS * ROWS}. Stel de animaties voor deze persoon apart in.`);
 
-// 3. Redraw every pose in its own uniform cell.
+// 3. Redraw every pose in its own uniform cell. The sheet is saved near-lossless:
+// the art is small, and extra compression on top of the source shows.
 const out = Buffer.alloc(CW * COLS * CH * ROWS * 4);
 const taken = new Set();
 for (const px of poses) {
@@ -186,5 +187,5 @@ for (const px of poses) {
 }
 
 const file = `public/sprites/${name}.webp`;
-await sharp(out, { raw: { width: CW * COLS, height: CH * ROWS, channels: 4 } }).webp({ quality: 88, alphaQuality: 100, effort: 6 }).toFile(file);
+await sharp(out, { raw: { width: CW * COLS, height: CH * ROWS, channels: 4 } }).webp({ nearLossless: true, quality: 60, effort: 6 }).toFile(file);
 console.log(`Klaar: ${file} en public/sprites/${name}-face.png. Voeg "${name}" toe aan SPRITE_SHEETS in src/lib/sprites.ts.`);
