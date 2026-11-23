@@ -5,7 +5,7 @@
  */
 import { animationOf, type Avatar } from "./avatar";
 import { backToFront, occludersOver } from "./depth";
-import type { Polygon } from "./geometry";
+import type { Polygon, Pt } from "./geometry";
 import type { Grid } from "./grid";
 import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
@@ -91,6 +91,14 @@ function pathOf(poly: Polygon): Path2D {
   return p;
 }
 
+/** Text over the world, the same size at any zoom: balloons, name tags, the moon of someone offline. */
+export interface Labels {
+  /** Your own id: no name tag over yourself. */
+  me: string;
+  /** The character someone tapped: shows its name. */
+  selected: string | null;
+}
+
 export interface RenderInput {
   ctx: CanvasRenderingContext2D;
   scene: SceneDef;
@@ -104,9 +112,10 @@ export interface RenderInput {
   grid?: Grid | null;
   debug?: boolean;
   page: string;
+  labels?: Labels;
 }
 
-export function render({ ctx, scene, background, outlines, avatars, characters, cam, view, now, grid, debug, page }: RenderInput) {
+export function render({ ctx, scene, background, outlines, avatars, characters, cam, view, now, grid, debug, page, labels }: RenderInput) {
   const { width, height, dpr } = view;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = page;
@@ -120,7 +129,9 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
   for (const a of backToFront(avatars)) {
     const c = characters.get(a.character);
     if (!c) continue;
+    if (a.offline) ctx.globalAlpha = 0.6;
     drawCharacter(ctx, c, a, scene.characterHeight, now, z);
+    ctx.globalAlpha = 1;
     const seat = a.seat ? scene.seats.find((s) => s.id === a.seat) : null;
     const spot = a.spot ? scene.spots.find((s) => s.id === a.spot) : null;
     const exclude = seat ? seatOccluder(scene.occluders, seat) : spot ? occluderUnder(scene.occluders, spot.at) : a.ignore;
@@ -144,6 +155,127 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
   }
 
   if (debug && grid) drawDebug(ctx, scene, grid, outlines);
+  if (labels) drawLabels(ctx, scene, avatars, characters, cam, view, now, labels);
+}
+
+/** Where the top of a character's head is on screen (CSS pixels). */
+function headOnScreen(c: LoadedCharacter, a: Avatar, scene: SceneDef, cam: Camera, view: View): Pt {
+  const box = characterBox(c, a, scene.characterHeight);
+  // The frames have empty space above the head; the head starts about a sixth down.
+  const top = box.y + box.h * 0.16;
+  return [view.width / 2 + (a.feet[0] - cam.x) * cam.zoom, view.height / 2 + (top - cam.y) * cam.zoom];
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+/** Wraps a line into at most three lines that fit `max` pixels wide. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const next = line ? `${line} ${w}` : w;
+    if (ctx.measureText(next).width <= max || !line) line = next;
+    else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length > 3) {
+    lines.length = 3;
+    lines[2] = lines[2].replace(/\s*\S*$/, "") + "…";
+  }
+  return lines;
+}
+
+function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Avatar[], characters: Map<string, LoadedCharacter>, cam: Camera, view: View, now: number, labels: Labels) {
+  ctx.save();
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+  for (const a of backToFront(avatars)) {
+    const c = characters.get(a.character);
+    if (!c) continue;
+    const [hx, hy] = headOnScreen(c, a, scene, cam, view);
+    let top = hy - 8;
+    // offline: a small moon
+    if (a.offline) {
+      const r = 11;
+      const cx = hx + 18, cy = top - r;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cx - r, cy - r, r * 2, r * 2);
+      ctx.arc(cx + 3.2, cy - 2.4, 5.4, 0, Math.PI * 2);
+      ctx.clip("evenodd");
+      ctx.fillStyle = "#d39a2c";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // name tag of the one you tapped
+    if (labels.selected === a.id && a.id !== labels.me) {
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      const w = ctx.measureText(a.name).width + 20;
+      roundRect(ctx, hx - w / 2, top - 26, w, 24, 12);
+      ctx.fillStyle = "rgba(43,29,24,0.88)";
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.fillText(a.name, hx, top - 14);
+      top -= 30;
+    }
+    // speech balloon
+    if (a.speech && a.speech.until > now) {
+      ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
+      const lines = wrap(ctx, a.speech.text, 190);
+      const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 24;
+      const h = lines.length * 18 + 14;
+      const fade = Math.min(1, (a.speech.until - now) / 400);
+      ctx.globalAlpha = fade;
+      const bx = Math.max(6, Math.min(view.width - w - 6, hx - w / 2));
+      const by = top - h - 10;
+      ctx.shadowColor = "rgba(43,29,24,0.18)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+      roundRect(ctx, bx, by, w, h, 14);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.shadowColor = "transparent";
+      // tail
+      ctx.beginPath();
+      ctx.moveTo(hx - 7, by + h - 1);
+      ctx.lineTo(hx, by + h + 8);
+      ctx.lineTo(hx + 7, by + h - 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#2b1d18";
+      lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 7 + 9 + i * 18));
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+}
+
+/** The avatar under a screen point (CSS pixels), front-most first; for tapping someone. */
+export function avatarAt(sx: number, sy: number, avatars: Avatar[], characters: Map<string, LoadedCharacter>, scene: SceneDef, cam: Camera, view: View): Avatar | null {
+  const [x, y] = screenToScene(sx, sy, cam, view);
+  for (const a of backToFront(avatars).reverse()) {
+    const c = characters.get(a.character);
+    if (!c) continue;
+    const b = characterBox(c, a, scene.characterHeight);
+    // the drawn figure is narrower than its frame
+    const inset = b.w * 0.25;
+    if (x >= b.x + inset && x <= b.x + b.w - inset && y >= b.y + b.h * 0.15 && y <= b.y + b.h) return a;
+  }
+  return null;
 }
 
 const gridLayers = new WeakMap<Grid, HTMLCanvasElement>();

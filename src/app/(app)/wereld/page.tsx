@@ -1,18 +1,20 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { requireContext } from "@/lib/data";
-import { ensureWorldProfile } from "@/lib/world/server";
+import { getSquad, requireContext } from "@/lib/data";
+import { ensureWorldProfile, loadWorldProfiles } from "@/lib/world/server";
 import { WORLD_SPRITES, canSeeWorld, worldSpriteFor } from "@/lib/world/types";
 import { FIRST_SCENE, SCENES } from "@/lib/world/scenes";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { WorldView } from "@/components/world/world-view";
+import type { WorldMember } from "@/components/world/world-canvas";
 
 export const metadata = { title: "Wereld" };
 
 /**
  * BADI Wereld over the whole screen: the living room, outside, Traffic Today
- * and the gym, linked by doors. You start where you were last. /wereld?debug=1 shows the walking
+ * and the gym, linked by doors. You start where you were last, and see the
+ * others live (or where they were last, while offline). /wereld?debug=1 shows the walking
  * grid and frames per second; ?debug=2 only enables the test hook
  * window.__wereld; ?scene=kantoor (with debug or bewerken) starts in a scene. ?bewerken is the placement mode for seats
  * (admin only, saves to the scene's JSON on your own computer). See
@@ -22,7 +24,17 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
-  const { profile, missingTable } = await ensureWorldProfile(ctx);
+  const [{ profile, missingTable }, squad, all] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id)]);
+  // The others, with where they were last: shown in a rest pose while they are offline.
+  const byUser = new Map(all.map((p) => [p.user_id, p]));
+  const members: WorldMember[] = squad
+    .filter((m) => m.user_id !== ctx.userId)
+    .flatMap((m) => {
+      const p = byUser.get(m.user_id);
+      const character = p?.sprite ?? worldSpriteFor(m.profile.display_name);
+      if (!character) return [];
+      return [{ id: m.user_id, name: firstName(m.profile.display_name), character, scene: p?.scene ?? "", x: p?.x ?? null, y: p?.y ?? null, activity: p?.activity ?? null, updatedAt: p?.updated_at ?? "" }];
+    });
   const name = firstName(ctx.profile.display_name);
   // Debug only: ?debug=2&als=anne plays as another character to test poses.
   const debugAs = sp.debug && typeof sp.als === "string" && (WORLD_SPRITES as readonly string[]).includes(sp.als) ? sp.als : null;
@@ -35,9 +47,12 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   return sprite ? (
     <WorldView
       me={{ id: ctx.userId, name, character: sprite }}
+      challengeId={ctx.challenge.id}
       startScene={startScene}
       startX={atSaved ? profile!.x : null}
       startY={atSaved ? profile!.y : null}
+      restore={atSaved ? (profile!.activity ?? null) : null}
+      members={members}
       debug={sp.debug === "1" || sp.debug === "2"}
       overlay={sp.debug === "1"}
       edit={sp.bewerken !== undefined}

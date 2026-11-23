@@ -271,3 +271,31 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - **Volgen:** de camera volgt je poppetje en kijkt vooruit in de richting waarin je loopt. Kijk je zelf rond (slepen of knijpen), dan blijft de camera daar tot je weer tikt om te lopen; geen terugspringen meer na 2,5 seconde.
 - Om de illustratie heen staat de kleur van de rand van de tekening, zodat het overzicht naadloos overloopt in de achtergrond.
 - Getest op telefoon- en desktopformaat; tests voor de zoomstanden, de dubbeltik, het vooruitkijken en het vloeiend bewegen.
+
+### Fase 2: samen in de wereld (23-11-2026)
+
+**Gedaan**
+- Live kanaal per groep, `wereld:<challenge id>`. Het is een privékanaal: alleen groepsleden ontvangen en versturen, via de databaseregels in migratie 0031 (`src/components/world/world-link.ts`).
+- Alleen het doel wordt gedeeld (`src/lib/world/engine/presence.ts`): waar je begon en wat je gaat doen, dus lopen naar een punt, zitten op zitplek X of plek Y.
+  - Elke telefoon rekent zelf de route uit, met dezelfde code als je eigen tikken (`src/lib/world/engine/moves.ts`).
+  - Wie al onderweg was toen jij binnenkwam, wordt doorgespoeld naar waar die nu is.
+  - Binnenkomende berichten worden gecontroleerd; een kapot of vreemd bericht wordt genegeerd.
+- Je ziet de anderen in je ruimte lopen, zitten, rennen en springen, en ze verdwijnen als ze door een deur gaan.
+- Praten: onderin "Zeg iets…". Een ballon boven je hoofd voor iedereen in dezelfde ruimte, een paar seconden lang (langer bij een langere zin), maximaal 120 tekens. Wordt niet opgeslagen.
+- Wie offline is, staat op zijn laatste plek in een rustpose: iets doorschijnend, met een maantje.
+  - Zat diegene, dan blijft hij zitten.
+  - Van een loopband of matje staat hij ernaast.
+  - Daarvoor bewaart `world_profiles.activity` je zitplek of plek (migratie 0031). Bij terugkomst zit je zelf ook weer op je plek.
+- Rechtsboven het aantal online met een lijstje van wie in welke ruimte is, en wie offline is (met hoe lang geleden).
+- Tik op iemand: naam boven het hoofd en een kaartje met online of offline.
+- Demo (`npm run dev:demo`): Sam (woonkamer) en Alex (buiten) lopen zelf rond, gaan zitten, sporten en zeggen af en toe iets; Noor zit offline op de bank.
+- Getest in de demo op telefoon- en desktopformaat. Tests voor het berichtformaat, het doorspoelen, de rustpose en de ballonnen.
+
+**Anders gegaan**
+- Geen tester: de wereld blijft alleen voor de beheerder zichtbaar tot hij open gaat (`WORLD_OPEN`). De test met twee echte telefoons gebeurt dan.
+
+**Open**
+- Migratie 0031 in Supabase zetten. Zonder die migratie werkt het afgeschermde kanaal niet en wordt je zitplek niet bewaard; je plek zelf wel.
+- Supabase raadt aan "Allow public access" in de Realtime-instellingen uit te zetten om alleen privékanalen toe te staan. Niet doen: het bestaande "wie is online"-kanaal van de app is openbaar en zou dan stoppen.
+- Noor verschijnt pas offline op de bank in de demo na een herstart van `npm run dev:demo` (de voorbeelddata wordt bij het starten ingelezen).
+- De echte test met twee telefoons, zodra de wereld opengaat.

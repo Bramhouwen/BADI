@@ -7,6 +7,8 @@ import { frameIndex } from "@/lib/world/engine/sprites";
 import { newAvatar, sit, step, walk } from "@/lib/world/engine/avatar";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
 import { SCENES } from "@/lib/world/scenes";
+import { fastForward, placeAtEnd, startIntent } from "@/lib/world/engine/moves";
+import { readPresence, readSpeech, secondsSince, SPEECH_MAX, speechSeconds } from "@/lib/world/engine/presence";
 import { ease, followTarget, heading, startZoom, toggledZoom, zoomLevels } from "@/lib/world/engine/camera";
 import { readSeats, seatAt, seatForeground, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
 
@@ -239,5 +241,60 @@ describe("camera", () => {
     for (let i = 0; i < 60; i++) a = ease(a, 1, 3, 1 / 60);
     for (let i = 0; i < 30; i++) b = ease(b, 1, 3, 1 / 30);
     expect(Math.abs(a - b)).toBeLessThan(1e-9);
+  });
+});
+
+describe("together in the world", () => {
+  const grid = buildGrid(WOONKAMER);
+  const can = { canSit: true, has: () => true };
+  const presence = { v: 1, name: "Anne", character: "anne", scene: "woonkamer", from: [400, 1000], intent: { kind: "seat", id: "zit-2" }, at: 1000 };
+  it("reads a move from the channel", () => {
+    expect(readPresence(presence)?.intent).toEqual({ kind: "seat", id: "zit-2" });
+  });
+  it("ignores broken or strange messages", () => {
+    expect(readPresence({ ...presence, v: 2 })).toBeNull();
+    expect(readPresence({ ...presence, character: "../../x" })).toBeNull();
+    expect(readPresence({ ...presence, from: [1, Number.NaN] })).toBeNull();
+    expect(readPresence({ ...presence, intent: { kind: "fly", to: [1, 2] } })).toBeNull();
+    expect(readPresence({ ...presence, name: "x".repeat(41) })).toBeNull();
+    expect(readPresence(null)).toBeNull();
+  });
+  it("keeps a speech balloon to one short line, and drops empty ones", () => {
+    expect(readSpeech({ from: "u1", scene: "woonkamer", text: "  hoi\n\n daar " })?.text).toBe("hoi daar");
+    expect(readSpeech({ from: "u1", scene: "woonkamer", text: "x".repeat(300) })?.text).toHaveLength(SPEECH_MAX);
+    expect(readSpeech({ from: "u1", scene: "woonkamer", text: "   " })).toBeNull();
+    expect(speechSeconds("hoi")).toBeGreaterThan(3);
+    expect(speechSeconds("x".repeat(120))).toBeLessThanOrEqual(9);
+  });
+  it("walks someone to a seat and sits them down, like your own tap", () => {
+    const a = newAvatar("anne", "anne", "Anne", [400, 1000], 0);
+    expect(startIntent(a, WOONKAMER, grid, { kind: "seat", id: "zit-2" }, 0, can)).toBe("ok");
+    fastForward(a, 60, 0);
+    expect(a.state).toBe("sit");
+    expect(a.seat).toBe("zit-2");
+  });
+  it("shows someone halfway when they started walking before you came in", () => {
+    const a = newAvatar("anne", "anne", "Anne", [400, 1000], 0);
+    startIntent(a, WOONKAMER, grid, { kind: "stand", to: [1500, 1100] }, 0, can);
+    fastForward(a, 2, 0);
+    expect(a.state).toBe("walk");
+    expect(a.feet[0]).toBeGreaterThan(400);
+    expect(a.feet[0]).toBeLessThan(1500);
+    expect(secondsSince(0, 10_000_000)).toBe(120);
+    expect(secondsSince(5000, 1000)).toBe(0);
+  });
+  it("puts someone straight on their seat, or next to a spot without the pose", () => {
+    const a = newAvatar("bram", "bram", "Bram", [400, 1000], 0);
+    placeAtEnd(a, WOONKAMER, { kind: "seat", id: "zit-4" }, 0, can);
+    expect(a.state).toBe("sit");
+    const b = newAvatar("bram", "bram", "Bram", [400, 1000], 0);
+    placeAtEnd(b, WOONKAMER, { kind: "seat", id: "zit-4" }, 0, { canSit: false, has: () => false });
+    expect(b.state).toBe("idle");
+    expect(b.feet).toEqual(WOONKAMER.seats.find((s) => s.id === "zit-4")!.approach);
+  });
+  it("says so when a seat cannot be reached or sat on", () => {
+    const a = newAvatar("x", "anne", "X", [400, 1000], 0);
+    expect(startIntent(a, WOONKAMER, grid, { kind: "seat", id: "bestaat-niet" }, 0, can)).toBe("unreachable");
+    expect(startIntent(a, WOONKAMER, grid, { kind: "seat", id: "zit-2" }, 0, { canSit: false, has: () => true })).toBe("cannot");
   });
 });

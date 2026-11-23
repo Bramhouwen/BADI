@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveWorldPosition } from "@/app/actions/world";
-import { act, newAvatar, sit, step, walk, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
+import { newAvatar, step, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
 import { dist, pointInPolygon, type Pt } from "@/lib/world/engine/geometry";
 import { buildGrid, type Grid } from "@/lib/world/engine/grid";
 import { ease, followTarget, heading, startZoom, toggledZoom, zoomLevels } from "@/lib/world/engine/camera";
 import { attachInput } from "@/lib/world/engine/input";
-import { findPath, smoothPath } from "@/lib/world/engine/pathfinding";
-import { clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
-import { occluderUnder, seatAt, seatOccluder } from "@/lib/world/engine/seats";
+import { fastForward, placeAtEnd, startIntent, type Abilities, type Intent } from "@/lib/world/engine/moves";
+import { secondsSince, speechSeconds, type WorldPresence } from "@/lib/world/engine/presence";
+import { avatarAt, clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
+import { seatAt } from "@/lib/world/engine/seats";
 import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites";
-import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
+import type { Door, SceneDef, Seat } from "@/lib/world/engine/scene";
+import type { WorldLink } from "./world-link";
 
 const PAGE = "#f6ece4";
 
@@ -25,21 +27,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** The route from the avatar to a spot, in background pixels, ending exactly on the spot when it is free floor. */
-function routeTo(grid: Grid, from: Pt, to: Pt): Pt[] | null {
-  const startTile = grid.tileAt(from);
-  const start = startTile && grid.isWalkable(...startTile) ? startTile : grid.nearestWalkable(from);
-  const goalTile = grid.tileAt(to);
-  const exact = Boolean(goalTile && grid.isWalkable(...goalTile));
-  const goal = exact ? goalTile : grid.nearestWalkable(to);
-  if (!start || !goal) return null;
-  const tiles = findPath(grid, start, goal);
-  if (!tiles) return null;
-  const pts = smoothPath(grid, tiles).map(([u, v]) => grid.tileToPx(u + 0.5, v + 0.5));
-  if (exact) pts[pts.length - 1] = to;
-  return pts;
-}
-
 /** Centre of the walkable tile nearest to a point: where you walk to before sitting down. */
 function approachFor(grid: Grid, p: Pt): Pt | null {
   const t = grid.nearestWalkable([p[0], p[1] + 60]);
@@ -50,6 +37,28 @@ const round = (p: Pt): Pt => [Math.round(p[0]), Math.round(p[1])];
 
 interface EditorActions {
   tryOut(id: string): void;
+}
+
+/** Someone else in the world, as the page knows them: where they were last when not online. */
+export interface WorldMember {
+  id: string;
+  name: string;
+  character: string;
+  scene: string;
+  x: number | null;
+  y: number | null;
+  /** Seat or spot they were on. */
+  activity: string | null;
+  updatedAt: string;
+}
+
+/** Who you tapped. */
+export interface PickedMember {
+  id: string;
+  name: string;
+  online: boolean;
+  /** When they were last in the world, for someone offline. */
+  lastSeen: string | null;
 }
 
 /**
@@ -70,8 +79,12 @@ export function WorldCanvas({
   overlay = false,
   edit = false,
   arriveAt = null,
+  restore = null,
+  link = null,
+  members = [],
   onDoor,
   onReady,
+  onPick,
 }: {
   scene: SceneDef;
   me: { id: string; name: string; character: string | null };
@@ -82,19 +95,31 @@ export function WorldCanvas({
   edit?: boolean;
   /** Door in this scene you come in through. */
   arriveAt?: string | null;
+  /** The seat or spot you were on when you left, to sit there again (only with startX/startY). */
+  restore?: string | null;
+  /** Live link to the others; none in the placement mode. */
+  link?: WorldLink | null;
+  /** The others with their last place, shown in a rest pose while offline. */
+  members?: WorldMember[];
   /** You walked into a door that leads to another scene. */
   onDoor?: (door: Door) => void;
   /** The scene is loaded and drawn. */
   onReady?: () => void;
+  /** You tapped someone (or next to them: null). */
+  onPick?: (who: PickedMember | null) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
   // Latest callbacks, so a new function from the parent does not restart the scene.
   const onDoorRef = useRef(onDoor);
   const onReadyRef = useRef(onReady);
+  const onPickRef = useRef(onPick);
+  const membersRef = useRef(members);
   useEffect(() => {
     onDoorRef.current = onDoor;
     onReadyRef.current = onReady;
+    onPickRef.current = onPick;
+    membersRef.current = members;
   });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -126,6 +151,7 @@ export function WorldCanvas({
     let noteTimer: ReturnType<typeof setTimeout> | undefined;
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
     let detach: (() => void) | null = null;
+    let cleanupLink: (() => void) | null = null;
     let ro: ResizeObserver | null = null;
     const say = (text: string) => {
       setNote(text);
@@ -187,105 +213,196 @@ export function WorldCanvas({
         const start: Pt | null = door ? door.approach : startX !== null && startY !== null ? [startX, startY] : null;
         const startTile = start ? grid.tileAt(start) : null;
         const feet: Pt = start && startTile && grid.isWalkable(...startTile) ? start : scene.spawn;
+        const speed = scene.walkSpeed ?? walkSpeedFor(scene.characterHeight);
         const me0: Avatar = newAvatar(me.id, character.key, me.name, feet, now0);
-        me0.speed = scene.walkSpeed ?? walkSpeedFor(scene.characterHeight);
+        me0.speed = speed;
         if (door) me0.facing = door.approach[0] < scene.width / 2 ? "right" : "left";
-        const avatars = [me0];
+        const avatars: Avatar[] = [me0];
+        const abilities = (c: LoadedCharacter): Abilities => ({
+          canSit: Boolean(c.manifest.animations.zitten) && !c.manifest.animations.zitten.withChair,
+          has: (pose) => Boolean(c.manifest.animations[pose]),
+        });
+        const mine = abilities(character);
+        const intentOf = (activity: string | null): Intent | null => {
+          if (!activity) return null;
+          if (scene.seats.some((s) => s.id === activity)) return { kind: "seat", id: activity };
+          if (scene.spots.some((s) => s.id === activity)) return { kind: "spot", id: activity };
+          return null;
+        };
+        // Back where you left: on your seat again.
+        const restored = !door && start ? intentOf(restore) : null;
+        if (restored) placeAtEnd(me0, scene, restored, now0, mine);
 
         resize();
-        cam = clampCamera({ x: feet[0], y: feet[1] - scene.characterHeight * 0.4, zoom: edit ? zoomLimits().overview : startZoom(scene, zoomLimits()) }, scene, view);
+        cam = clampCamera({ x: me0.feet[0], y: me0.feet[1] - scene.characterHeight * 0.4, zoom: edit ? zoomLimits().overview : startZoom(scene, zoomLimits()) }, scene, view);
         follow = !edit;
         ro = new ResizeObserver(resize);
         ro.observe(box);
 
+        const activityOf = (a: Avatar) => (a.state === "sit" ? a.seat : a.state === "act" ? a.spot : null);
         const remember = () => {
           if (edit) return;
           clearTimeout(saveTimer);
-          saveTimer = setTimeout(() => void saveWorldPosition({ scene: scene.id, x: me0.feet[0], y: me0.feet[1] }), 1200);
+          saveTimer = setTimeout(() => void saveWorldPosition({ scene: scene.id, x: me0.feet[0], y: me0.feet[1], activity: activityOf(me0) }), 1200);
         };
-        const goTo = (target: Pt, then: (() => void) | null) => {
-          const route = routeTo(grid, me0.feet, target);
-          if (!route) {
-            say("Daar kun je niet komen.");
-            return;
-          }
-          // Standing up or stepping off: that piece is not drawn over you while you step away from it.
-          const was = me0.state === "sit" ? live().seats.find((s) => s.id === me0.seat) : null;
-          const wasAt = me0.state === "act" ? scene.spots.find((s) => s.id === me0.spot) : null;
-          const leaving = was ? seatOccluder(scene.occluders, was) : wasAt ? occluderUnder(scene.occluders, wasAt.at) : null;
-          if (me0.state === "sit" || me0.state === "act") me0.state = "idle";
-          walk(
-            me0,
-            route,
-            performance.now(),
-            () => {
-              remember();
-              then?.();
-            },
-            leaving,
-          );
+        // Tell the others: only where you start from and what you are going to do.
+        const publish = (intent: Intent, from: Pt) => {
+          if (edit || !link) return;
+          link.publish({ v: 1, name: me.name, character: character.key, scene: scene.id, from, intent, at: Date.now() });
         };
-        const sitOn = (seat: Seat) => {
-          goTo(seat.approach, () => {
-            if (character.manifest.animations.zitten?.withChair) {
-              me0.facing = seat.facing;
-              say(`${me.name} heeft nog geen zitpose zonder stoel.`);
-              return;
-            }
-            const under = seatOccluder(scene.occluders, seat);
-            walk(
-              me0,
-              [seat.hip],
-              performance.now(),
-              () => {
-                sit(me0, seat.id, seat.hip, seat.facing, performance.now());
-                remember();
-              },
-              under,
-            );
+        const move = (intent: Intent, then?: () => void) => {
+          const from = me0.feet;
+          const result = startIntent(me0, live(), grid, intent, performance.now(), mine, () => {
+            remember();
+            then?.();
           });
+          if (result === "unreachable") return say("Daar kun je niet komen.");
+          if (result === "cannot") return say(intent.kind === "seat" ? `${me.name} heeft nog geen zitpose zonder stoel.` : `${me.name} heeft hier nog geen animatie voor.`);
+          publish(intent, from);
         };
-
-        const doSpot = (spot: Spot) => {
-          goTo(spot.approach, () => {
-            if (!character.manifest.animations[spot.pose]) {
-              say(`${me.name} heeft nog geen animatie voor ${spot.label.toLowerCase()}.`);
-              return;
-            }
-            const under = occluderUnder(scene.occluders, spot.at);
-            walk(me0, [spot.at], performance.now(), () => act(me0, spot.id, spot.at, spot.facing, spot.pose, performance.now()), under);
-          });
-        };
-
         const tapScene = (p: Pt) => {
           const door = scene.doors.find((d) => pointInPolygon(p, d.tap));
           if (door) {
-            goTo(door.approach, () => {
+            move({ kind: "stand", to: door.approach }, () => {
               if (door.to && onDoorRef.current) onDoorRef.current(door);
               else say("Deze deur gaat nog nergens heen.");
             });
             return;
           }
           const spot = scene.spots.find((s) => pointInPolygon(p, s.tap));
-          if (spot) {
-            doSpot(spot);
-            return;
-          }
+          if (spot) return move({ kind: "spot", id: spot.id });
           const seat = seatAt(live(), p);
-          if (seat) {
-            sitOn(seat);
-            return;
-          }
-          goTo(p, null);
+          if (seat) return move({ kind: "seat", id: seat.id });
+          move({ kind: "stand", to: p });
         };
         actionsRef.current = {
           tryOut(id) {
-            const seat = seatsRef.current.find((s) => s.id === id);
-            if (seat) sitOn(seat);
+            move({ kind: "seat", id });
           },
         };
+
+        // The others: live from the link, or where they were last (offline, in a rest pose).
+        interface Other {
+          av: Avatar;
+          at: number;
+          intent: Intent | null;
+          live: boolean;
+          lastSeen: string | null;
+        }
+        const others = new Map<string, Other>();
+        const drop = (id: string) => {
+          const o = others.get(id);
+          if (!o) return;
+          others.delete(id);
+          const i = avatars.indexOf(o.av);
+          if (i >= 0) avatars.splice(i, 1);
+        };
+        const ensure = (id: string, name: string, key: string, feetAt: Pt): Other => {
+          let o = others.get(id);
+          if (!o) {
+            const av = newAvatar(id, key, name, feetAt, performance.now());
+            av.speed = speed;
+            o = { av, at: -1, intent: null, live: false, lastSeen: null };
+            others.set(id, o);
+            avatars.push(av);
+          }
+          o.av.name = name;
+          return o;
+        };
+        const withCharacter = (key: string, then: (c: LoadedCharacter) => void) => {
+          const c = characters.get(key);
+          if (c) return then(c);
+          void loadCharacter(key)
+            .then((loadedC) => {
+              if (!alive) return;
+              characters.set(loadedC.key, loadedC);
+              then(loadedC);
+            })
+            .catch(() => {});
+        };
+        // Offline: still sitting on a seat; off a treadmill or mat, standing next to it; else standing where they were.
+        const restPose = (intent: Intent | null, at: Pt): Intent => {
+          if (intent?.kind === "seat") return intent;
+          if (intent?.kind === "spot") return { kind: "stand", to: scene.spots.find((s) => s.id === intent.id)?.approach ?? at };
+          return { kind: "stand", to: at };
+        };
+        const showOffline = () => {
+          for (const m of membersRef.current) {
+            if (m.id === me.id || m.scene !== scene.id || m.x === null || m.y === null || others.get(m.id)?.live) continue;
+            const o = ensure(m.id, m.name, m.character, [m.x, m.y]);
+            o.av.offline = true;
+            o.lastSeen = m.updatedAt;
+            withCharacter(m.character, (c) => {
+              if (o.live) return;
+              placeAtEnd(o.av, scene, restPose(intentOf(m.activity), [m.x!, m.y!]), performance.now(), abilities(c));
+            });
+          }
+        };
+        const applyPeer = (id: string, p: WorldPresence) => {
+          if (p.scene !== scene.id) {
+            if (others.get(id)?.live) drop(id);
+            return;
+          }
+          const first = !others.get(id)?.live;
+          const o = ensure(id, p.name, p.character, p.from);
+          o.live = true;
+          o.av.offline = false;
+          o.lastSeen = null;
+          if (o.at === p.at) return;
+          o.at = p.at;
+          o.intent = p.intent;
+          withCharacter(p.character, (c) => {
+            const can = abilities(c);
+            const t = performance.now();
+            o.av.character = c.key;
+            o.av.feet = p.from;
+            if (startIntent(o.av, scene, grid, p.intent, t, can) !== "ok") placeAtEnd(o.av, scene, p.intent, t, can);
+            // Already on the way when you came in: show them where they are now.
+            else if (first) fastForward(o.av, secondsSince(p.at, Date.now()), t);
+          });
+        };
+        const syncPeers = () => {
+          if (!link) return;
+          const peers = link.peers();
+          for (const [id, p] of peers) applyPeer(id, p);
+          // Left the world: they stay where their last move ended, in a rest pose.
+          for (const [id, o] of others) {
+            if (!o.live || peers.has(id)) continue;
+            o.live = false;
+            o.av.offline = true;
+            o.lastSeen = new Date().toISOString();
+            const c = characters.get(o.av.character);
+            if (o.intent && c) placeAtEnd(o.av, scene, restPose(o.intent, o.intent.kind === "stand" ? o.intent.to : o.av.feet), performance.now(), abilities(c));
+            else drop(id);
+          }
+        };
+        showOffline();
+        let unsubscribe: (() => void) | null = null;
+        if (link && !edit) {
+          syncPeers();
+          unsubscribe = link.subscribe((e) => {
+            if (!alive) return;
+            if (e.type === "peers") return syncPeers();
+            if (e.scene !== scene.id) return;
+            const who = e.from === me.id ? me0 : others.get(e.from)?.av;
+            if (who) who.speech = { text: e.text, until: performance.now() + speechSeconds(e.text) * 1000 };
+          });
+          publish(restored ?? { kind: "stand", to: me0.feet }, me0.feet);
+        }
+        cleanupLink = () => unsubscribe?.();
+        // Coming in through a door: that is your place in this scene now.
+        if (door) remember();
+        let picked: string | null = null;
+        const pick = (sx: number, sy: number): boolean => {
+          const hit = avatarAt(sx, sy, avatars.filter((a) => a !== me0), characters, scene, cam, view);
+          picked = hit ? hit.id : null;
+          const o = hit ? others.get(hit.id) : null;
+          onPickRef.current?.(hit && o ? { id: hit.id, name: hit.name, online: o.live, lastSeen: o.lastSeen } : null);
+          return Boolean(hit);
+        };
+
         // Debug only: drive the character from the console (window.__wereld.tap(x, y) in background pixels).
-        if (debug) (window as unknown as { __wereld?: unknown }).__wereld = { tap: (x: number, y: number) => tapScene([x, y]), me: me0 };
+        if (debug) (window as unknown as { __wereld?: unknown }).__wereld = { tap: (x: number, y: number) => tapScene([x, y]), me: me0, others };
 
         // Placement mode: what is under the finger.
         const HIT = 34; // screen pixels
@@ -316,6 +433,8 @@ export function WorldCanvas({
                 return;
               }
               lastTap = { t: now, x, y };
+              // Tapping someone shows who it is instead of walking.
+              if (pick(x, y)) return;
               follow = true;
               tapScene(screenToScene(x, y, cam, view));
               return;
@@ -379,8 +498,6 @@ export function WorldCanvas({
         });
 
         setStatus("ready");
-        // Coming in through a door: that is your place in this scene now.
-        if (door) remember();
         let last = performance.now();
         let first = true;
         let frames = 0;
@@ -398,7 +515,7 @@ export function WorldCanvas({
               fpsSince = now;
             }
           }
-          step(me0, dt, now);
+          for (const a of avatars) step(a, dt, now);
           // Camera: ease to the zoom asked for, and follow your character a bit ahead of where it walks.
           let zoom = cam.zoom;
           if (zoomTo !== null) {
@@ -418,7 +535,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);
@@ -441,10 +558,11 @@ export function WorldCanvas({
       clearTimeout(noteTimer);
       clearTimeout(saveTimer);
       detach?.();
+      cleanupLink?.();
       ro?.disconnect();
       actionsRef.current = null;
     };
-  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit, arriveAt]);
+  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit, arriveAt, restore, link]);
 
   // Delete removes the selected seat (keyboard, placement mode).
   useEffect(() => {
@@ -491,7 +609,7 @@ export function WorldCanvas({
         ) : null}
         {overlay ? <p ref={fpsRef} className="absolute right-3 rounded-full bg-text/80 px-3 py-1 text-[12px] tabular-nums text-paper" style={{ top: "calc(var(--sat) + 14px)" }} aria-live="off" /> : null}
         {note ? (
-          <p className="absolute inset-x-4 mx-auto max-w-md rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" style={{ bottom: "calc(var(--sab) + 18px)" }} role="status">
+          <p className="absolute inset-x-4 mx-auto max-w-md rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" style={{ top: "calc(var(--sat) + 68px)" }} role="status">
             {note}
           </p>
         ) : null}

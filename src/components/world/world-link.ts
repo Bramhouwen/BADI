@@ -1,0 +1,190 @@
+"use client";
+
+/**
+ * The live link between everyone in BADI Wereld: a private Supabase Realtime
+ * channel per group ('wereld:<challenge id>', members only, migration 0031).
+ * Presence carries where you are and what you are doing (an intent, never a
+ * route); broadcast carries speech balloons. Nothing of it is stored.
+ *
+ * In demo mode there is no Supabase: two squad members walk around, sit, run
+ * and say something now and then, so the world can be tried alone.
+ */
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import { isDemo } from "@/lib/demo";
+import { SCENES } from "@/lib/world/scenes";
+import { buildGrid } from "@/lib/world/engine/grid";
+import type { Pt } from "@/lib/world/engine/geometry";
+import type { Intent } from "@/lib/world/engine/moves";
+import { cleanSpeech, readPresence, readSpeech, type Speech, type WorldPresence } from "@/lib/world/engine/presence";
+
+export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech);
+
+export interface WorldLink {
+  /** Shares where you are and what you are doing now. */
+  publish(p: WorldPresence): void;
+  /** Says something to everyone in the scene; also shown over yourself. */
+  say(scene: string, text: string): void;
+  subscribe(listener: (e: LinkEvent) => void): () => void;
+  /** Everyone else in the world right now, by user id. */
+  peers(): ReadonlyMap<string, WorldPresence>;
+  close(): void;
+}
+
+class Listeners {
+  private set = new Set<(e: LinkEvent) => void>();
+  add(l: (e: LinkEvent) => void) {
+    this.set.add(l);
+    return () => void this.set.delete(l);
+  }
+  emit(e: LinkEvent) {
+    for (const l of this.set) l(e);
+  }
+}
+
+export function createWorldLink(userId: string, challengeId: string): WorldLink {
+  return isDemo() ? demoLink(userId) : realtimeLink(userId, challengeId);
+}
+
+function realtimeLink(userId: string, challengeId: string): WorldLink {
+  const listeners = new Listeners();
+  let peers = new Map<string, WorldPresence>();
+  let mine: WorldPresence | null = null;
+  let joined = false;
+  let channel: RealtimeChannel | null = null;
+  let supabase: ReturnType<typeof createClient> | null = null;
+  try {
+    supabase = createClient();
+  } catch {
+    supabase = null;
+  }
+  const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
+  const track = () => {
+    if (!channel || !joined) return;
+    if (mine && visible()) void channel.track(mine);
+    else void channel.untrack();
+  };
+  if (supabase) {
+    channel = supabase.channel(`wereld:${challengeId}`, { config: { private: true, presence: { key: userId } } });
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel!.presenceState() as Record<string, unknown[]>;
+        const next = new Map<string, WorldPresence>();
+        for (const [id, metas] of Object.entries(state)) {
+          if (id === userId) continue;
+          // The newest move of someone with the world open on two devices wins.
+          let best: WorldPresence | null = null;
+          for (const m of metas) {
+            const p = readPresence(m);
+            if (p && (!best || p.at >= best.at)) best = p;
+          }
+          if (best) next.set(id, best);
+        }
+        peers = next;
+        listeners.emit({ type: "peers" });
+      })
+      .on("broadcast", { event: "zeg" }, ({ payload }) => {
+        const s = readSpeech(payload);
+        if (s && s.from !== userId) listeners.emit({ type: "speech", ...s });
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          joined = true;
+          track();
+        }
+      });
+    document.addEventListener("visibilitychange", track);
+  }
+  return {
+    publish(p) {
+      mine = p;
+      track();
+    },
+    say(scene, text) {
+      const clean = cleanSpeech(text);
+      if (!clean) return;
+      listeners.emit({ type: "speech", from: userId, scene, text: clean });
+      void channel?.send({ type: "broadcast", event: "zeg", payload: { from: userId, scene, text: clean } });
+    },
+    subscribe: (l) => listeners.add(l),
+    peers: () => peers,
+    close() {
+      document.removeEventListener("visibilitychange", track);
+      if (channel) {
+        void channel.untrack();
+        void supabase?.removeChannel(channel);
+      }
+      channel = null;
+    },
+  };
+}
+
+/** Demo: Sam (in the living room) and Alex (outside) as characters that walk, sit, run and talk on their own. */
+const DEMO_BOTS = [
+  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "woonkamer", start: [1300, 900] as Pt },
+  { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne", scene: "buiten", start: [900, 520] as Pt },
+];
+const DEMO_LINES = ["Wie gaat er mee hardlopen?", "Ik heb net mijn stappen gehaald", "Koffie iemand?", "Zullen we vanavond samen trainen?", "Hoi!", "Nog 2 trainingen deze week"];
+
+function demoLink(userId: string): WorldLink {
+  const listeners = new Listeners();
+  const peers = new Map<string, WorldPresence>();
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  let closed = false;
+  const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)];
+
+  for (const bot of DEMO_BOTS) {
+    const scene = SCENES[bot.scene];
+    const grid = buildGrid(scene);
+    let here: Pt = bot.start;
+    const free: Pt[] = [];
+    for (let u = 0; u < grid.nu; u++) for (let v = 0; v < grid.nv; v++) if (grid.walk[u][v]) free.push(grid.tileToPx(u + 0.5, v + 0.5));
+    const move = () => {
+      if (closed) return;
+      const r = Math.random();
+      let intent: Intent;
+      if (r < 0.3 && scene.seats.length) {
+        const seat = pick(scene.seats);
+        intent = { kind: "seat", id: seat.id };
+        here = seat.hip;
+      } else if (r < 0.45 && scene.spots.length) {
+        const spot = pick(scene.spots);
+        intent = { kind: "spot", id: spot.id };
+        here = spot.at;
+      } else {
+        // somewhere not too far, so you see them walk
+        const near = free.filter((p) => Math.hypot(p[0] - here[0], p[1] - here[1]) < scene.characterHeight * 3);
+        const to = pick(near.length ? near : free);
+        intent = { kind: "stand", to };
+        here = to;
+      }
+      const from = peers.get(bot.id)?.intent;
+      const fromPt: Pt = !from ? bot.start : from.kind === "stand" ? from.to : (scene.seats.find((s) => s.id === (from as { id: string }).id)?.hip ?? scene.spots.find((s) => s.id === (from as { id: string }).id)?.at ?? bot.start);
+      peers.set(bot.id, { v: 1, name: bot.name, character: bot.character, scene: bot.scene, from: fromPt, intent, at: Date.now() });
+      listeners.emit({ type: "peers" });
+      timers.push(setTimeout(move, 7000 + Math.random() * 7000));
+    };
+    timers.push(setTimeout(move, 800 + Math.random() * 1500));
+  }
+  const talk = () => {
+    if (closed) return;
+    const bot = pick(DEMO_BOTS);
+    listeners.emit({ type: "speech", from: bot.id, scene: bot.scene, text: pick(DEMO_LINES) });
+    timers.push(setTimeout(talk, 9000 + Math.random() * 9000));
+  };
+  timers.push(setTimeout(talk, 4000));
+
+  return {
+    publish() {},
+    say(scene, text) {
+      const clean = cleanSpeech(text);
+      if (clean) listeners.emit({ type: "speech", from: userId, scene, text: clean });
+    },
+    subscribe: (l) => listeners.add(l),
+    peers: () => peers,
+    close() {
+      closed = true;
+      timers.forEach(clearTimeout);
+    },
+  };
+}

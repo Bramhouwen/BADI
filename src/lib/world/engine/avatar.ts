@@ -28,6 +28,10 @@ export interface Avatar {
   since: number;
   /** Called once when the route is done. */
   onArrive: (() => void) | null;
+  /** A speech balloon above the head until `until` (performance.now()). */
+  speech: { text: string; until: number } | null;
+  /** Not in the world right now: shown where they were last, in a rest pose. */
+  offline: boolean;
 }
 
 /** Walking speed in background pixels per second at a character height of 340, matched to the steps of the walk animation. */
@@ -39,7 +43,7 @@ export function walkSpeedFor(characterHeight: number): number {
 }
 
 export function newAvatar(id: string, character: string, name: string, feet: Pt, now: number): Avatar {
-  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, spot: null, speed: WALK_SPEED, ignore: null, since: now, onArrive: null };
+  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, spot: null, speed: WALK_SPEED, ignore: null, since: now, onArrive: null, speech: null, offline: false };
 }
 
 export function walk(a: Avatar, path: Pt[], now: number, onArrive: (() => void) | null = null, ignore: string | null = null) {

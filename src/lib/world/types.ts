@@ -27,6 +27,8 @@ export interface WorldProfile {
   scene: string;
   x: number | null;
   y: number | null;
+  /** The seat or spot you were on when you left, for the rest pose; null when standing (migration 0031). */
+  activity?: string | null;
   updated_at: string;
 }
 
