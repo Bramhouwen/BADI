@@ -3,6 +3,6 @@
     {"id":"zit-1","hip":[875,575],"facing":"right","approach":[800,704]},
     {"id":"zit-2","hip":[985,568],"facing":"right","approach":[800,704]},
     {"id":"zit-3","hip":[1095,562],"facing":"left","approach":[1258,690]},
-    {"id":"zit-4","hip":[1442,626],"facing":"left","approach":[1395,805]}
+    {"id":"zit-4","hip":[1400,652],"facing":"left","approach":[1395,805]}
   ]
 }

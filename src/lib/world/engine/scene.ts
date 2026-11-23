@@ -10,6 +10,12 @@ export interface Occluder {
   outline: Polygon;
   /** The furniture's front edge on the floor, left to right. A character whose feet are above it (smaller y) is behind. */
   front: Polygon;
+  /**
+   * Parts of this piece that are in front of someone sitting on it, such as
+   * an armrest that faces the viewer or the back of a chair seen from behind.
+   * Cut from the background and drawn over the one sitting there.
+   */
+  foreground?: Polygon[];
 }
 
 /**

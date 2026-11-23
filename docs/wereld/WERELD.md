@@ -210,6 +210,6 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Getest op telefoonformaat: zitplek toevoegen, slepen, verwijderen, proberen, opslaan. Tests voor het inlezen van zitplekken, raken, het meubel onder een zitplek en het zitAnker.
 
 **Open**
-- Uitgeknipte voorgrondlaag per meubel met arm- of rugleuning, boven het zittende poppetje (stap 3 van deze tussendoor), na akkoord op de plaatsingsmodus.
+- ~~Voorgrondlaag voor arm- en rugleuningen~~ Gedaan: een meubel kan `foreground`-vlakken hebben (in de ruimte, bij het uitgeknipte meubel). Die worden uit de illustratie geknipt en over wie erop zit getekend. Woonkamer: beide armleuningen van de bank (links met het plaid) en de voorste armleuning van de fauteuil met de plant ervoor. In `?debug=1` paars gestippeld. De fauteuil-plek staat nu op de zitting (1400, 652), zodat je ín de stoel zit.
 - ~~De vier zitplekken zijn nog schattingen~~ Opgelost: geplaatst en gecontroleerd door alle vier poppetjes op alle vier plekken te renderen met de rekenregels van de engine (`docs/wereld/zitplekken-controle.png`, rijen zit-1 t/m zit-4, kolommen Anne, Daphne, Irene, Bram). De middelste plek valt samen met Bram in het stijlvoorbeeld. De plaatsingsmodus is er voor correcties achteraf.
 - zitAnker x is het midden van de romp: Anne 158, Daphne 155, Irene 138, Bram 147.

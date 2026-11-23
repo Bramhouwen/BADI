@@ -1,5 +1,5 @@
 /** Seats: hit testing and which piece of furniture you sit on. */
-import { dist, pointInPolygon, type Pt } from "./geometry";
+import { dist, pointInPolygon, type Polygon, type Pt } from "./geometry";
 import type { Occluder, SceneDef, Seat } from "./scene";
 
 /** The furniture whose outline holds the seat: not drawn over the one sitting on it. */
@@ -19,6 +19,12 @@ export function seatAt(scene: SceneDef, p: Pt, radius = 90): Seat | null {
     }
   }
   return best;
+}
+
+/** The parts of the furniture drawn over someone sitting on this seat (armrests, backrests). */
+export function seatForeground(occluders: readonly Occluder[], seat: Seat): Polygon[] {
+  const id = seatOccluder(occluders, seat);
+  return occluders.find((o) => o.id === id)?.foreground ?? [];
 }
 
 /** Where a sitting character's frame goes: its zitAnker on the hip point. */

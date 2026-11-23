@@ -5,11 +5,12 @@
  */
 import { animationOf, type Avatar } from "./avatar";
 import { backToFront, occludersOver } from "./depth";
+import type { Polygon } from "./geometry";
 import type { Grid } from "./grid";
 import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
 import type { SceneDef, Seat } from "./scene";
-import { seatOccluder } from "./seats";
+import { seatForeground, seatOccluder } from "./seats";
 
 export interface Camera {
   x: number;
@@ -75,6 +76,20 @@ function drawCharacter(ctx: CanvasRenderingContext2D, c: LoadedCharacter, a: Ava
   ctx.restore();
 }
 
+const paths = new WeakMap<Polygon, Path2D>();
+/** A polygon as a canvas path, made once. */
+function pathOf(poly: Polygon): Path2D {
+  let p = paths.get(poly);
+  if (!p) {
+    p = new Path2D();
+    const path = p;
+    poly.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
+    p.closePath();
+    paths.set(poly, p);
+  }
+  return p;
+}
+
 export interface RenderInput {
   ctx: CanvasRenderingContext2D;
   scene: SceneDef;
@@ -114,6 +129,15 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
       ctx.drawImage(background, 0, 0, scene.width, scene.height);
       ctx.restore();
     }
+    // Sitting: the armrest or backrest in front of you goes over you.
+    if (seat && a.state === "sit") {
+      for (const poly of seatForeground(scene.occluders, seat)) {
+        ctx.save();
+        ctx.clip(pathOf(poly));
+        ctx.drawImage(background, 0, 0, scene.width, scene.height);
+        ctx.restore();
+      }
+    }
   }
 
   if (debug && grid) drawDebug(ctx, scene, grid, outlines);
@@ -145,6 +169,11 @@ function drawDebug(ctx: CanvasRenderingContext2D, scene: SceneDef, grid: Grid, o
     ctx.stroke();
     ctx.strokeStyle = "#1e6fd9";
   }
+  // foreground parts (armrests, backrests): purple
+  ctx.strokeStyle = "#8a3fd1";
+  ctx.setLineDash([12, 8]);
+  for (const o of scene.occluders) for (const poly of o.foreground ?? []) ctx.stroke(pathOf(poly));
+  ctx.setLineDash([]);
   for (const s of scene.seats) drawSeatMarker(ctx, s, false);
   ctx.restore();
 }

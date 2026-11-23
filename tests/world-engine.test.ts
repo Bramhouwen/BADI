@@ -6,7 +6,7 @@ import { backToFront, occludersOver } from "@/lib/world/engine/depth";
 import { frameIndex } from "@/lib/world/engine/sprites";
 import { newAvatar, sit, step, walk } from "@/lib/world/engine/avatar";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
-import { readSeats, seatAt, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
+import { readSeats, seatAt, seatForeground, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
 
 const grid = buildGrid(WOONKAMER);
 
@@ -143,6 +143,12 @@ describe("seats", () => {
     const seat = WOONKAMER.seats[0];
     expect(seatAt(WOONKAMER, [seat.hip[0] + 10, seat.hip[1] - 10])?.id).toBe(seat.id);
     expect(seatAt(WOONKAMER, [200, 1400])).toBeNull();
+  });
+  it("draws the armrest in front over someone in the armchair, and nothing in the middle of the sofa that is not there", () => {
+    const chair = WOONKAMER.seats.find((s) => seatOccluder(WOONKAMER.occluders, s) === "fauteuil")!;
+    expect(seatForeground(WOONKAMER.occluders, chair).length).toBeGreaterThan(0);
+    const middle = WOONKAMER.seats.find((s) => s.id === "zit-2")!;
+    for (const poly of seatForeground(WOONKAMER.occluders, middle)) expect(pointInPolygon(middle.hip, poly)).toBe(false);
   });
   it("puts the zitAnker exactly on the hip point at the standing scale", () => {
     const [x, y] = sitOrigin([1000, 600], { x: 160, y: 168 }, 1.25);
