@@ -15,6 +15,10 @@ import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites"
 import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
 import type { WorldLink } from "./world-link";
 import { lockBalloonOver, totalUnread, type WorldDm } from "@/lib/world/dm";
+import { basePoint, depthOf, fits, footprintPolygon, freeSpot, seatHip, type Placement } from "@/lib/world/engine/furniture";
+import { ITEM_BY_ID, itemImage } from "@/lib/world/items";
+import type { Prop } from "@/lib/world/engine/renderer";
+import type { RoomPiece } from "@/app/actions/world";
 
 const PAGE = "#f6ece4";
 
@@ -72,6 +76,16 @@ export interface WorldCanvasApi {
   setMine(mine: { status: StatusKey | null; trained: boolean }): void;
   /** Go and do what a spot is for, after choosing it (run on the treadmill). */
   doSpot(id: string): void;
+  /** The furniture in this room. */
+  setPieces(pieces: RoomPiece[]): void;
+  /** Furnishing your own room: drag pieces over the floor. */
+  setFurnishing(on: boolean): void;
+  /** Where a new piece from storage fits, or null when the room is full. */
+  spotFor(piece: Omit<RoomPiece, "u" | "v">): { u: number; v: number } | null;
+  /** Whether a piece fits at its place (after turning it). */
+  canPlace(piece: RoomPiece): boolean;
+  /** Highlight a piece while furnishing. */
+  selectPiece(id: string | null): void;
 }
 
 /** Who you tapped. */
@@ -116,6 +130,8 @@ export function WorldCanvas({
   onSpot,
   onNotice,
   onFollow,
+  onPieceMoved,
+  onPieceSelected,
 }: {
   scene: SceneDef;
   me: { id: string; name: string; character: string | null };
@@ -148,6 +164,10 @@ export function WorldCanvas({
   onNotice?: (text: string) => void;
   /** Who you are walking along with, or null when that stopped. */
   onFollow?: (name: string | null) => void;
+  /** Furnishing: a piece was dragged to a new place where it fits. */
+  onPieceMoved?: (piece: RoomPiece) => void;
+  /** Furnishing: the piece you tapped, or null. */
+  onPieceSelected?: (id: string | null) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
@@ -160,7 +180,11 @@ export function WorldCanvas({
   const onNoticeRef = useRef(onNotice);
   const onFollowRef = useRef(onFollow);
   const mineRef = useRef(mine);
+  const onPieceMovedRef = useRef(onPieceMoved);
+  const onPieceSelectedRef = useRef(onPieceSelected);
   useEffect(() => {
+    onPieceMovedRef.current = onPieceMoved;
+    onPieceSelectedRef.current = onPieceSelected;
     onDoorRef.current = onDoor;
     onReadyRef.current = onReady;
     onPickRef.current = onPick;
@@ -208,9 +232,16 @@ export function WorldCanvas({
       noteTimer = setTimeout(() => setNote(null), 3200);
     };
     // The scene as it is being edited: same as `scene`, with the seats from the placement mode.
-    const live = (): SceneDef => (edit ? { ...scene, seats: seatsRef.current } : scene);
-
-    const grid = buildGrid(scene);
+    // Furniture in a room: placed pieces, their seats, and whether you are furnishing.
+    let pieces: Placement[] = [];
+    let pieceSeats: Seat[] = [];
+    let furnishing = false;
+    let selectedPiece: string | null = null;
+    let movingOk = true;
+    const images = new Map<string, HTMLImageElement>();
+    const baseGrid = buildGrid(scene);
+    let grid = baseGrid;
+    const live = (): SceneDef => (edit ? { ...scene, seats: seatsRef.current } : pieceSeats.length ? { ...scene, seats: [...scene.seats, ...pieceSeats] } : scene);
     const outlines = new Map(
       scene.occluders.map((o) => {
         const p = new Path2D();
@@ -495,6 +526,58 @@ export function WorldCanvas({
           return Boolean(hit);
         };
 
+        // Furniture: the floor it takes, the seats it offers, and its pictures.
+        const refreshPieces = () => {
+          const solid = pieces.filter((p) => !p.item.flat).map((p) => footprintPolygon(baseGrid, p));
+          grid = solid.length ? buildGrid({ ...scene, blockers: [...scene.blockers, ...solid] }) : baseGrid;
+          pieceSeats = pieces.flatMap((p) => {
+            const hip = seatHip(baseGrid, p);
+            if (!hip) return [];
+            const [a, b] = p.flip ? [p.item.foot[1], p.item.foot[0]] : p.item.foot;
+            const front = baseGrid.tileToPx(p.u + a + 0.5, p.v + b + 0.5);
+            const t = grid.nearestWalkable(front);
+            if (!t) return [];
+            return [{ id: p.id, hip, facing: "right" as const, approach: grid.tileToPx(t[0] + 0.5, t[1] + 0.5), on: null }];
+          });
+          for (const p of pieces) {
+            if (images.has(p.item.id)) continue;
+            const img = new Image();
+            img.decoding = "async";
+            img.src = itemImage(p.item.id);
+            images.set(p.item.id, img);
+          }
+        };
+        const toPlacement = (r: RoomPiece): Placement | null => {
+          const item = ITEM_BY_ID.get(r.itemId);
+          return item ? { id: r.id, item, u: r.u, v: r.v, flip: r.flip } : null;
+        };
+        const propsNow = (): Prop[] =>
+          pieces.flatMap((p) => {
+            const img = images.get(p.item.id);
+            if (!img || !img.complete || !img.naturalWidth) return [];
+            const [x, y] = basePoint(baseGrid, p);
+            const selected = furnishing && p.id === selectedPiece;
+            return [{ img, x, y, w: p.item.w, h: p.item.h, flip: p.flip, depth: depthOf(baseGrid, p), flat: Boolean(p.item.flat), outline: selected ? { poly: footprintPolygon(baseGrid, p), ok: movingOk } : null, alpha: selected && !movingOk ? 0.7 : undefined }];
+          });
+        const seatDepth = () => new Map(pieces.map((p) => [p.id, depthOf(baseGrid, p)]));
+        // The piece under a finger: the front-most picture that covers that point.
+        const pieceAt = (sx: number, sy: number): Placement | null => {
+          const [x, y] = screenToScene(sx, sy, cam, view);
+          let best: Placement | null = null;
+          let bestDepth = -Infinity;
+          for (const p of pieces) {
+            const [bx, by] = basePoint(baseGrid, p);
+            if (x < bx - p.item.w / 2 || x > bx + p.item.w / 2 || y < by - p.item.h || y > by + 8) continue;
+            const d = depthOf(baseGrid, p) + (p.item.flat ? -10000 : 0);
+            if (d > bestDepth) {
+              bestDepth = d;
+              best = p;
+            }
+          }
+          return best;
+        };
+        let movingPiece: { id: string; from: { u: number; v: number }; grab: [number, number] } | null = null;
+
         if (apiRef)
           apiRef.current = {
             focusMe() {
@@ -562,6 +645,33 @@ export function WorldCanvas({
               stopFollowing();
               move({ kind: "spot", id });
             },
+            setPieces(next) {
+              pieces = next.flatMap((r) => toPlacement(r) ?? []);
+              if (selectedPiece && !pieces.some((p) => p.id === selectedPiece)) selectedPiece = null;
+              refreshPieces();
+            },
+            setFurnishing(on) {
+              furnishing = on;
+              selectedPiece = null;
+              movingOk = true;
+              if (on) {
+                // See the whole room while furnishing.
+                follow = false;
+                zoomTo = zoomLimits().overview;
+              }
+            },
+            spotFor(piece) {
+              const p = toPlacement({ ...piece, u: 0, v: 0 });
+              return p ? freeSpot(baseGrid, p, pieces) : null;
+            },
+            selectPiece(id) {
+              selectedPiece = id;
+              movingOk = true;
+            },
+            canPlace(piece) {
+              const p = toPlacement(piece);
+              return Boolean(p && fits(baseGrid, p, pieces));
+            },
           };
 
         // Debug only: drive the character from the console (window.__wereld.tap(x, y) in background pixels).
@@ -586,6 +696,13 @@ export function WorldCanvas({
         let lastTap = { t: -Infinity, x: 0, y: 0 };
         detach = attachInput(canvas, {
           tap(x, y) {
+            if (furnishing) {
+              const hit = pieceAt(x, y);
+              selectedPiece = hit ? hit.id : null;
+              movingOk = true;
+              onPieceSelectedRef.current?.(selectedPiece);
+              return;
+            }
             if (!edit) {
               const now = performance.now();
               // Double tap: switch between the whole picture and close to your character.
@@ -620,18 +737,52 @@ export function WorldCanvas({
             commit([...seatsRef.current, seat], seat.id);
           },
           grab(x, y) {
+            if (furnishing) {
+              const hit = pieceAt(x, y);
+              if (!hit) return false;
+              selectedPiece = hit.id;
+              onPieceSelectedRef.current?.(hit.id);
+              const [fu, fv] = baseGrid.pxToTile(screenToScene(x, y, cam, view));
+              movingPiece = { id: hit.id, from: { u: hit.u, v: hit.v }, grab: [fu - hit.u, fv - hit.v] };
+              return true;
+            }
             if (!edit) return false;
             dragging = hitSeat(x, y);
             if (dragging) commit(seatsRef.current, dragging.id);
             return Boolean(dragging);
           },
           drag(x, y) {
+            if (movingPiece) {
+              const p = pieces.find((q) => q.id === movingPiece!.id);
+              if (!p) return;
+              const [fu, fv] = baseGrid.pxToTile(screenToScene(x, y, cam, view));
+              p.u = Math.round(fu - movingPiece.grab[0]);
+              p.v = Math.round(fv - movingPiece.grab[1]);
+              movingOk = fits(baseGrid, p, pieces);
+              return;
+            }
             if (!dragging) return;
             const p = round(screenToScene(x, y, cam, view));
             const { id, part } = dragging;
             seatsRef.current = seatsRef.current.map((s) => (s.id === id ? { ...s, [part]: p } : s));
           },
           drop() {
+            if (movingPiece) {
+              const p = pieces.find((q) => q.id === movingPiece!.id);
+              const from = movingPiece.from;
+              movingPiece = null;
+              if (!p) return;
+              if (fits(baseGrid, p, pieces)) {
+                refreshPieces();
+                onPieceMovedRef.current?.({ id: p.id, itemId: p.item.id, u: p.u, v: p.v, flip: p.flip });
+              } else {
+                p.u = from.u;
+                p.v = from.v;
+                say("Daar past het niet.");
+              }
+              movingOk = true;
+              return;
+            }
             if (!dragging) return;
             const { id, part } = dragging;
             dragging = null;
@@ -721,7 +872,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: propsNow(), seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

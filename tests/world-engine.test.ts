@@ -163,8 +163,8 @@ describe("seats", () => {
 
 describe("scenes", () => {
   const scenes = Object.values(SCENES);
-  it("has the living room, outside, the office and the gym", () => {
-    expect(Object.keys(SCENES).sort()).toEqual(["buiten", "kantoor", "sportschool", "woonkamer"]);
+  it("has the living room, outside, the office, the gym and four own rooms", () => {
+    expect(Object.keys(SCENES).sort()).toEqual(["buiten", "kamer-anne", "kamer-bram", "kamer-daphne", "kamer-irene", "kantoor", "sportschool", "woonkamer"]);
   });
   for (const scene of scenes) {
     describe(scene.id, () => {
@@ -182,8 +182,12 @@ describe("scenes", () => {
           expect(reach(d.approach)).toBe(true);
           expect(d.to && SCENES[d.to]).toBeTruthy();
           const back = SCENES[d.to!].doors.find((x) => x.id === d.arrive);
-          expect(back?.to).toBe(scene.id);
-          expect(back?.arrive).toBe(d.id);
+          expect(back).toBeTruthy();
+          // Own rooms open onto the living room's front door; every other door has its own door back.
+          if (!scene.owner) {
+            expect(back?.to).toBe(scene.id);
+            expect(back?.arrive).toBe(d.id);
+          }
         }
       });
       it("every seat and spot can be walked to", () => {

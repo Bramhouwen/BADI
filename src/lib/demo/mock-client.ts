@@ -7,6 +7,8 @@ import { buildSeed, demoId, type Row, type Store } from "./seed";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
 import { personalRecords, weekStartOf, type RecordSession } from "@/lib/checkin-plan";
 import { todayKey } from "@/lib/dates";
+import { ITEMS } from "@/lib/world/items";
+import { coinsForDay, dayRecords } from "@/lib/world/missions";
 import { availablePrizes, expectedCost, isDuplicateWin, swapOptions, wheelOdds, WHEEL_CHALLENGES, type OwnedSpin, type PrizeLike, type WheelCategory } from "@/lib/wheel";
 
 type Result = { data: unknown; error: { message: string } | null; count: number | null };
@@ -181,6 +183,8 @@ class Query implements PromiseLike<Result> {
     }
 
     if (this.op === "insert" || this.op === "upsert") {
+      // Tables added after the demo store was made (it lives as long as the dev server) start empty.
+      s[this.table] ??= [];
       const list = Array.isArray(this.payload) ? this.payload : [this.payload as Row];
       const inserted: Row[] = [];
       for (const input of list) {
@@ -210,7 +214,7 @@ class Query implements PromiseLike<Result> {
 
     if (this.op === "delete") {
       const rows = this.matching();
-      s[this.table] = s[this.table].filter((r) => !rows.includes(r));
+      s[this.table] = (s[this.table] ?? []).filter((r) => !rows.includes(r));
       return this.finish(rows);
     }
     return { data: null, error: { message: "unsupported" }, count: null };
@@ -307,6 +311,23 @@ function squadMemberStats(s: Store, pUser: string): Result {
   };
 }
 
+
+const DEMO_PRICES: Record<string, number> = Object.fromEntries(ITEMS.map((i) => [i.id, i.price]));
+
+/** Demo coins for the demo user, with the same rules as world_coins_earned in the database. */
+function demoWorldCoins(s: Store): number {
+  const mine = (t: string) => (s[t] ?? []).filter((r) => r.user_id === DEMO_USER_ID);
+  const days = dayRecords({
+    checkins: mine("daily_checkins") as { checkin_date: string }[],
+    workouts: mine("workout_sessions").filter((r) => r.status === "completed") as { workout_date: string }[],
+    water: mine("water_entries") as { log_date: string; amount_ml: number }[],
+    steps: mine("step_logs") as { log_date: string; steps: number }[],
+  });
+  let n = 0;
+  for (const d of days.values()) n += coinsForDay(d);
+  return n;
+}
+
 function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> {
   const s = store();
   const ok = (data: unknown): Result => ({ data, error: null, count: null });
@@ -381,6 +402,22 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const spin = s.wheel_spins.find((x) => x.id === args.p_spin && x.user_id === DEMO_USER_ID);
       if (spin && !spin.challenge_completed_at) spin.challenge_completed_at = new Date().toISOString();
       return Promise.resolve(ok(null));
+    }
+    case "world_coins_balance":
+    case "world_coins_earned": {
+      // Demo: the same rules as the database, from the demo data.
+      const earned = demoWorldCoins(s);
+      const spent = (s.world_purchases ?? []).filter((r) => r.user_id === DEMO_USER_ID).reduce((n, r) => n + Number(r.price), 0);
+      return Promise.resolve(ok(name === "world_coins_earned" ? earned : earned - spent));
+    }
+    case "world_buy": {
+      const price = DEMO_PRICES[String(args.p_item)];
+      if (price === undefined) return Promise.resolve({ data: null, error: { message: "Dit is niet te koop." }, count: null });
+      const spent = (s.world_purchases ?? []).filter((r) => r.user_id === DEMO_USER_ID).reduce((n, r) => n + Number(r.price), 0);
+      if (demoWorldCoins(s) - spent < price) return Promise.resolve({ data: null, error: { message: "Niet genoeg munten." }, count: null });
+      const id = demoId();
+      (s.world_purchases ??= []).push({ id, user_id: DEMO_USER_ID, challenge_id: DEMO_CHALLENGE_ID, item_id: String(args.p_item), price, created_at: new Date().toISOString() });
+      return Promise.resolve(ok(id));
     }
     case "week_records":
       return Promise.resolve(ok(weekRecords(s, String(args.p_from))));

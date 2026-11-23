@@ -8,7 +8,7 @@ import { coinsForDay, dayRecords, missionsFor, type Mission } from "./missions";
 
 export interface WorldGame {
   missions: Mission[];
-  /** All coins earned since the challenge started. */
+  /** Coins you can spend: everything earned since the start, minus what you bought. */
   coins: number;
   /** Earned today. */
   coinsToday: number;
@@ -39,6 +39,9 @@ export async function loadWorldGame(ctx: AppContext): Promise<WorldGame> {
   const todayRecord = days.get(today) ?? { checkin: false, training: false, waterMl: 0, steps: 0 };
   let coins = 0;
   for (const d of days.values()) coins += coinsForDay(d);
+  // With migration 0032 the database keeps the balance (earned minus bought); before that, what was earned.
+  const { data: balance, error: balanceError } = await supabase.rpc("world_coins_balance");
+  if (!balanceError && typeof balance === "number") coins = balance;
   return {
     missions: missionsFor(todayRecord),
     coins,

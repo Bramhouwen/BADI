@@ -105,6 +105,24 @@ export interface Labels {
   statusIcons?: Readonly<Record<string, { icon: string }>>;
 }
 
+/** A loose picture standing in the scene (furniture in a room), sorted with the characters by depth. */
+export interface Prop {
+  img: CanvasImageSource;
+  /** Bottom centre of the picture, its drawn size, and whether it is mirrored. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  flip: boolean;
+  /** Drawing order, like a character's feet. */
+  depth: number;
+  /** Lies on the floor: drawn before everything else. */
+  flat: boolean;
+  /** Highlight while furnishing: its footprint in green (fits) or red (does not). */
+  outline?: { poly: Polygon; ok: boolean } | null;
+  alpha?: number;
+}
+
 export interface RenderInput {
   ctx: CanvasRenderingContext2D;
   scene: SceneDef;
@@ -119,9 +137,34 @@ export interface RenderInput {
   debug?: boolean;
   page: string;
   labels?: Labels;
+  /** Furniture in a room. */
+  props?: Prop[];
+  /** Characters sitting on a piece of furniture are drawn just in front of it: seat id to its depth. */
+  seatDepth?: ReadonlyMap<string, number>;
 }
 
-export function render({ ctx, scene, background, outlines, avatars, characters, cam, view, now, grid, debug, page, labels }: RenderInput) {
+function drawProp(ctx: CanvasRenderingContext2D, p: Prop) {
+  if (p.outline) {
+    ctx.save();
+    ctx.beginPath();
+    p.outline.poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fillStyle = p.outline.ok ? "rgba(63,143,79,0.28)" : "rgba(201,87,58,0.32)";
+    ctx.strokeStyle = p.outline.ok ? "#3f8f4f" : "#c9573a";
+    ctx.lineWidth = 4;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.save();
+  if (p.alpha !== undefined) ctx.globalAlpha = p.alpha;
+  ctx.translate(p.x, p.y);
+  if (p.flip) ctx.scale(-1, 1);
+  ctx.drawImage(p.img, -p.w / 2, -p.h, p.w, p.h);
+  ctx.restore();
+}
+
+export function render({ ctx, scene, background, outlines, avatars, characters, cam, view, now, grid, debug, page, labels, props = [], seatDepth }: RenderInput) {
   const { width, height, dpr } = view;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = page;
@@ -131,8 +174,21 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(background, 0, 0, scene.width, scene.height);
+  for (const p of props) if (p.flat) drawProp(ctx, p);
 
-  for (const a of backToFront(avatars)) {
+  // Characters and standing furniture together, back to front.
+  type Item = { depth: number; prop?: Prop; avatar?: Avatar };
+  const order: Item[] = [
+    ...props.filter((p) => !p.flat).map((prop) => ({ depth: prop.depth, prop })),
+    ...avatars.map((avatar) => ({ depth: avatar.state === "sit" && avatar.seat && seatDepth?.has(avatar.seat) ? seatDepth.get(avatar.seat)! + 0.5 : avatar.feet[1], avatar })),
+  ].sort((x, y) => x.depth - y.depth);
+
+  for (const it of order) {
+    if (it.prop) {
+      drawProp(ctx, it.prop);
+      continue;
+    }
+    const a = it.avatar!;
     const c = characters.get(a.character);
     if (!c) continue;
     if (a.trained && !a.offline) drawGlow(ctx, a, scene.characterHeight, now);

@@ -81,3 +81,145 @@ export async function loadWorldGameState(): Promise<ActionResult<WorldGame>> {
   if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
   return { ok: true, data: await loadWorldGame(ctx) };
 }
+
+// ---------------------------------------------------------------------------
+// Own rooms (fase 4): the shop, furnishing and notes. Buying goes through the
+// database function world_buy, which checks the price and your coins.
+// ---------------------------------------------------------------------------
+
+const MISSING = new Set(["42P01", "42883", "PGRST202", "PGRST205"]);
+const notYet = (e: { code?: string; message?: string } | null) => Boolean(e && (MISSING.has(e.code ?? "") || /does not exist|could not find/i.test(e.message ?? "")));
+const NOT_YET = "De kamers staan nog niet in de database (migratie 0032).";
+
+export interface RoomPiece {
+  /** The purchase this piece is. */
+  id: string;
+  itemId: string;
+  u: number;
+  v: number;
+  flip: boolean;
+}
+
+export interface RoomState {
+  /** What stands in the room. */
+  pieces: RoomPiece[];
+  /** Your own room: what you have in storage, and your coins to spend. */
+  storage: { id: string; itemId: string }[] | null;
+  coins: number | null;
+}
+
+/** The furniture in someone's room (everyone in the group may visit), plus your storage and coins in your own room. */
+export async function loadRoom(ownerId: string): Promise<ActionResult<RoomState>> {
+  if (!peerId.safeParse(ownerId).success) return { ok: false, error: "Onbekende kamer." };
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("world_room_items").select("purchase_id, item_id, u, v, flip").eq("challenge_id", ctx.challenge.id).eq("user_id", ownerId);
+  if (error) return { ok: false, error: notYet(error) ? NOT_YET : "Laden is niet gelukt." };
+  const pieces = ((data ?? []) as { purchase_id: string; item_id: string; u: number; v: number; flip: boolean }[]).map((r) => ({ id: r.purchase_id, itemId: r.item_id, u: r.u, v: r.v, flip: r.flip }));
+  if (ownerId !== ctx.userId) return { ok: true, data: { pieces, storage: null, coins: null } };
+  const [{ data: bought }, { data: balance }] = await Promise.all([
+    supabase.from("world_purchases").select("id, item_id").eq("user_id", ctx.userId).order("created_at"),
+    supabase.rpc("world_coins_balance"),
+  ]);
+  const placed = new Set(pieces.map((p) => p.id));
+  const storage = ((bought ?? []) as { id: string; item_id: string }[]).filter((b) => !placed.has(b.id)).map((b) => ({ id: b.id, itemId: b.item_id }));
+  return { ok: true, data: { pieces, storage, coins: typeof balance === "number" ? balance : null } };
+}
+
+/** Buys a piece for your room. The database checks the price and your coins. */
+export async function buyWorldItem(itemId: string): Promise<ActionResult<{ id: string; coins: number | null }>> {
+  if (!/^[a-z0-9-]{1,40}$/.test(itemId)) return { ok: false, error: "Dit is niet te koop." };
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("world_buy", { p_item: itemId });
+  if (error || typeof data !== "string") {
+    if (notYet(error)) return { ok: false, error: NOT_YET };
+    return { ok: false, error: /genoeg munten/i.test(error?.message ?? "") ? "Je hebt niet genoeg munten." : "Kopen is niet gelukt." };
+  }
+  const { data: balance } = await supabase.rpc("world_coins_balance");
+  return { ok: true, data: { id: data, coins: typeof balance === "number" ? balance : null } };
+}
+
+const pieceSchema = z.object({
+  id: z.string().uuid(),
+  itemId: z.string().regex(/^[a-z0-9-]{1,40}$/),
+  u: z.number().int().min(0).max(64),
+  v: z.number().int().min(0).max(64),
+  flip: z.boolean(),
+});
+
+/** Puts one of your pieces in your room, or moves it. The database only allows what you bought yourself. */
+export async function placeWorldItem(input: RoomPiece): Promise<ActionResult> {
+  const parsed = pieceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Ongeldige plek." };
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  const supabase = await createClient();
+  const p = parsed.data;
+  const { error } = await supabase
+    .from("world_room_items")
+    .upsert({ purchase_id: p.id, user_id: ctx.userId, challenge_id: ctx.challenge.id, item_id: p.itemId, u: p.u, v: p.v, flip: p.flip, updated_at: new Date().toISOString() }, { onConflict: "purchase_id" });
+  return error ? { ok: false, error: notYet(error) ? NOT_YET : "Neerzetten is niet gelukt." } : { ok: true };
+}
+
+/** Takes a piece out of your room, back into storage. */
+export async function storeWorldItem(id: string): Promise<ActionResult> {
+  if (!peerId.safeParse(id).success) return { ok: false, error: "Onbekend meubel." };
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  const { error } = await supabase.from("world_room_items").delete().eq("purchase_id", id).eq("user_id", ctx.userId);
+  return error ? { ok: false, error: "Opbergen is niet gelukt." } : { ok: true };
+}
+
+export interface RoomNote {
+  id: string;
+  author: string;
+  kind: "briefje" | "highfive";
+  body: string | null;
+  at: string;
+  read: boolean;
+}
+
+const noteSchema = z.object({ ownerId: z.string().uuid(), kind: z.enum(["briefje", "highfive"]), body: z.string().trim().max(200).optional() });
+
+/** Leaves a note or a high five in someone's room; they find it when they come in. */
+export async function leaveRoomNote(input: { ownerId: string; kind: "briefje" | "highfive"; body?: string }): Promise<ActionResult> {
+  const parsed = noteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Een briefje is hooguit 200 tekens." };
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  if (parsed.data.ownerId === ctx.userId) return { ok: false, error: "Dit is je eigen kamer." };
+  if (parsed.data.kind === "briefje" && !parsed.data.body) return { ok: false, error: "Schrijf eerst iets." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("world_notes").insert({
+    challenge_id: ctx.challenge.id,
+    room_owner: parsed.data.ownerId,
+    author: ctx.userId,
+    kind: parsed.data.kind,
+    body: parsed.data.kind === "briefje" ? parsed.data.body : null,
+  });
+  return error ? { ok: false, error: notYet(error) ? NOT_YET : "Achterlaten is niet gelukt." } : { ok: true };
+}
+
+/** The notes and high fives left in your room, newest first. */
+export async function loadRoomNotes(): Promise<ActionResult<RoomNote[]>> {
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("world_notes").select("id, author, kind, body, created_at, read_at").eq("room_owner", ctx.userId).order("created_at", { ascending: false }).limit(30);
+  if (error) return { ok: false, error: notYet(error) ? NOT_YET : "Laden is niet gelukt." };
+  return {
+    ok: true,
+    data: ((data ?? []) as { id: string; author: string; kind: "briefje" | "highfive"; body: string | null; created_at: string; read_at: string | null }[]).map((n) => ({ id: n.id, author: n.author, kind: n.kind, body: n.body, at: n.created_at, read: Boolean(n.read_at) })),
+  };
+}
+
+/** Marks the notes in your room as read. */
+export async function markRoomNotesRead(): Promise<ActionResult> {
+  const ctx = await requireContext();
+  const supabase = await createClient();
+  await supabase.from("world_notes").update({ read_at: new Date().toISOString() }).eq("room_owner", ctx.userId).is("read_at", null);
+  return { ok: true };
+}

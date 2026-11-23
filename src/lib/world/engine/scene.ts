@@ -99,4 +99,6 @@ export interface SceneDef {
    * `close`: how much closer the close-up zoom is than usual.
    */
   camera?: { start?: "overview" | "close"; close?: number };
+  /** Someone's own room: the character key of the one who lives here; furnished from the database. */
+  owner?: string;
 }

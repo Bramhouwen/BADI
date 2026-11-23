@@ -18,6 +18,11 @@ import { loadWorldGameState } from "@/app/actions/world";
 import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
 import type { Spot } from "@/lib/world/engine/scene";
 import type { WorldGame } from "@/lib/world/missions-server";
+import { FurnishBar, NotesSheet, ShopSheet, VisitCard } from "./world-room";
+import { buyWorldItem, leaveRoomNote, loadRoom, loadRoomNotes, markRoomNotesRead, placeWorldItem, storeWorldItem, type RoomNote, type RoomPiece } from "@/app/actions/world";
+import { roomId } from "@/lib/world/scenes/kamers";
+import type { ItemDef } from "@/lib/world/items";
+import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
 
 const FADE_MS = 220;
 
@@ -74,6 +79,13 @@ export function WorldView({
   const [following, setFollowing] = useState<string | null>(null);
   const [choice, setChoice] = useState<Spot | null>(null);
   const trained = game?.trainedToday ?? false;
+  // Own rooms: what stands in the room you are in, your storage, furnishing, the shop and notes.
+  const [room, setRoom] = useState<{ scene: string; pieces: RoomPiece[]; storage: { id: string; itemId: string }[] | null; coins: number | null } | null>(null);
+  const [furnishing, setFurnishing] = useState(false);
+  const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
+  const [roomPanel, setRoomPanel] = useState<"winkel" | "briefjes" | "bezoek" | null>(null);
+  const [buying, setBuying] = useState<string | null>(null);
+  const [notes, setNotes] = useState<RoomNote[]>([]);
   // Private messages: unread per sender, the post box and an open conversation.
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [inbox, setInbox] = useState<WorldInboxItem[] | null>(null);
@@ -179,6 +191,9 @@ export function WorldView({
     setHud(null);
     setChoice(null);
     setFollowing(null);
+    setFurnishing(false);
+    setSelectedPiece(null);
+    setRoomPanel(null);
     if (to === "sportschool" && !status) setStatus("trainen", true);
     else if (to !== "sportschool" && autoStatus.current) setStatus(null);
     setTimeout(() => setHere((h) => ({ scene: to, arrive, n: h.n + 1 })), FADE_MS);
@@ -238,6 +253,92 @@ export function WorldView({
     refreshInbox();
   };
 
+  // The room you are in: whose it is, and its furniture.
+  const sceneNow = SCENES[here.scene];
+  const ownerId = sceneNow?.owner ? (sceneNow.owner === me.character ? me.id : (members.find((m) => m.character === sceneNow.owner)?.id ?? null)) : null;
+  const ownerName = sceneNow?.owner ? (sceneNow.owner === me.character ? me.name : (members.find((m) => m.character === sceneNow.owner)?.name ?? "")) : "";
+  const isMine = Boolean(ownerId && ownerId === me.id);
+  useEffect(() => {
+    if (!ownerId || edit) return;
+    let alive = true;
+    void loadRoom(ownerId).then((r) => {
+      if (!alive) return;
+      if (r.ok && r.data) setRoom({ scene: here.scene, ...r.data });
+      else say2(r.ok ? "Laden is niet gelukt." : r.error);
+    });
+    if (ownerId === me.id)
+      void loadRoomNotes().then((r) => {
+        if (!alive || !r.ok || !r.data) return;
+        setNotes(r.data);
+        // Something new left in your room: show it when you come in.
+        if (r.data.some((n) => !n.read)) {
+          setRoomPanel("briefjes");
+          void markRoomNotesRead();
+        }
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per room you enter
+  }, [ownerId, here.n, edit]);
+  const pieces = room && room.scene === here.scene ? room.pieces : [];
+  const piecesKey = JSON.stringify(pieces);
+  useEffect(() => {
+    canvasApi.current?.setPieces(JSON.parse(piecesKey) as RoomPiece[]);
+  }, [piecesKey]);
+  useEffect(() => {
+    canvasApi.current?.setFurnishing(furnishing);
+  }, [furnishing]);
+
+  const savePiece = (p: RoomPiece) =>
+    void placeWorldItem(p).then((r) => {
+      if (!r.ok) say2(r.error);
+    });
+  const updatePieces = (fn: (list: RoomPiece[]) => RoomPiece[], storage?: (list: { id: string; itemId: string }[]) => { id: string; itemId: string }[]) =>
+    setRoom((r) => (r ? { ...r, pieces: fn(r.pieces), storage: r.storage && storage ? storage(r.storage) : r.storage } : r));
+  const placeFromStorage = (s: { id: string; itemId: string }) => {
+    const spot = canvasApi.current?.spotFor({ ...s, flip: false });
+    if (!spot) return say2("Er is in je kamer geen plek meer vrij.");
+    const piece: RoomPiece = { ...s, ...spot, flip: false };
+    updatePieces((l) => [...l, piece], (st) => st.filter((x) => x.id !== s.id));
+    setSelectedPiece(piece.id);
+    setTimeout(() => canvasApi.current?.selectPiece(piece.id), 0);
+    savePiece(piece);
+  };
+  const flipSelected = () => {
+    const p = pieces.find((x) => x.id === selectedPiece);
+    if (!p) return;
+    const next = { ...p, flip: !p.flip };
+    if (!canvasApi.current?.canPlace(next)) return say2("Gedraaid past het hier niet. Sleep het eerst naar een ruimere plek.");
+    updatePieces((l) => l.map((x) => (x.id === p.id ? next : x)));
+    savePiece(next);
+  };
+  const storeSelected = () => {
+    const p = pieces.find((x) => x.id === selectedPiece);
+    if (!p) return;
+    updatePieces((l) => l.filter((x) => x.id !== p.id), (st) => [...st, { id: p.id, itemId: p.itemId }]);
+    setSelectedPiece(null);
+    void storeWorldItem(p.id).then((r) => {
+      if (!r.ok) say2(r.error);
+    });
+  };
+  const buy = async (item: ItemDef) => {
+    setBuying(item.id);
+    const r = await buyWorldItem(item.id);
+    setBuying(null);
+    if (!r.ok || !r.data) return say2(r.ok ? "Kopen is niet gelukt." : r.error);
+    const bought = { id: r.data.id, itemId: item.id };
+    setRoom((x) => (x ? { ...x, coins: r.data!.coins ?? x.coins, storage: x.storage ? [...x.storage, bought] : x.storage } : x));
+    refreshGame();
+    say2(`${item.name} gekocht.`);
+    // In your own room it goes straight in, somewhere free.
+    if (isMine) {
+      setRoomPanel(null);
+      setFurnishing(true);
+      setTimeout(() => placeFromStorage(bought), 0);
+    }
+  };
+
   const onDoor = (door: Door) => {
     const to = door.to;
     if (!to || !SCENES[to]) return;
@@ -248,7 +349,8 @@ export function WorldView({
   const first = here.n === 0;
   // Where the bottom bar sits, and the panels just above it.
   const bottom = visible?.keyboard ? 8 : "calc(var(--sab) + 12px)";
-  const above = "calc(var(--sab) + 128px)";
+  // In a room there is an extra row of room buttons above the action bar.
+  const above = SCENES[here.scene]?.owner ? "calc(var(--sab) + 178px)" : "calc(var(--sab) + 128px)";
 
   const send = () => {
     const now = Date.now();
@@ -283,6 +385,7 @@ export function WorldView({
             onReady={() => {
               setDim(false);
               syncCanvas();
+              canvasApi.current?.setPieces(pieces);
             }}
             onPick={(who) => {
               if (who?.self) return openBox();
@@ -298,6 +401,11 @@ export function WorldView({
             }}
             onNotice={say2}
             onFollow={setFollowing}
+            onPieceMoved={(p) => {
+              updatePieces((l) => l.map((x) => (x.id === p.id ? p : x)));
+              savePiece(p);
+            }}
+            onPieceSelected={setSelectedPiece}
           />
         ) : null}
       </div>
@@ -388,6 +496,7 @@ export function WorldView({
           people={peers.map(([id, p]) => ({ id, name: p.name, scene: p.scene, status: p.status ?? null }))}
           onGo={(to) => enterScene(to, null)}
           onClose={() => setHud(null)}
+          myRoom={me.character ? roomId(me.character) : null}
         />
       ) : null}
       {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
@@ -403,7 +512,37 @@ export function WorldView({
         />
       ) : null}
 
-      {!edit && !post ? (
+      {!edit && !post && furnishing && isMine && roomPanel !== "winkel" ? (
+        <FurnishBar
+          bottom={bottom}
+          storage={room?.storage ?? []}
+          selected={pieces.find((p) => p.id === selectedPiece)?.itemId ?? null}
+          onPlace={placeFromStorage}
+          onFlip={flipSelected}
+          onStore={storeSelected}
+          onShop={() => setRoomPanel("winkel")}
+          onDone={() => {
+            setFurnishing(false);
+            setSelectedPiece(null);
+          }}
+        />
+      ) : null}
+      {!edit && !post && roomPanel === "winkel" ? <ShopSheet bottom={furnishing ? bottom : above} coins={room?.coins ?? game?.coins ?? null} busy={buying} onBuy={(i) => void buy(i)} onClose={() => setRoomPanel(null)} /> : null}
+      {!edit && !post && roomPanel === "briefjes" && isMine ? <NotesSheet bottom={above} notes={notes} nameOf={(id) => members.find((m) => m.id === id)?.name ?? "Iemand"} onClose={() => setRoomPanel(null)} /> : null}
+      {!edit && !post && roomPanel === "bezoek" && ownerId && !isMine ? (
+        <VisitCard
+          bottom={above}
+          owner={ownerName}
+          onLeave={async (kind, body) => {
+            const r = await leaveRoomNote({ ownerId, kind, body });
+            if (!r.ok) say2(r.error);
+            return r.ok;
+          }}
+          onClose={() => setRoomPanel(null)}
+        />
+      ) : null}
+
+      {!edit && !post && !furnishing ? (
         <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom }}>
           {picked && !hud ? (
             <div className="space-y-2.5 rounded-[18px] bg-white/95 px-4 py-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" role="status">
@@ -440,6 +579,15 @@ export function WorldView({
                 <button type="button" onClick={() => openThread({ id: picked.id, name: picked.name })} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#2b1d18] text-[11.5px] font-semibold text-white">
                   <Lock className="h-4 w-4" aria-hidden /> Privé
                 </button>
+                {members.find((m) => m.id === picked.id)?.character ? (
+                  <button
+                    type="button"
+                    onClick={() => enterScene(roomId(members.find((m) => m.id === picked.id)!.character), null)}
+                    className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text ${picked.online ? "col-span-4" : ""}`}
+                  >
+                    <DoorOpen className="h-4 w-4" aria-hidden /> Op bezoek in de kamer van {picked.name}
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -450,6 +598,27 @@ export function WorldView({
               <button type="button" onClick={() => canvasApi.current?.stopFollowing()} className="ml-auto rounded-full bg-[#f6ece4] px-3 py-1 text-[12.5px] font-semibold text-ink">
                 Stop
               </button>
+            </div>
+          ) : null}
+          {ownerId && !visible?.keyboard && !picked ? (
+            <div className="flex gap-2">
+              {isMine ? (
+                <>
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(null), setFurnishing(true))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                    <Sofa className="h-4 w-4" aria-hidden /> Inrichten
+                  </button>
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "winkel" ? null : "winkel"))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                    <ShoppingBag className="h-4 w-4" aria-hidden /> Winkel
+                  </button>
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "briefjes" ? null : "briefjes"))} aria-label="Achtergelaten in je kamer" className="grid h-10 w-10 place-items-center rounded-full bg-white/95 text-ink shadow-md ring-1 ring-ink/[0.06]">
+                    <MailIcon className="h-4 w-4" aria-hidden />
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "bezoek" ? null : "bezoek"))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                  <MailIcon className="h-4 w-4" aria-hidden /> Iets achterlaten voor {ownerName}
+                </button>
+              )}
             </div>
           ) : null}
           {!visible?.keyboard ? <ActionBar open={hud} onOpen={openHud} status={status} /> : null}

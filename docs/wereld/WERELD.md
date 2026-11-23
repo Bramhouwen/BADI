@@ -359,3 +359,33 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Het Weekrad als ding in de wereld vraagt een getekend rad.
 - Munten uitgeven: met de eigen kamers (fase 4).
 - De muntbedragen zijn een eerste voorstel en staan in `MISSION_COINS`.
+
+### Fase 4: eigen kamer en munten (24-11-2026)
+
+**Gedaan**
+- Tekeningen (via Higgsfield, GPT Image 2.6, met de woonkamer als stijlvoorbeeld; bronnen in `docs/wereld/bron/kamers`):
+  - vier lege kamers, gemaakt door alle meubels uit de woonkamer weg te laten, in groen (Bram), perzik (Anne), blauw (Daphne) en lila (Irene);
+  - twintig losse meubels op een doorzichtige achtergrond. Kosten samen 38 credits; de proef staat in `docs/wereld/proef-kamer`.
+- Kamers als ruimtes (`src/lib/world/scenes/kamers.ts`): één opgemeten vloer voor alle vier. De deur gaat naar de woonkamer. Je komt erin via de kaart (Jouw kamer en de kamers van de anderen) of via "Op bezoek" op het kaartje van iemand.
+- Winkel (`src/lib/world/items.ts`, `world-room.tsx`): zitten, slapen, kasten en tafels, planten, sport, kleden en licht. Prijzen 15 tot 120 munten.
+- Kopen gaat alleen via de databasefunctie `world_buy` (migratie 0032), die je saldo uitrekent uit je echte check-ins, trainingen, water en stappen en de prijs controleert. Wat je koopt, komt in je kamer of in je opslag. De muntenteller gebruikt hetzelfde saldo.
+- Inrichten in je eigen kamer:
+  - meubels slepen over de vloertegels; groen als het past, rood als het niet past;
+  - draaien, opbergen, en neerzetten uit je opslag;
+  - kleden en matten mogen onder meubels liggen.
+- Meubels zijn losse lagen, op diepte gesorteerd met de poppetjes (`engine/furniture.ts`). Ze blokkeren de tegels waar ze staan. Op een bankje, fauteuil, zitzak of bureaustoel kun je zitten.
+- Op bezoek: iedereen kan in de kamers van de anderen, ook als die offline zijn, en daar een briefje of een high five achterlaten. Kom je in je eigen kamer, dan zie je wat er is achtergelaten.
+- Klaar-eis gehaald: een training levert munten op, je koopt een bankje, het staat in je kamer en je kunt erop zitten.
+- Tests:
+  - `supabase/tests/kamers.sql` voor de SQL Editor, lokaal gedraaid in PGlite met alle controles groen, en met een expres lekke regel een FOUT;
+  - gewone tests voor tegels, passen, diepte, zitplekken en dat de prijzen in app en migratie gelijk zijn.
+
+**Anders gegaan**
+- Geen gang met vier deuren: daarvoor is een extra tekening nodig. Je gaat via de kaart of via "Op bezoek".
+- De muntberekening staat nu twee keer: in de database (de bron voor saldo en kopen) en in de app (missies van vandaag). De regels zijn gelijk en getest.
+
+**Open**
+- Migratie 0032 in Supabase zetten, en `supabase/tests/kamers.sql` draaien.
+- Een melding (push) als iemand iets in je kamer achterliet.
+- Praten met de deur dicht (gesprek van het type 'room').
+- Meer meubels, en muurdingen zoals posters: die vragen een plek op de muur in plaats van op de vloer.

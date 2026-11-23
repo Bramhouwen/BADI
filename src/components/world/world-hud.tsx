@@ -103,22 +103,30 @@ export function MapSheet({
   people,
   onGo,
   onClose,
+  myRoom = null,
 }: {
   bottom: number | string;
   here: string;
+  /** Your own room's scene id: shown as "Jouw kamer". */
+  myRoom?: string | null;
   /** Who is online in which scene, with their status. */
   people: { id: string; name: string; scene: string; status: StatusKey | null }[];
   onGo: (scene: string) => void;
   onClose: () => void;
 }) {
   const order = ["woonkamer", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
+  // Own rooms after the shared places, yours first.
+  const rooms = Object.values(SCENES)
+    .filter((s) => s.owner)
+    .sort((a, b) => (a.id === myRoom ? -1 : b.id === myRoom ? 1 : a.name.localeCompare(b.name)))
+    .map((s) => s.id);
   return (
     <section aria-label="Kaart" className={`${sheet} flex max-h-[min(72%,600px)] flex-col`} style={{ bottom }}>
       <SheetHeader title="Kaart" onClose={onClose}>
         <span className="text-[12px] text-muted">tik op een plek om erheen te gaan</span>
       </SheetHeader>
       <ul className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto p-3">
-        {order.map((id) => {
+        {[...order, ...rooms].map((id) => {
           const s = SCENES[id];
           const there = people.filter((p) => p.scene === id);
           const mine = id === here;
@@ -131,7 +139,7 @@ export function MapSheet({
                 style={{ backgroundImage: `url(${s.background})`, backgroundSize: "cover", backgroundPosition: "center" }}
               >
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2.5 pb-2 pt-6">
-                  <span className="block text-[13.5px] font-semibold text-white">{s.name}</span>
+                  <span className="block truncate text-[13.5px] font-semibold text-white">{id === myRoom ? "Jouw kamer" : s.name}</span>
                   <span className="block truncate text-[11.5px] text-white/85">{mine ? "Jij bent hier" : there.length ? there.map((p) => p.name).join(", ") : "Niemand"}</span>
                 </span>
                 {there.length ? (
