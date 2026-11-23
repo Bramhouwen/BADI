@@ -42,19 +42,22 @@ export interface SpriteSheet {
   src: string;
   /** Head on a cream square, for push notifications. */
   face: string;
+  /** False while the character is ready but not released to its member yet. */
+  live?: boolean;
   anims: Record<SpriteAnim, Frames>;
 }
 
 /** Sheets by lower-case first name. */
 export const SPRITE_SHEETS: Record<string, SpriteSheet> = {
   anne: { src: "/sprites/anne.webp", face: "/sprites/anne-face.png", anims: SPRITE_ANIMS },
+  irene: { src: "/sprites/irene.webp", face: "/sprites/irene-face.png", anims: SPRITE_ANIMS, live: false },
 };
 void BRAM_ANIMS;
 
 /** The sheet of a member by display name, or null. In demo mode everyone borrows the first sheet. */
 export function spriteFor(displayName: string | null | undefined): SpriteSheet | null {
   const first = (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-  if (SPRITE_SHEETS[first]) return SPRITE_SHEETS[first];
+  if (SPRITE_SHEETS[first] && SPRITE_SHEETS[first].live !== false) return SPRITE_SHEETS[first];
   if (isDemo()) return Object.values(SPRITE_SHEETS)[0] ?? null;
   return null;
 }
@@ -62,5 +65,6 @@ export function spriteFor(displayName: string | null | undefined): SpriteSheet |
 /** Notification icon for a push from this member: their character's face, or the app icon. */
 export function pushIconFor(displayName: string | null | undefined): string | undefined {
   const first = (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
-  return SPRITE_SHEETS[first]?.face;
+  const sheet = SPRITE_SHEETS[first];
+  return sheet && sheet.live !== false ? sheet.face : undefined;
 }
