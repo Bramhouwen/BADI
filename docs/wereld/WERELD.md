@@ -334,3 +334,28 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Privacytest draaien in de echte database (SQL Editor).
 - Gesprek in je eigen kamer met de deur dicht (type 'room'): wacht op de eigen kamers in fase 4.
 - "Is aan het typen" gaat over het openbare online-kanaal: wie daar meeluistert ziet wie naar wie typt, niet wat. Dichtzetten kan door dat kanaal privé te maken.
+
+### Tussendoor: het wordt een game (23-11-2026)
+
+**Gedaan**
+- Actiebalk onderin (`src/components/world/world-hud.tsx`), boven "Zeg iets…":
+  - **Doe iets:** zwaaien, juichen of een dansje, met de eigen animaties van het poppetje. Iedereen in de ruimte ziet het.
+  - **Status:** aan het trainen, aan het werk, even chillen, aan het koken of even weg. Een icoontje boven je hoofd, op het kaartje en op de kaart. Wordt op je toestel onthouden. In de sportschool krijg je vanzelf "aan het trainen" als je niets had gekozen; buiten de sportschool verdwijnt die weer.
+  - **Kaart:** de vier plekken met wie er is en wat ze doen. Tik op een plek om erheen te reizen.
+  - **Missies:** zie hieronder.
+- Doen met elkaar: tik op iemand die online is voor zwaaien, high five, meelopen of privé praten.
+  - Bij een high five loop je naar diegene toe en juichen jullie samen.
+  - Bij meelopen blijf je binnen een stap, tot je zelf ergens anders heen tikt of op Stop drukt.
+  - Zwaait iemand naar je of geeft iemand je een high five, dan zie je een melding.
+- Missies van vandaag uit wat je echt in BADI deed (`src/lib/world/missions.ts`): inchecken, training, 2,5 liter water, 10.000 stappen. Met voortgang, een knop "Doen" naar de goede pagina, en een knop voor het Weekrad als je deze week nog mag draaien.
+- Munten: 5 voor inchecken, 10 voor een training, 3 voor water en 5 voor stappen, per dag sinds de start van de challenge.
+  - De server rekent ze uit de database uit (`missions-server.ts`), dus vals verdienen kan niet en er is geen migratie nodig.
+  - Rechtsboven staat je totaal. Uitgeven komt met de eigen kamers.
+- Heb je vandaag getraind, dan heb je een warme glans om je poppetje; op het kaartje staat "heeft vandaag getraind".
+- Loopband: tikken geeft de keus tussen "Rennen" en "Training loggen". Dat laatste opent het trainingsscherm van de app.
+- Getest in de demo op telefoonformaat: dansje, status, missies, kaart en reizen, de keus bij de loopband, de high five en meelopen. Plus tests voor missies, munten, acties en status.
+
+**Open**
+- Het Weekrad als ding in de wereld vraagt een getekend rad.
+- Munten uitgeven: met de eigen kamers (fase 4).
+- De muntbedragen zijn een eerste voorstel en staan in `MISSION_COINS`.

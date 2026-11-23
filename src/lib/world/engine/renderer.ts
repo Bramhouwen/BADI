@@ -101,6 +101,8 @@ export interface Labels {
   unread?: ReadonlyMap<string, number>;
   /** Who is typing a private message to you. */
   typing?: ReadonlySet<string>;
+  /** Status icons by status key. */
+  statusIcons?: Readonly<Record<string, { icon: string }>>;
 }
 
 export interface RenderInput {
@@ -133,6 +135,7 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
   for (const a of backToFront(avatars)) {
     const c = characters.get(a.character);
     if (!c) continue;
+    if (a.trained && !a.offline) drawGlow(ctx, a, scene.characterHeight, now);
     if (a.offline) ctx.globalAlpha = 0.6;
     drawCharacter(ctx, c, a, scene.characterHeight, now, z);
     ctx.globalAlpha = 1;
@@ -225,10 +228,13 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.fill();
       ctx.restore();
     }
+    // what they are up to: an icon (not while offline, the moon says enough)
+    const statusIcon = !a.offline && a.status ? labels.statusIcons?.[a.status]?.icon : null;
+    if (statusIcon) drawBadge(ctx, hx + 20, top - 12, statusIcon);
     // unread private messages: an envelope with the number
     const count = labels.unread?.get(a.id) ?? 0;
     if (count > 0) {
-      drawEnvelope(ctx, hx - (a.offline ? 18 : 0), top - 14, count);
+      drawEnvelope(ctx, hx - (a.offline || statusIcon ? 18 : 0), top - 14, count);
       top -= 30;
     }
     // typing a private message to you: three dots
@@ -287,6 +293,39 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.globalAlpha = 1;
     }
   }
+  ctx.restore();
+}
+
+/** Trained today: a soft warm glow behind the character, gently breathing. */
+function drawGlow(ctx: CanvasRenderingContext2D, a: Avatar, height: number, now: number) {
+  const pulse = 0.85 + Math.sin(now / 700) * 0.15;
+  const cx = a.feet[0], cy = a.feet[1] - height * 0.32;
+  const r = height * 0.42 * pulse;
+  const g = ctx.createRadialGradient(cx, cy, r * 0.15, cx, cy, r);
+  g.addColorStop(0, "rgba(255, 214, 120, 0.42)");
+  g.addColorStop(1, "rgba(255, 214, 120, 0)");
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r * 0.8, r, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** A status icon in a small white circle. */
+function drawBadge(ctx: CanvasRenderingContext2D, cx: number, cy: number, icon: string) {
+  ctx.save();
+  ctx.shadowColor = "rgba(43,29,24,0.2)";
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.font = "15px ui-sans-serif, system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(icon, cx, cy + 1);
   ctx.restore();
 }
 

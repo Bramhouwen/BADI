@@ -8,6 +8,7 @@ import type { ActionResult } from "@/lib/types";
 import { attachmentLabel } from "@/lib/chat";
 import { loadChatList, loadPeople, loadThread } from "@/lib/chat-data";
 import type { WorldDm } from "@/lib/world/dm";
+import { loadWorldGame, type WorldGame } from "@/lib/world/missions-server";
 
 const schema = z.object({
   scene: z.string().regex(/^[a-z0-9-]{1,40}$/),
@@ -72,4 +73,11 @@ export async function loadWorldThread(peer: string): Promise<ActionResult<{ mess
   const thread = await loadThread(ctx, people, peer);
   const messages = thread.messages.map((m) => ({ id: m.id, from: m.user_id, to: m.recipient_id ?? "", text: m.body || attachmentLabel(m) || "Bijlage", at: m.created_at }));
   return { ok: true, data: { messages, peerLastRead: thread.peerLastRead } };
+}
+
+/** Your missions of today, your coins and whether you may spin the Weekrad, from your own data. */
+export async function loadWorldGameState(): Promise<ActionResult<WorldGame>> {
+  const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
+  return { ok: true, data: await loadWorldGame(ctx) };
 }

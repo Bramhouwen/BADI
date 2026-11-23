@@ -16,15 +16,17 @@ import { SCENES } from "@/lib/world/scenes";
 import { buildGrid } from "@/lib/world/engine/grid";
 import type { Pt } from "@/lib/world/engine/geometry";
 import type { Intent } from "@/lib/world/engine/moves";
-import { cleanSpeech, readPresence, readSpeech, type Speech, type WorldPresence } from "@/lib/world/engine/presence";
+import { cleanSpeech, readAction, readPresence, readSpeech, type ActionKind, type Speech, type WorldAction, type WorldPresence } from "@/lib/world/engine/presence";
 
-export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech);
+export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech) | ({ type: "action" } & WorldAction);
 
 export interface WorldLink {
   /** Shares where you are and what you are doing now. */
   publish(p: WorldPresence): void;
   /** Says something to everyone in the scene; also shown over yourself. */
   say(scene: string, text: string): void;
+  /** Does something for the room to see: wave, cheer, dance, a high five; `to` someone or nobody. Also shown on yourself. */
+  act(scene: string, kind: ActionKind, to: string | null): void;
   subscribe(listener: (e: LinkEvent) => void): () => void;
   /** Everyone else in the world right now, by user id. */
   peers(): ReadonlyMap<string, WorldPresence>;
@@ -87,6 +89,10 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
         const s = readSpeech(payload);
         if (s && s.from !== userId) listeners.emit({ type: "speech", ...s });
       })
+      .on("broadcast", { event: "actie" }, ({ payload }) => {
+        const a = readAction(payload);
+        if (a && a.from !== userId) listeners.emit({ type: "action", ...a });
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           joined = true;
@@ -106,6 +112,10 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
       listeners.emit({ type: "speech", from: userId, scene, text: clean });
       void channel?.send({ type: "broadcast", event: "zeg", payload: { from: userId, scene, text: clean } });
     },
+    act(scene, kind, to) {
+      listeners.emit({ type: "action", from: userId, scene, kind, to });
+      void channel?.send({ type: "broadcast", event: "actie", payload: { from: userId, scene, kind, to } });
+    },
     subscribe: (l) => listeners.add(l),
     peers: () => peers,
     close() {
@@ -121,8 +131,8 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
 
 /** Demo: Sam (in the living room) and Alex (outside) as characters that walk, sit, run and talk on their own. */
 const DEMO_BOTS = [
-  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "woonkamer", start: [1300, 900] as Pt },
-  { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne", scene: "buiten", start: [900, 520] as Pt },
+  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "woonkamer", start: [1300, 900] as Pt, status: "chillen" as const, trained: true },
+  { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne", scene: "buiten", start: [900, 520] as Pt, status: "trainen" as const, trained: false },
 ];
 const DEMO_LINES = ["Wie gaat er mee hardlopen?", "Ik heb net mijn stappen gehaald", "Koffie iemand?", "Zullen we vanavond samen trainen?", "Hoi!", "Nog 2 trainingen deze week"];
 
@@ -160,7 +170,7 @@ function demoLink(userId: string): WorldLink {
       }
       const from = peers.get(bot.id)?.intent;
       const fromPt: Pt = !from ? bot.start : from.kind === "stand" ? from.to : (scene.seats.find((s) => s.id === (from as { id: string }).id)?.hip ?? scene.spots.find((s) => s.id === (from as { id: string }).id)?.at ?? bot.start);
-      peers.set(bot.id, { v: 1, name: bot.name, character: bot.character, scene: bot.scene, from: fromPt, intent, at: Date.now() });
+      peers.set(bot.id, { v: 1, name: bot.name, character: bot.character, scene: bot.scene, from: fromPt, intent, at: Date.now(), status: bot.status, trained: bot.trained });
       listeners.emit({ type: "peers" });
       timers.push(setTimeout(move, 7000 + Math.random() * 7000));
     };
@@ -169,7 +179,8 @@ function demoLink(userId: string): WorldLink {
   const talk = () => {
     if (closed) return;
     const bot = pick(DEMO_BOTS);
-    listeners.emit({ type: "speech", from: bot.id, scene: bot.scene, text: pick(DEMO_LINES) });
+    if (Math.random() < 0.35) listeners.emit({ type: "action", from: bot.id, scene: bot.scene, kind: "zwaai", to: userId });
+    else listeners.emit({ type: "speech", from: bot.id, scene: bot.scene, text: pick(DEMO_LINES) });
     timers.push(setTimeout(talk, 9000 + Math.random() * 9000));
   };
   timers.push(setTimeout(talk, 4000));
@@ -179,6 +190,12 @@ function demoLink(userId: string): WorldLink {
     say(scene, text) {
       const clean = cleanSpeech(text);
       if (clean) listeners.emit({ type: "speech", from: userId, scene, text: clean });
+    },
+    act(scene, kind, to) {
+      listeners.emit({ type: "action", from: userId, scene, kind, to });
+      // Demo: a high five or a wave to Sam or Alex is answered.
+      const bot = DEMO_BOTS.find((b) => b.id === to);
+      if (bot && (kind === "highfive" || kind === "zwaai")) timers.push(setTimeout(() => listeners.emit({ type: "action", from: bot.id, scene: bot.scene, kind, to: userId }), kind === "highfive" ? 50 : 900));
     },
     subscribe: (l) => listeners.add(l),
     peers: () => peers,

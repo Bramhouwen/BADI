@@ -64,6 +64,8 @@ export interface Spot {
   facing: "left" | "right";
   /** Animation from the character's manifest. */
   pose: string;
+  /** Besides doing it here, a page in the app for it (the treadmill: log a training). Tapping the spot then asks which. */
+  link?: { label: string; href: string };
 }
 
 export interface SceneDef {

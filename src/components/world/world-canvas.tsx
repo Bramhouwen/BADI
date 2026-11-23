@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveWorldPosition } from "@/app/actions/world";
-import { newAvatar, step, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
+import { endAction, newAvatar, playAction, step, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
 import { dist, pointInPolygon, type Pt } from "@/lib/world/engine/geometry";
 import { buildGrid, type Grid } from "@/lib/world/engine/grid";
 import { ease, followTarget, heading, startZoom, toggledZoom, zoomLevels } from "@/lib/world/engine/camera";
 import { attachInput } from "@/lib/world/engine/input";
 import { fastForward, placeAtEnd, startIntent, type Abilities, type Intent } from "@/lib/world/engine/moves";
-import { secondsSince, speechSeconds, type WorldPresence } from "@/lib/world/engine/presence";
+import { ACTIONS, STATUSES, secondsSince, speechSeconds, type StatusKey, type WorldPresence } from "@/lib/world/engine/presence";
 import { avatarAt, clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
 import { seatAt } from "@/lib/world/engine/seats";
 import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites";
-import type { Door, SceneDef, Seat } from "@/lib/world/engine/scene";
+import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
 import type { WorldLink } from "./world-link";
 import { lockBalloonOver, totalUnread, type WorldDm } from "@/lib/world/dm";
 
@@ -63,6 +63,15 @@ export interface WorldCanvasApi {
   setUnread(unread: Readonly<Record<string, number>>): void;
   /** Who is typing a private message to you. */
   setTyping(ids: readonly string[]): void;
+  /** Do something for the room to see. */
+  act(kind: "zwaai" | "juich" | "dans"): void;
+  /** Towards someone: wave at them, walk over for a high five, or walk along with them. */
+  interact(id: string, kind: "zwaai" | "highfive" | "meelopen"): void;
+  stopFollowing(): void;
+  /** Your status and whether you trained today, shared with the others. */
+  setMine(mine: { status: StatusKey | null; trained: boolean }): void;
+  /** Go and do what a spot is for, after choosing it (run on the treadmill). */
+  doSpot(id: string): void;
 }
 
 /** Who you tapped. */
@@ -74,6 +83,8 @@ export interface PickedMember {
   lastSeen: string | null;
   /** You tapped yourself. */
   self?: boolean;
+  status?: StatusKey | null;
+  trained?: boolean;
 }
 
 /**
@@ -101,6 +112,10 @@ export function WorldCanvas({
   onReady,
   onPick,
   apiRef,
+  mine = { status: null, trained: false },
+  onSpot,
+  onNotice,
+  onFollow,
 }: {
   scene: SceneDef;
   me: { id: string; name: string; character: string | null };
@@ -125,6 +140,14 @@ export function WorldCanvas({
   onPick?: (who: PickedMember | null) => void;
   /** Filled with the canvas controls while the scene runs. */
   apiRef?: { current: WorldCanvasApi | null };
+  /** Your status and training glow at the start of the scene. */
+  mine?: { status: StatusKey | null; trained: boolean };
+  /** You tapped a spot that offers a choice (the treadmill: run, or log a training). */
+  onSpot?: (spot: Spot) => void;
+  /** Something to tell you, like someone waving at you. */
+  onNotice?: (text: string) => void;
+  /** Who you are walking along with, or null when that stopped. */
+  onFollow?: (name: string | null) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
@@ -133,11 +156,19 @@ export function WorldCanvas({
   const onReadyRef = useRef(onReady);
   const onPickRef = useRef(onPick);
   const membersRef = useRef(members);
+  const onSpotRef = useRef(onSpot);
+  const onNoticeRef = useRef(onNotice);
+  const onFollowRef = useRef(onFollow);
+  const mineRef = useRef(mine);
   useEffect(() => {
     onDoorRef.current = onDoor;
     onReadyRef.current = onReady;
     onPickRef.current = onPick;
     membersRef.current = members;
+    onSpotRef.current = onSpot;
+    onNoticeRef.current = onNotice;
+    onFollowRef.current = onFollow;
+    mineRef.current = mine;
   });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -263,10 +294,26 @@ export function WorldCanvas({
           clearTimeout(saveTimer);
           saveTimer = setTimeout(() => void saveWorldPosition({ scene: scene.id, x: me0.feet[0], y: me0.feet[1], activity: activityOf(me0) }), 1200);
         };
-        // Tell the others: only where you start from and what you are going to do.
+        // Tell the others: only where you start from and what you are going to do, plus your status.
+        me0.status = mineRef.current.status;
+        me0.trained = mineRef.current.trained;
+        let lastMove: { intent: Intent; from: Pt; at: number } | null = null;
+        const send = () => {
+          if (edit || !link || !lastMove) return;
+          link.publish({ v: 1, name: me.name, character: character.key, scene: scene.id, from: lastMove.from, intent: lastMove.intent, at: lastMove.at, status: (me0.status as StatusKey | null) ?? null, trained: me0.trained });
+        };
         const publish = (intent: Intent, from: Pt) => {
-          if (edit || !link) return;
-          link.publish({ v: 1, name: me.name, character: character.key, scene: scene.id, from, intent, at: Date.now() });
+          lastMove = { intent, from, at: Date.now() };
+          send();
+        };
+        // Walking along with someone: the id, and where you last set off to.
+        let following: string | null = null;
+        let followGoal: Pt | null = null;
+        const stopFollowing = () => {
+          if (!following) return;
+          following = null;
+          followGoal = null;
+          onFollowRef.current?.(null);
         };
         const move = (intent: Intent, then?: () => void) => {
           const from = me0.feet;
@@ -279,6 +326,7 @@ export function WorldCanvas({
           publish(intent, from);
         };
         const tapScene = (p: Pt) => {
+          stopFollowing();
           const door = scene.doors.find((d) => pointInPolygon(p, d.tap));
           if (door) {
             move({ kind: "stand", to: door.approach }, () => {
@@ -288,6 +336,8 @@ export function WorldCanvas({
             return;
           }
           const spot = scene.spots.find((s) => pointInPolygon(p, s.tap));
+          // A spot with a choice (the treadmill) asks first.
+          if (spot?.link && onSpotRef.current) return onSpotRef.current(spot);
           if (spot) return move({ kind: "spot", id: spot.id });
           const seat = seatAt(live(), p);
           if (seat) return move({ kind: "seat", id: seat.id });
@@ -366,6 +416,8 @@ export function WorldCanvas({
           o.live = true;
           o.av.offline = false;
           o.lastSeen = null;
+          o.av.status = p.status ?? null;
+          o.av.trained = Boolean(p.trained);
           if (o.at === p.at) return;
           o.at = p.at;
           o.intent = p.intent;
@@ -402,8 +454,23 @@ export function WorldCanvas({
             if (!alive) return;
             if (e.type === "peers") return syncPeers();
             if (e.scene !== scene.id) return;
-            const who = e.from === me.id ? me0 : others.get(e.from)?.av;
-            if (who) who.speech = { text: e.text, until: performance.now() + speechSeconds(e.text) * 1000 };
+            const avatarOf = (id: string | null) => (!id ? null : id === me.id ? me0 : (others.get(id)?.av ?? null));
+            const who = avatarOf(e.from);
+            if (e.type === "speech") {
+              if (who) who.speech = { text: e.text, until: performance.now() + speechSeconds(e.text) * 1000 };
+              return;
+            }
+            // An action: played on whoever does it; a high five on both of you.
+            const action = ACTIONS[e.kind];
+            const target = avatarOf(e.to);
+            const t = performance.now();
+            const towards = (a: Avatar, b: Avatar | null) => (b ? (b.feet[0] < a.feet[0] ? "left" : "right") : undefined);
+            if (who) playAction(who, action.pose, action.seconds, t, towards(who, target));
+            if (e.kind === "highfive" && target) playAction(target, action.pose, action.seconds, t, towards(target, who));
+            if (e.to === me.id && e.from !== me.id && who) {
+              if (e.kind === "zwaai") onNoticeRef.current?.(`${who.name} zwaait naar je`);
+              if (e.kind === "highfive") onNoticeRef.current?.(`${who.name} geeft je een high five`);
+            }
           });
           publish(restored ?? { kind: "stand", to: me0.feet }, me0.feet);
         }
@@ -413,6 +480,7 @@ export function WorldCanvas({
         let picked: string | null = null;
         let unread = new Map<string, number>();
         let typing = new Set<string>();
+        const statusOf = (a: Avatar) => (a.status && Object.hasOwn(STATUSES, a.status) ? (a.status as StatusKey) : null);
         const pick = (sx: number, sy: number): boolean => {
           const hit = avatarAt(sx, sy, avatars, characters, scene, cam, view);
           // Yourself: only when there is post, to open the post box.
@@ -423,7 +491,7 @@ export function WorldCanvas({
           }
           picked = hit ? hit.id : null;
           const o = hit ? others.get(hit.id) : null;
-          onPickRef.current?.(hit && o ? { id: hit.id, name: hit.name, online: o.live, lastSeen: o.lastSeen } : null);
+          onPickRef.current?.(hit && o ? { id: hit.id, name: hit.name, online: o.live, lastSeen: o.lastSeen, status: o.live ? statusOf(hit) : null, trained: o.live && hit.trained } : null);
           return Boolean(hit);
         };
 
@@ -448,10 +516,56 @@ export function WorldCanvas({
             setTyping(ids) {
               typing = new Set(ids);
             },
+            act(kind) {
+              if (!link) return;
+              if (me0.state !== "idle") return say("Dat kan als je stilstaat.");
+              link.act(scene.id, kind, null);
+            },
+            interact(id, kind) {
+              const o = others.get(id);
+              if (!o || !link) return;
+              const t = o.av;
+              if (kind === "zwaai") {
+                if (me0.state !== "idle") return say("Dat kan als je stilstaat.");
+                me0.facing = t.feet[0] < me0.feet[0] ? "left" : "right";
+                return link.act(scene.id, "zwaai", id);
+              }
+              if (kind === "meelopen") {
+                if (!o.live) return say(`${t.name} is er nu niet.`);
+                following = id;
+                followGoal = null;
+                onFollowRef.current?.(t.name);
+                return;
+              }
+              // High five: walk up to them, then both cheer.
+              stopFollowing();
+              const side = me0.feet[0] < t.feet[0] ? -1 : 1;
+              const gap = scene.characterHeight * 0.42;
+              const free = (p: Pt) => {
+                const tile = grid.tileAt(p);
+                return Boolean(tile && grid.isWalkable(...tile));
+              };
+              const next: Pt = [t.feet[0] + side * gap, t.feet[1]];
+              const dest = free(next) ? next : ([t.feet[0] - side * gap, t.feet[1]] as Pt);
+              move({ kind: "stand", to: dest }, () => {
+                me0.facing = t.feet[0] < me0.feet[0] ? "left" : "right";
+                link.act(scene.id, "highfive", id);
+              });
+            },
+            stopFollowing,
+            setMine(next) {
+              me0.status = next.status;
+              me0.trained = next.trained;
+              send();
+            },
+            doSpot(id) {
+              stopFollowing();
+              move({ kind: "spot", id });
+            },
           };
 
         // Debug only: drive the character from the console (window.__wereld.tap(x, y) in background pixels).
-        if (debug) (window as unknown as { __wereld?: unknown }).__wereld = { tap: (x: number, y: number) => tapScene([x, y]), me: me0, others };
+        if (debug) (window as unknown as { __wereld?: unknown }).__wereld = { tap: (x: number, y: number) => tapScene([x, y]), me: me0, others, api: apiRef?.current };
 
         // Placement mode: what is under the finger.
         const HIT = 34; // screen pixels
@@ -549,6 +663,7 @@ export function WorldCanvas({
         setStatus("ready");
         let last = performance.now();
         let first = true;
+        let followCheck = 0;
         let frames = 0;
         let fpsSince = last;
         const frame = (now: number) => {
@@ -564,7 +679,29 @@ export function WorldCanvas({
               fpsSince = now;
             }
           }
-          for (const a of avatars) step(a, dt, now);
+          for (const a of avatars) {
+            step(a, dt, now);
+            endAction(a, now);
+          }
+          // Walking along: keep close to them, a step behind.
+          if (following && now - followCheck > 400) {
+            followCheck = now;
+            const o = others.get(following);
+            if (!o || !o.live) {
+              stopFollowing();
+            } else {
+              const t = o.av.feet;
+              const near = scene.characterHeight * 0.75;
+              const moved = !followGoal || dist(followGoal, t) > scene.characterHeight * 0.5;
+              if (dist(me0.feet, t) > near && moved) {
+                const d = dist(me0.feet, t) || 1;
+                const dest: Pt = [t[0] + ((me0.feet[0] - t[0]) / d) * near * 0.7, t[1] + ((me0.feet[1] - t[1]) / d) * near * 0.7];
+                followGoal = t;
+                const from = me0.feet;
+                if (startIntent(me0, scene, grid, { kind: "stand", to: dest }, now, mine, remember) === "ok") publish({ kind: "stand", to: dest }, from);
+              }
+            }
+          }
           // Camera: ease to the zoom asked for, and follow your character a bit ahead of where it walks.
           let zoom = cam.zoom;
           if (zoomTo !== null) {
@@ -584,7 +721,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked, unread, typing } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

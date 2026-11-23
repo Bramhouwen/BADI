@@ -59,8 +59,8 @@ export const SPORTSCHOOL: SceneDef = {
   seats: readSeats(zitplekken),
   doors: [{ id: "deur", label: "Naar buiten", tap: [[100, 460], [300, 375], [305, 825], [105, 865]], approach: [272, 900], to: "buiten", arrive: "sportschool" }],
   spots: [
-    { id: "loopband-1", label: "Loopband", tap: [[405, 790], [430, 545], [655, 590], [750, 800], [620, 880]], approach: [770, 905], at: [590, 790], facing: "left", pose: "lopen" },
-    { id: "loopband-2", label: "Loopband", tap: [[640, 720], [665, 460], [855, 520], [965, 735], [860, 795]], approach: [985, 800], at: [805, 705], facing: "left", pose: "lopen" },
+    { id: "loopband-1", label: "Loopband", link: { label: "Training loggen", href: "/fitness/start" }, tap: [[405, 790], [430, 545], [655, 590], [750, 800], [620, 880]], approach: [770, 905], at: [590, 790], facing: "left", pose: "lopen" },
+    { id: "loopband-2", label: "Loopband", link: { label: "Training loggen", href: "/fitness/start" }, tap: [[640, 720], [665, 460], [855, 520], [965, 735], [860, 795]], approach: [985, 800], at: [805, 705], facing: "left", pose: "lopen" },
     { id: "mat-groen", label: "Sprongsquats", tap: [[494, 1120], [820, 964], [900, 1000], [580, 1180]], approach: [697, 1072], at: [697, 1072], facing: "right", pose: "sprongsquat" },
     { id: "mat-oranje", label: "Sprongsquats", tap: [[714, 1200], [1040, 1016], [1114, 1054], [790, 1266]], approach: [914, 1141], at: [914, 1141], facing: "right", pose: "sprongsquat" },
     { id: "mat-rood", label: "Sprongsquats", tap: [[974, 1300], [1300, 1070], [1372, 1106], [1050, 1344]], approach: [1173, 1207], at: [1173, 1207], facing: "right", pose: "sprongsquat" },

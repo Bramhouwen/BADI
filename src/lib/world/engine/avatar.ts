@@ -32,6 +32,12 @@ export interface Avatar {
   speech: { text: string; until: number; private?: boolean } | null;
   /** Not in the world right now: shown where they were last, in a rest pose. */
   offline: boolean;
+  /** Playing an action (wave, cheer, dance) until this moment (performance.now()); 0 when not. */
+  actionUntil: number;
+  /** What they are up to (a status key), shown as an icon over the head. */
+  status: string | null;
+  /** Trained today: a soft glow around the character. */
+  trained: boolean;
 }
 
 /** Walking speed in background pixels per second at a character height of 340, matched to the steps of the walk animation. */
@@ -43,7 +49,7 @@ export function walkSpeedFor(characterHeight: number): number {
 }
 
 export function newAvatar(id: string, character: string, name: string, feet: Pt, now: number): Avatar {
-  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, spot: null, speed: WALK_SPEED, ignore: null, since: now, onArrive: null, speech: null, offline: false };
+  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, spot: null, speed: WALK_SPEED, ignore: null, since: now, onArrive: null, speech: null, offline: false, actionUntil: 0, status: null, trained: false };
 }
 
 export function walk(a: Avatar, path: Pt[], now: number, onArrive: (() => void) | null = null, ignore: string | null = null) {
@@ -110,6 +116,30 @@ export function act(a: Avatar, spotId: string, feet: Pt, facing: "left" | "right
   a.seat = null;
   a.facing = facing;
   a.since = now;
+}
+
+/**
+ * Plays an action for a few seconds (wave, cheer, dance) while standing. Not
+ * while walking, sitting or busy on a spot: then nothing happens.
+ */
+export function playAction(a: Avatar, pose: string, seconds: number, now: number, face?: "left" | "right"): boolean {
+  if (a.state !== "idle") return false;
+  a.pose = pose;
+  a.since = now;
+  a.actionUntil = now + seconds * 1000;
+  if (face) a.facing = face;
+  return true;
+}
+
+/** Ends an action that has run its time. */
+export function endAction(a: Avatar, now: number) {
+  if (a.actionUntil && now >= a.actionUntil) {
+    a.actionUntil = 0;
+    if (a.state === "idle") {
+      a.pose = "staan";
+      a.since = now;
+    }
+  }
 }
 
 /** The animation to show right now. */

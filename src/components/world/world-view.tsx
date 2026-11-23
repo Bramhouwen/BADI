@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Lock, Mail, SendHorizontal, Users, X } from "lucide-react";
+import { ChevronLeft, Footprints, Hand, Lock, Mail, SendHorizontal, X } from "lucide-react";
 import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
 import type { Door } from "@/lib/world/engine/scene";
 import { SPEECH_MAX, type WorldPresence } from "@/lib/world/engine/presence";
@@ -13,6 +13,11 @@ import { WorldPostBox, WorldThread, useLiveDms } from "./world-dm";
 import { loadWorldInbox, type WorldInboxItem } from "@/app/actions/world";
 import { totalUnread, withUnread, type WorldDm } from "@/lib/world/dm";
 import { useTypingAll } from "@/lib/presence";
+import { ActionBar, ActionsSheet, CoinChip, MapSheet, MissionsSheet, SpotChoice, StatusSheet, type HudPanel } from "./world-hud";
+import { loadWorldGameState } from "@/app/actions/world";
+import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
+import type { Spot } from "@/lib/world/engine/scene";
+import type { WorldGame } from "@/lib/world/missions-server";
 
 const FADE_MS = 220;
 
@@ -55,11 +60,20 @@ export function WorldView({
   const [dim, setDim] = useState(false);
   const [link, setLink] = useState<WorldLink | null>(null);
   const [peers, setPeers] = useState<[string, WorldPresence][]>([]);
-  const [showWho, setShowWho] = useState(false);
   const [picked, setPicked] = useState<PickedMember | null>(null);
   const [text, setText] = useState("");
   const lastSaid = useRef(0);
   const canvasApi = useRef<WorldCanvasApi | null>(null);
+  // The game: which panel is open, missions and coins, your status, notes and walking along.
+  const [hud, setHud] = useState<HudPanel | null>(null);
+  const [game, setGame] = useState<WorldGame | null>(null);
+  const [status, setStatusState] = useState<StatusKey | null>(null);
+  const autoStatus = useRef(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [following, setFollowing] = useState<string | null>(null);
+  const [choice, setChoice] = useState<Spot | null>(null);
+  const trained = game?.trainedToday ?? false;
   // Private messages: unread per sender, the post box and an open conversation.
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [inbox, setInbox] = useState<WorldInboxItem[] | null>(null);
@@ -121,6 +135,62 @@ export function WorldView({
     };
   }, [edit, me.id, challengeId]);
 
+  // Your status is remembered on this device.
+  useEffect(() => {
+    let saved: StatusKey | null = null;
+    try {
+      const v = localStorage.getItem(`wereld-status:${me.id}`);
+      if (v && Object.hasOwn(STATUSES, v)) saved = v as StatusKey;
+    } catch {}
+    const frame = requestAnimationFrame(() => setStatusState(saved));
+    return () => cancelAnimationFrame(frame);
+  }, [me.id]);
+  const setStatus = (next: StatusKey | null, auto = false) => {
+    autoStatus.current = auto;
+    setStatusState(next);
+    try {
+      if (next && !auto) localStorage.setItem(`wereld-status:${me.id}`, next);
+      else if (!next) localStorage.removeItem(`wereld-status:${me.id}`);
+    } catch {}
+  };
+  useEffect(() => {
+    canvasApi.current?.setMine({ status, trained });
+  }, [status, trained]);
+
+  // Missions and coins, worked out on the server from what you did in BADI.
+  const refreshGame = () =>
+    void loadWorldGameState().then((r) => {
+      if (r.ok && r.data) setGame(r.data);
+    });
+  useEffect(() => {
+    if (!edit) refreshGame();
+  }, [edit]);
+
+  const say2 = (text: string) => {
+    setToast(text);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  };
+
+  // Into another scene: in the gym your status is "aan het trainen" unless you picked one yourself.
+  const enterScene = (to: string, arrive: string | null) => {
+    setDim(true);
+    setPicked(null);
+    setHud(null);
+    setChoice(null);
+    setFollowing(null);
+    if (to === "sportschool" && !status) setStatus("trainen", true);
+    else if (to !== "sportschool" && autoStatus.current) setStatus(null);
+    setTimeout(() => setHere((h) => ({ scene: to, arrive, n: h.n + 1 })), FADE_MS);
+  };
+  const openHud = (p: HudPanel | null) => {
+    setPicked(null);
+    setPost(null);
+    setChoice(null);
+    setHud(p);
+    if (p === "missies") refreshGame();
+  };
+
   // The post box, with unread counts per member.
   const refreshInbox = () =>
     void loadWorldInbox().then((r) => {
@@ -156,14 +226,14 @@ export function WorldView({
 
   const openThread = (peer: { id: string; name: string }) => {
     setPicked(null);
-    setShowWho(false);
+    setHud(null);
     setIncoming([]);
     setUnread((u) => ({ ...u, [peer.id]: 0 }));
     setPost({ kind: "thread", peer });
   };
   const openBox = () => {
     setPicked(null);
-    setShowWho(false);
+    setHud(null);
     setPost({ kind: "box" });
     refreshInbox();
   };
@@ -171,15 +241,14 @@ export function WorldView({
   const onDoor = (door: Door) => {
     const to = door.to;
     if (!to || !SCENES[to]) return;
-    setDim(true);
-    setPicked(null);
-    setTimeout(() => setHere((h) => ({ scene: to, arrive: door.arrive ?? null, n: h.n + 1 })), FADE_MS);
+    enterScene(to, door.arrive ?? null);
   };
 
   const scene = SCENES[here.scene];
   const first = here.n === 0;
-  const online = new Set(peers.map(([id]) => id));
-  const offline = members.filter((m) => !online.has(m.id));
+  // Where the bottom bar sits, and the panels just above it.
+  const bottom = visible?.keyboard ? 8 : "calc(var(--sab) + 12px)";
+  const above = "calc(var(--sab) + 128px)";
 
   const send = () => {
     const now = Date.now();
@@ -215,8 +284,20 @@ export function WorldView({
               setDim(false);
               syncCanvas();
             }}
-            onPick={(who) => (who?.self ? openBox() : setPicked(who))}
+            onPick={(who) => {
+              if (who?.self) return openBox();
+              setHud(null);
+              setPicked(who);
+            }}
             apiRef={canvasApi}
+            mine={{ status, trained }}
+            onSpot={(spot) => {
+              setHud(null);
+              setPicked(null);
+              setChoice(spot);
+            }}
+            onNotice={say2}
+            onFollow={setFollowing}
           />
         ) : null}
       </div>
@@ -246,43 +327,13 @@ export function WorldView({
             ) : null}
           </button>
         ) : null}
-        {!edit ? (
-          <button
-            type="button"
-            onClick={() => setShowWho((v) => !v)}
-            aria-expanded={showWho}
-            className="pointer-events-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3.5 text-[13.5px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur"
-          >
-            <Users className="h-4 w-4" aria-hidden />
-            {peers.length + 1} online
-          </button>
-        ) : null}
+        {!edit ? <CoinChip coins={game?.coins ?? null} onClick={() => openHud(hud === "missies" ? null : "missies")} /> : null}
       </div>
 
-      {showWho && !edit ? (
-        <div className="absolute right-3 w-[min(280px,calc(100vw-24px))] rounded-[18px] bg-white/95 p-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" style={{ top: "calc(var(--sat) + 64px)" }}>
-          <ul className="space-y-1.5 text-[13.5px]">
-            <li className="flex items-center gap-2">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[#3f8f4f]" aria-hidden />
-              <span className="font-semibold text-text">Jij</span>
-              <span className="ml-auto truncate text-muted">{scene.name}</span>
-            </li>
-            {peers.map(([id, p]) => (
-              <li key={id} className="flex items-center gap-2">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[#3f8f4f]" aria-hidden />
-                <span className="font-semibold text-text">{p.name}</span>
-                <span className="ml-auto truncate text-muted">{SCENES[p.scene]?.name ?? "In de wereld"}</span>
-              </li>
-            ))}
-            {offline.map((m) => (
-              <li key={m.id} className="flex items-center gap-2">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-ink/20" aria-hidden />
-                <span className="text-text">{m.name}</span>
-                <span className="ml-auto truncate text-muted">{m.updatedAt ? `offline · ${relativeTimeNl(m.updatedAt)}` : "nog niet geweest"}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {toast ? (
+        <p className="absolute inset-x-4 mx-auto max-w-sm rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" style={{ top: "calc(var(--sat) + 68px)" }} role="status">
+          {toast}
+        </p>
       ) : null}
 
       {!edit && post?.kind === "box" ? (
@@ -309,28 +360,99 @@ export function WorldView({
         />
       ) : null}
 
+      {!edit && !post && hud === "acties" ? (
+        <ActionsSheet
+          bottom={above}
+          onAct={(kind) => {
+            canvasApi.current?.act(kind);
+            setHud(null);
+          }}
+          onClose={() => setHud(null)}
+        />
+      ) : null}
+      {!edit && !post && hud === "status" ? (
+        <StatusSheet
+          bottom={above}
+          status={status}
+          onPick={(s) => {
+            setStatus(s);
+            setHud(null);
+          }}
+          onClose={() => setHud(null)}
+        />
+      ) : null}
+      {!edit && !post && hud === "kaart" ? (
+        <MapSheet
+          bottom={above}
+          here={here.scene}
+          people={peers.map(([id, p]) => ({ id, name: p.name, scene: p.scene, status: p.status ?? null }))}
+          onGo={(to) => enterScene(to, null)}
+          onClose={() => setHud(null)}
+        />
+      ) : null}
+      {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
+      {!edit && !post && choice ? (
+        <SpotChoice
+          spot={choice}
+          bottom={above}
+          onDo={() => {
+            canvasApi.current?.doSpot(choice.id);
+            setChoice(null);
+          }}
+          onClose={() => setChoice(null)}
+        />
+      ) : null}
+
       {!edit && !post ? (
-        <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom: visible?.keyboard ? 8 : "calc(var(--sab) + 12px)" }}>
-          {picked ? (
-            <div className="flex items-center gap-3 rounded-[18px] bg-white/95 px-4 py-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" role="status">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${picked.online ? "bg-[#3f8f4f]" : "bg-ink/20"}`} aria-hidden />
-              <div className="min-w-0">
-                <p className="truncate text-[15px] font-semibold text-text">{picked.name}</p>
-                <p className="truncate text-[12.5px] text-muted">{picked.online ? "Online" : picked.lastSeen ? `Offline · ${relativeTimeNl(picked.lastSeen)}` : "Offline"}</p>
+        <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom }}>
+          {picked && !hud ? (
+            <div className="space-y-2.5 rounded-[18px] bg-white/95 px-4 py-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" role="status">
+              <div className="flex items-center gap-3">
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${picked.online ? "bg-[#3f8f4f]" : "bg-ink/20"}`} aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-text">{picked.name}</p>
+                  <p className="truncate text-[12.5px] text-muted">
+                    {picked.online ? (picked.status ? `${STATUSES[picked.status].icon} ${STATUSES[picked.status].label}` : "Online") : picked.lastSeen ? `Offline · ${relativeTimeNl(picked.lastSeen)}` : "Offline"}
+                    {picked.online && picked.trained ? " · heeft vandaag getraind" : ""}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setPicked(null)} aria-label="Sluiten" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted">
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => openThread({ id: picked.id, name: picked.name })}
-                className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#2b1d18] px-3.5 text-[13px] font-semibold text-white"
-              >
-                <Lock className="h-3.5 w-3.5" aria-hidden />
-                Privé praten
-              </button>
-              <button type="button" onClick={() => setPicked(null)} aria-label="Sluiten" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted">
-                <X className="h-4 w-4" aria-hidden />
+              <div className={`grid gap-1.5 ${picked.online ? "grid-cols-4" : "grid-cols-1"}`}>
+                {picked.online ? (
+                  <>
+                    <button type="button" onClick={() => (canvasApi.current?.interact(picked.id, "zwaai"), setPicked(null))} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text">
+                      <Hand className="h-4 w-4" aria-hidden /> Zwaaien
+                    </button>
+                    <button type="button" onClick={() => (canvasApi.current?.interact(picked.id, "highfive"), setPicked(null))} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text">
+                      <span className="text-[15px] leading-none" aria-hidden>
+                        🙌
+                      </span>
+                      High five
+                    </button>
+                    <button type="button" onClick={() => (canvasApi.current?.interact(picked.id, "meelopen"), setPicked(null))} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text">
+                      <Footprints className="h-4 w-4" aria-hidden /> Meelopen
+                    </button>
+                  </>
+                ) : null}
+                <button type="button" onClick={() => openThread({ id: picked.id, name: picked.name })} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#2b1d18] text-[11.5px] font-semibold text-white">
+                  <Lock className="h-4 w-4" aria-hidden /> Privé
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {following ? (
+            <div className="flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-4 pr-1.5 text-[13px] text-text shadow-md ring-1 ring-ink/[0.06]">
+              <Footprints className="h-4 w-4 text-muted" aria-hidden />
+              Je loopt mee met {following}
+              <button type="button" onClick={() => canvasApi.current?.stopFollowing()} className="ml-auto rounded-full bg-[#f6ece4] px-3 py-1 text-[12.5px] font-semibold text-ink">
+                Stop
               </button>
             </div>
           ) : null}
+          {!visible?.keyboard ? <ActionBar open={hud} onOpen={openHud} status={status} /> : null}
           <form
             className="flex items-center gap-2 rounded-full bg-white/95 p-1.5 pl-4 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur"
             onSubmit={(e) => {
@@ -346,7 +468,8 @@ export function WorldView({
               placeholder="Zeg iets…"
               aria-label={`Zeg iets tegen iedereen in ${scene.name}`}
               onFocus={() => {
-                setShowWho(false);
+                setHud(null);
+                setPicked(null);
                 canvasApi.current?.focusMe();
               }}
               // 16px or more, so a phone does not zoom the page in when you tap the field.
