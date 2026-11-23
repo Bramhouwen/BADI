@@ -29,15 +29,41 @@ export interface Seat {
   facing: "left" | "right";
   /** Free floor (a tile centre) to walk to before sitting down. */
   approach: Pt;
+  /**
+   * The furniture you sit on, which is not drawn over you. Left out: the
+   * piece whose outline holds the hip point. null: none, for a chair behind a
+   * desk or table, where the desk in front is drawn over your legs.
+   */
+  on?: string | null;
 }
 
 export interface Door {
   id: string;
   label: string;
   tap: Polygon;
+  /** Free floor in front of the door: where you walk to, and where you come out when you arrive through it. */
   approach: Pt;
   /** Scene behind the door; null while it does not exist yet. */
   to: string | null;
+  /** The door in that scene you come out of. */
+  arrive?: string;
+}
+
+/**
+ * A place to do something: run on a treadmill, jump squats on a mat, get a
+ * coffee. You walk to `approach`, step onto `at` (your feet) and play `pose`
+ * there until you walk away.
+ */
+export interface Spot {
+  id: string;
+  label: string;
+  /** Tap here to go to the spot. */
+  tap: Polygon;
+  approach: Pt;
+  at: Pt;
+  facing: "left" | "right";
+  /** Animation from the character's manifest. */
+  pose: string;
 }
 
 export interface SceneDef {
@@ -46,10 +72,12 @@ export interface SceneDef {
   background: string;
   width: number;
   height: number;
-  /** Corners of the floor diamond: back (top), right, front (bottom), left. */
-  floor: { top: Pt; right: Pt; bottom: Pt; left: Pt };
-  /** Tiles per side of the floor diamond. */
-  tiles: number;
+  /**
+   * The walking grid. Rooms: tiles along the drawn floor diamond, given by
+   * its corners (back, right, front, left) and the tiles per side. Outside,
+   * where nothing is drawn on a clean diagonal: square cells of `cell` pixels.
+   */
+  grid: { kind: "iso"; floor: { top: Pt; right: Pt; bottom: Pt; left: Pt }; tiles: number } | { kind: "screen"; cell: number };
   /** Where characters may stand: tile centres inside it are walkable. */
   walkable: Polygon;
   /** Floor areas taken by furniture. */
@@ -57,7 +85,12 @@ export interface SceneDef {
   occluders: Occluder[];
   seats: Seat[];
   doors: Door[];
+  spots: Spot[];
   spawn: Pt;
   /** Drawn height of a standing character (frame height) in image pixels. */
   characterHeight: number;
+  /** Walking speed in background pixels per second, so steps match the walk animation at this size. */
+  walkSpeed?: number;
+  /** Zoom the camera starts at, relative to the zoom that fits the whole scene; outside starts closer. */
+  startZoom?: number;
 }

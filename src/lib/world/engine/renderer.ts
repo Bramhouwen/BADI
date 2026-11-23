@@ -10,7 +10,7 @@ import type { Grid } from "./grid";
 import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
 import type { SceneDef, Seat } from "./scene";
-import { seatForeground, seatOccluder } from "./seats";
+import { occluderUnder, seatForeground, seatOccluder } from "./seats";
 
 export interface Camera {
   x: number;
@@ -58,10 +58,11 @@ function drawCharacter(ctx: CanvasRenderingContext2D, c: LoadedCharacter, a: Ava
   const { frameWidth: fw, frameHeight: fh } = c.manifest;
   // soft shadow under the feet
   if (a.state !== "sit") {
+    const k = height / 370;
     ctx.save();
     ctx.fillStyle = "rgba(70, 35, 20, 0.22)";
     ctx.beginPath();
-    ctx.ellipse(a.feet[0], a.feet[1] - 2, 62 * (height / 370), 15 * (height / 370), 0, 0, Math.PI * 2);
+    ctx.ellipse(a.feet[0], a.feet[1] - 2 * k, 62 * k, 15 * k, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -121,7 +122,9 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
     if (!c) continue;
     drawCharacter(ctx, c, a, scene.characterHeight, now, z);
     const seat = a.seat ? scene.seats.find((s) => s.id === a.seat) : null;
-    for (const o of occludersOver(a.feet, characterBox(c, a, scene.characterHeight), scene.occluders, seat ? seatOccluder(scene.occluders, seat) : a.ignore)) {
+    const spot = a.spot ? scene.spots.find((s) => s.id === a.spot) : null;
+    const exclude = seat ? seatOccluder(scene.occluders, seat) : spot ? occluderUnder(scene.occluders, spot.at) : a.ignore;
+    for (const o of occludersOver(a.feet, characterBox(c, a, scene.characterHeight), scene.occluders, exclude)) {
       const path = outlines.get(o.id);
       if (!path) continue;
       ctx.save();
@@ -143,11 +146,19 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
   if (debug && grid) drawDebug(ctx, scene, grid, outlines);
 }
 
-function drawDebug(ctx: CanvasRenderingContext2D, scene: SceneDef, grid: Grid, outlines: Map<string, Path2D>) {
-  ctx.save();
-  ctx.lineWidth = 2;
-  for (let u = 0; u < grid.n; u++) {
-    for (let v = 0; v < grid.n; v++) {
+const gridLayers = new WeakMap<Grid, HTMLCanvasElement>();
+
+/** The walking grid drawn once into its own canvas, so the debug view does not redraw thousands of tiles every frame. */
+function gridLayer(scene: SceneDef, grid: Grid): HTMLCanvasElement {
+  let layer = gridLayers.get(grid);
+  if (layer) return layer;
+  layer = document.createElement("canvas");
+  layer.width = scene.width;
+  layer.height = scene.height;
+  const ctx = layer.getContext("2d")!;
+  ctx.lineWidth = scene.grid.kind === "screen" ? 1 : 2;
+  for (let u = 0; u < grid.nu; u++) {
+    for (let v = 0; v < grid.nv; v++) {
       const p = [grid.tileToPx(u, v), grid.tileToPx(u + 1, v), grid.tileToPx(u + 1, v + 1), grid.tileToPx(u, v + 1)];
       ctx.beginPath();
       p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
@@ -158,6 +169,14 @@ function drawDebug(ctx: CanvasRenderingContext2D, scene: SceneDef, grid: Grid, o
       ctx.stroke();
     }
   }
+  gridLayers.set(grid, layer);
+  return layer;
+}
+
+function drawDebug(ctx: CanvasRenderingContext2D, scene: SceneDef, grid: Grid, outlines: Map<string, Path2D>) {
+  ctx.save();
+  ctx.drawImage(gridLayer(scene, grid), 0, 0);
+  ctx.lineWidth = 2;
   ctx.strokeStyle = "#1e6fd9";
   ctx.lineWidth = 4;
   for (const o of scene.occluders) {

@@ -186,7 +186,7 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 
 **Open**
 - ~~Bram kan nog niet zitten~~ Opgelost: losse zitpose `docs/wereld/bron/bram-zitten.png`, op de maat van het stijlvoorbeeld (204 px figuurhoogte in het frame).
-- De deur leidt nog nergens heen: buiten, kantoor en sportschool zijn stap 1b.
+- ~~De deur leidt nog nergens heen~~ Opgelost in fase 1b.
 - Snelheid op een echte telefoon nog meten (doel 60 fps).
 
 ### Tussendoor: wereld alleen voor de beheerder (23-11-2026)
@@ -213,3 +213,44 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - ~~Voorgrondlaag voor arm- en rugleuningen~~ Gedaan: een meubel kan `foreground`-vlakken hebben (in de ruimte, bij het uitgeknipte meubel). Die worden uit de illustratie geknipt en over wie erop zit getekend. Woonkamer: beide armleuningen van de bank (links met het plaid) en de voorste armleuning van de fauteuil met de plant ervoor. In `?debug=1` paars gestippeld. De fauteuil-plek staat nu op de zitting (1400, 652), zodat je ín de stoel zit.
 - ~~De vier zitplekken zijn nog schattingen~~ Opgelost: geplaatst en gecontroleerd door alle vier poppetjes op alle vier plekken te renderen met de rekenregels van de engine (`docs/wereld/zitplekken-controle.png`, rijen zit-1 t/m zit-4, kolommen Anne, Daphne, Irene, Bram). De middelste plek valt samen met Bram in het stijlvoorbeeld. De plaatsingsmodus is er voor correcties achteraf.
 - zitAnker x is het midden van de romp: Anne 158, Daphne 155, Irene 138, Bram 147.
+
+### Fase 1b: buiten, kantoor, sportschool en deuren (23-11-2026)
+
+**Gedaan**
+- Vier ruimtes, verbonden met deuren (`src/lib/world/scenes/index.ts`):
+  - woonkamer: voordeur naar buiten;
+  - buiten: voordeur van het huis, ingang Traffic Today, ingang sportschool;
+  - kantoor: glazen deur naar buiten;
+  - sportschool: deur naar buiten.
+- Door een deur: het beeld vervaagt kort, je komt uit bij de bijbehorende deur aan de andere kant en die plek wordt bewaard. Alle achtergronden en je poppetje worden één keer geladen.
+- Je start in de ruimte waar je het laatst was. Testen: `?debug=2&scene=kantoor` (of `&scene=` bij `?bewerken`) start direct in een ruimte.
+- Raster per ruimte (`grid` in de ruimte):
+  - de woonkamer houdt het schuine tegelgrid;
+  - kantoor en sportschool zijn niet op één zuivere schuine lijn getekend en krijgen vakjes van 20 px binnen de getekende vloer;
+  - buiten heeft vakjes van 10 px over het hele dorp. Gebouwen, vijver, moestuin, hagen, boomstammen, bankjes en lantaarnpalen zijn blokkades.
+- De routezoeker gebruikt nu een heap: een route dwars door het dorp kost een paar milliseconden.
+- Plekken (`spots`): je loopt erheen en doet daar iets.
+  - Sportschool: rennen op beide loopbanden en sprongsquats op de drie matjes.
+  - Zitten: op de halterbank.
+- Kantoor:
+  - zitten achter beide bureaus (vier stoelen) en aan de achterkant van de vergadertafel (twee stoelen), met het gezicht naar de kamer;
+  - een zitplek kan aangeven op welk meubel je zit (`on`). Daardoor wordt het bureau voor je wel over je benen getekend.
+- Buiten:
+  - zitten op beide parkbankjes;
+  - achter bomen en lantaarnpalen langs lopen.
+- Poppetjes zijn buiten 112 px hoog (binnen 340). De looptempo schaalt mee en de camera start buiten dichterbij.
+- fps-meter rechtsboven in `?debug=1`. Het controleraster wordt één keer vooraf getekend, zodat de meter de echte snelheid meet.
+- Gecontroleerd:
+  - per ruimte een render van raster, meubels, deuren en plekken;
+  - Anne en Bram op elke zitplek en plek gerenderd;
+  - in de app door alle deuren gelopen, gezeten, gerend en gesprongen, ook op telefoonformaat;
+  - tests: elke deur leidt naar een ruimte met een deur terug, elke deur, zitplek en plek is bereikbaar, en een route door het dorp blijft snel.
+
+**Anders gegaan**
+- Kantoor en sportschool hebben geen schuin grid, maar vakjes binnen de vloer. De routes worden rechtgetrokken, dus je ziet het verschil niet.
+- Geen koffieplek in het kantoor: alleen staan bij het apparaat voegt niets toe zolang er geen koffie-animatie is.
+
+**Open**
+- fps meten op een echte telefoon: open `/wereld?debug=1` en kijk rechtsboven, binnen en buiten.
+- De kat staat niet in de illustratie en er is nog geen getekende kat.
+- Zitten aan de voorkant van bureaus en tafels: daar zie je de rugleuning, en er is geen achteraanzicht van de poppetjes.

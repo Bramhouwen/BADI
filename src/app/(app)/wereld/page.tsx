@@ -4,11 +4,11 @@ import Image from "next/image";
 import { getSquad, requireContext } from "@/lib/data";
 import { ensureWorldProfile, loadWorldProfiles } from "@/lib/world/server";
 import { WORLD_SPRITES, canSeeWorld, worldSpriteFor } from "@/lib/world/types";
-import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
+import { FIRST_SCENE, SCENES } from "@/lib/world/scenes";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { WorldCanvas } from "@/components/world/world-canvas";
+import { WorldView } from "@/components/world/world-view";
 
 export const metadata = { title: "Wereld" };
 
@@ -20,13 +20,14 @@ const SCENE_NAMES: Record<string, string> = {
 };
 
 /**
- * BADI Wereld. Fase 1a: the living room, where you walk, sit and stand behind
- * furniture. /wereld?debug=1 shows the walking grid; ?debug=2 only enables the
- * test hook window.__wereld. ?bewerken is the placement mode for seats
+ * BADI Wereld: the living room, outside, Traffic Today and the gym, linked by
+ * doors. You start where you were last. /wereld?debug=1 shows the walking
+ * grid and frames per second; ?debug=2 only enables the test hook
+ * window.__wereld; ?scene=kantoor (with debug or bewerken) starts in a scene. ?bewerken is the placement mode for seats
  * (admin only, saves to the scene's JSON on your own computer). See
  * docs/wereld/WERELD.md.
  */
-async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[]; bewerken?: string | string[] }> }) {
+async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[]; bewerken?: string | string[]; scene?: string | string[] }> }) {
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
@@ -35,22 +36,25 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   // Debug only: ?debug=2&als=anne plays as another character to test poses.
   const debugAs = sp.debug && typeof sp.als === "string" && (WORLD_SPRITES as readonly string[]).includes(sp.als) ? sp.als : null;
   const sprite = debugAs ?? profile?.sprite ?? worldSpriteFor(ctx.profile.display_name);
-  const inRoom = profile?.scene === WOONKAMER.id && profile.x !== null && profile.y !== null;
+  const testing = sp.debug !== undefined || sp.bewerken !== undefined;
+  const jump = testing && typeof sp.scene === "string" && SCENES[sp.scene] ? sp.scene : null;
+  const startScene = jump ?? (profile?.scene && SCENES[profile.scene] ? profile.scene : FIRST_SCENE);
+  const atSaved = !jump && profile?.scene === startScene && profile.x !== null && profile.y !== null;
   const others = squad.filter((m) => m.user_id !== ctx.userId);
   const seen = new Map(all.map((p) => [p.user_id, p]));
 
   return (
     <Page className="space-y-3">
-      <div className="flex items-end justify-between gap-3 px-1">
-        <div className="min-w-0">
-          <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-muted">BADI Wereld · {WOONKAMER.name}</p>
-          <h1 className="truncate font-display text-[28px] leading-tight text-text">{name}</h1>
-        </div>
-        <p className="shrink-0 pb-1 text-[12.5px] text-muted">{sp.bewerken !== undefined ? "Zitplekken plaatsen" : "Tik om te lopen"}</p>
-      </div>
-
       {sprite ? (
-        <WorldCanvas scene={WOONKAMER} me={{ id: ctx.userId, name, character: sprite }} startX={inRoom ? profile!.x : null} startY={inRoom ? profile!.y : null} debug={sp.debug === "1" || sp.debug === "2"} overlay={sp.debug === "1"} edit={sp.bewerken !== undefined} />
+        <WorldView
+          me={{ id: ctx.userId, name, character: sprite }}
+          startScene={startScene}
+          startX={atSaved ? profile!.x : null}
+          startY={atSaved ? profile!.y : null}
+          debug={sp.debug === "1" || sp.debug === "2"}
+          overlay={sp.debug === "1"}
+          edit={sp.bewerken !== undefined}
+        />
       ) : (
         <p className="rounded-[20px] bg-white/80 p-4 text-[14px] text-muted">Je poppetje voor de wereld is er nog niet.</p>
       )}

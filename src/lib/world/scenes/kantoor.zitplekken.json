@@ -1,0 +1,10 @@
+{
+  "seats": [
+    {"id":"bureau-raam-1","hip":[400,880],"facing":"right","approach":[310,860],"on":"stoel-raam-1"},
+    {"id":"bureau-raam-2","hip":[590,815],"facing":"left","approach":[500,770],"on":"stoel-raam-2"},
+    {"id":"bureau-voor-1","hip":[1092,1062],"facing":"right","approach":[1000,1010],"on":"stoel-voor-1"},
+    {"id":"bureau-voor-2","hip":[1295,972],"facing":"left","approach":[1195,925],"on":"stoel-voor-2"},
+    {"id":"vergader-1","hip":[1170,540],"facing":"right","approach":[985,610],"on":null},
+    {"id":"vergader-2","hip":[1364,575],"facing":"left","approach":[1545,745],"on":null}
+  ]
+}

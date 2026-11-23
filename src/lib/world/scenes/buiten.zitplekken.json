@@ -1,0 +1,6 @@
+{
+  "seats": [
+    {"id":"bank-park","hip":[305,742],"facing":"right","approach":[310,800]},
+    {"id":"bank-tuin","hip":[672,1015],"facing":"left","approach":[672,1085]}
+  ]
+}

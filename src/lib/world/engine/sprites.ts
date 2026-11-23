@@ -23,7 +23,20 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function loadCharacter(key: string): Promise<LoadedCharacter> {
+const loaded = new Map<string, Promise<LoadedCharacter>>();
+
+/** A character, loaded once per page: walking through a door does not load it again. */
+export function loadCharacter(key: string): Promise<LoadedCharacter> {
+  let p = loaded.get(key);
+  if (!p) {
+    p = buildCharacter(key);
+    p.catch(() => loaded.delete(key));
+    loaded.set(key, p);
+  }
+  return p;
+}
+
+async function buildCharacter(key: string): Promise<LoadedCharacter> {
   const base = `/wereld/poppetjes/${key}/`;
   const manifest = (await fetch(base + "manifest.json").then((r) => r.json())) as SpriteManifest;
   const files = [...new Set(Object.values(manifest.animations).flatMap((a) => a.frames))];

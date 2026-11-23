@@ -15,8 +15,7 @@ export const WOONKAMER: SceneDef = {
   background: "/wereld/scenes/woonkamer.webp",
   width: 2000,
   height: 1493,
-  floor: { top: [1005, 445], right: [1980, 965], bottom: [1000, 1485], left: [25, 965] },
-  tiles: 24,
+  grid: { kind: "iso", floor: { top: [1005, 445], right: [1980, 965], bottom: [1000, 1485], left: [25, 965] }, tiles: 24 },
   // The floor, kept clear of the walls and the open front edges.
   walkable: [
     [1005, 482],
@@ -84,7 +83,8 @@ export const WOONKAMER: SceneDef = {
     },
   ],
   seats: readSeats(zitplekken),
-  doors: [{ id: "voordeur", label: "Naar buiten", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [215, 932], to: null }],
+  doors: [{ id: "voordeur", label: "Naar buiten", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [215, 932], to: "buiten", arrive: "huis" }],
+  spots: [],
   spawn: [262, 948],
   characterHeight: 340,
 };

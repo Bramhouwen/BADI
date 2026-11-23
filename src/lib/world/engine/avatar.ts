@@ -4,7 +4,7 @@
  */
 import { dist, type Pt } from "./geometry";
 
-export type AvatarState = "idle" | "walk" | "sit";
+export type AvatarState = "idle" | "walk" | "sit" | "act";
 
 export interface Avatar {
   id: string;
@@ -18,6 +18,10 @@ export interface Avatar {
   facing: "left" | "right";
   /** Seat id while sitting. */
   seat: string | null;
+  /** Spot id while doing something there (treadmill, mat). */
+  spot: string | null;
+  /** Walking speed in background pixels per second. */
+  speed: number;
   /** Furniture not drawn over this avatar while it steps on or off a seat. */
   ignore: string | null;
   /** When the current animation started (performance.now()). */
@@ -26,16 +30,22 @@ export interface Avatar {
   onArrive: (() => void) | null;
 }
 
-/** Walking speed in background pixels per second, matched to the steps of the walk animation. */
+/** Walking speed in background pixels per second at a character height of 340, matched to the steps of the walk animation. */
 export const WALK_SPEED = 230;
 
+/** Walking speed for a scene where a standing character is drawn `characterHeight` pixels high. */
+export function walkSpeedFor(characterHeight: number): number {
+  return (WALK_SPEED * characterHeight) / 340;
+}
+
 export function newAvatar(id: string, character: string, name: string, feet: Pt, now: number): Avatar {
-  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, ignore: null, since: now, onArrive: null };
+  return { id, character, name, feet, path: [], state: "idle", pose: "staan", facing: "right", seat: null, spot: null, speed: WALK_SPEED, ignore: null, since: now, onArrive: null };
 }
 
 export function walk(a: Avatar, path: Pt[], now: number, onArrive: (() => void) | null = null, ignore: string | null = null) {
   a.path = path.filter((p, i) => i > 0 || dist(p, a.feet) > 2);
   a.seat = null;
+  a.spot = null;
   a.ignore = ignore;
   a.onArrive = onArrive;
   if (a.path.length === 0) {
@@ -51,7 +61,7 @@ export function walk(a: Avatar, path: Pt[], now: number, onArrive: (() => void) 
 /** Moves the avatar along its route. */
 export function step(a: Avatar, dt: number, now: number) {
   if (a.state !== "walk") return;
-  let left = WALK_SPEED * dt;
+  let left = a.speed * dt;
   while (left > 0 && a.path.length) {
     const target = a.path[0];
     const d = dist(a.feet, target);
@@ -82,6 +92,18 @@ export function sit(a: Avatar, seatId: string, feet: Pt, facing: "left" | "right
   a.state = "sit";
   a.pose = "zitten";
   a.seat = seatId;
+  a.facing = facing;
+  a.since = now;
+}
+
+/** Doing something at a spot: running on the treadmill, jump squats on a mat. */
+export function act(a: Avatar, spotId: string, feet: Pt, facing: "left" | "right", pose: string, now: number) {
+  a.feet = feet;
+  a.path = [];
+  a.state = "act";
+  a.pose = pose;
+  a.spot = spotId;
+  a.seat = null;
   a.facing = facing;
   a.since = now;
 }

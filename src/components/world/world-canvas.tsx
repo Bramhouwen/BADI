@@ -2,15 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { saveWorldPosition } from "@/app/actions/world";
-import { newAvatar, sit, step, walk, type Avatar } from "@/lib/world/engine/avatar";
+import { act, newAvatar, sit, step, walk, walkSpeedFor, type Avatar } from "@/lib/world/engine/avatar";
 import { dist, pointInPolygon, type Pt } from "@/lib/world/engine/geometry";
 import { buildGrid, type Grid } from "@/lib/world/engine/grid";
 import { attachInput } from "@/lib/world/engine/input";
 import { findPath, smoothPath } from "@/lib/world/engine/pathfinding";
 import { clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
-import { seatAt, seatOccluder } from "@/lib/world/engine/seats";
+import { occluderUnder, seatAt, seatOccluder } from "@/lib/world/engine/seats";
 import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites";
-import type { SceneDef, Seat } from "@/lib/world/engine/scene";
+import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
 
 const PAGE = "#f6ece4";
 
@@ -68,6 +68,9 @@ export function WorldCanvas({
   debug = false,
   overlay = false,
   edit = false,
+  arriveAt = null,
+  onDoor,
+  onReady,
 }: {
   scene: SceneDef;
   me: { id: string; name: string; character: string | null };
@@ -76,8 +79,22 @@ export function WorldCanvas({
   debug?: boolean;
   overlay?: boolean;
   edit?: boolean;
+  /** Door in this scene you come in through. */
+  arriveAt?: string | null;
+  /** You walked into a door that leads to another scene. */
+  onDoor?: (door: Door) => void;
+  /** The scene is loaded and drawn. */
+  onReady?: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const fpsRef = useRef<HTMLParagraphElement>(null);
+  // Latest callbacks, so a new function from the parent does not restart the scene.
+  const onDoorRef = useRef(onDoor);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onDoorRef.current = onDoor;
+    onReadyRef.current = onReady;
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [note, setNote] = useState<string | null>(null);
@@ -131,7 +148,9 @@ export function WorldCanvas({
     let lastPan = -Infinity;
     const zoomLimits = () => {
       const min = Math.min(view.width / scene.width, view.height / scene.height);
-      return { min, max: Math.max(min, 1.3), start: Math.max(min, Math.min(1.3, view.height / (scene.height * 0.8))) };
+      // The closest zoom keeps a character as large as it can be in the rooms, also outside where characters are drawn smaller.
+      const max = Math.max(min, (1.3 * 340) / scene.characterHeight);
+      return { min, max, start: Math.max(min, Math.min(max, (view.height / (scene.height * 0.8)) * (scene.startZoom ?? 1))) };
     };
     const resize = () => {
       const r = box.getBoundingClientRect();
@@ -152,10 +171,13 @@ export function WorldCanvas({
         if (!alive) return;
         const characters = new Map<string, LoadedCharacter>([[character.key, character]]);
         const now0 = performance.now();
-        const start: Pt | null = startX !== null && startY !== null ? [startX, startY] : null;
+        const door = arriveAt ? scene.doors.find((d) => d.id === arriveAt) : null;
+        const start: Pt | null = door ? door.approach : startX !== null && startY !== null ? [startX, startY] : null;
         const startTile = start ? grid.tileAt(start) : null;
         const feet: Pt = start && startTile && grid.isWalkable(...startTile) ? start : scene.spawn;
         const me0: Avatar = newAvatar(me.id, character.key, me.name, feet, now0);
+        me0.speed = scene.walkSpeed ?? walkSpeedFor(scene.characterHeight);
+        if (door) me0.facing = door.approach[0] < scene.width / 2 ? "right" : "left";
         const avatars = [me0];
 
         resize();
@@ -174,10 +196,11 @@ export function WorldCanvas({
             say("Daar kun je niet komen.");
             return;
           }
-          // Standing up: the seat is not drawn over you while you step away from it.
+          // Standing up or stepping off: that piece is not drawn over you while you step away from it.
           const was = me0.state === "sit" ? live().seats.find((s) => s.id === me0.seat) : null;
-          const leaving = was ? seatOccluder(scene.occluders, was) : null;
-          if (me0.state === "sit") me0.state = "idle";
+          const wasAt = me0.state === "act" ? scene.spots.find((s) => s.id === me0.spot) : null;
+          const leaving = was ? seatOccluder(scene.occluders, was) : wasAt ? occluderUnder(scene.occluders, wasAt.at) : null;
+          if (me0.state === "sit" || me0.state === "act") me0.state = "idle";
           walk(
             me0,
             route,
@@ -210,10 +233,29 @@ export function WorldCanvas({
           });
         };
 
+        const doSpot = (spot: Spot) => {
+          goTo(spot.approach, () => {
+            if (!character.manifest.animations[spot.pose]) {
+              say(`${me.name} heeft nog geen animatie voor ${spot.label.toLowerCase()}.`);
+              return;
+            }
+            const under = occluderUnder(scene.occluders, spot.at);
+            walk(me0, [spot.at], performance.now(), () => act(me0, spot.id, spot.at, spot.facing, spot.pose, performance.now()), under);
+          });
+        };
+
         const tapScene = (p: Pt) => {
           const door = scene.doors.find((d) => pointInPolygon(p, d.tap));
           if (door) {
-            goTo(door.approach, () => say(door.to ? door.label : "De deur naar buiten komt in de volgende stap."));
+            goTo(door.approach, () => {
+              if (door.to && onDoorRef.current) onDoorRef.current(door);
+              else say("Deze deur gaat nog nergens heen.");
+            });
+            return;
+          }
+          const spot = scene.spots.find((s) => pointInPolygon(p, s.tap));
+          if (spot) {
+            doSpot(spot);
             return;
           }
           const seat = seatAt(live(), p);
@@ -311,11 +353,25 @@ export function WorldCanvas({
         });
 
         setStatus("ready");
+        // Coming in through a door: that is your place in this scene now.
+        if (door) remember();
         let last = performance.now();
+        let first = true;
+        let frames = 0;
+        let fpsSince = last;
         const frame = (now: number) => {
           if (!alive) return;
           const dt = Math.min(0.05, (now - last) / 1000);
           last = now;
+          // Frames per second, in the debug view only.
+          if (overlay && fpsRef.current) {
+            frames++;
+            if (now - fpsSince >= 500) {
+              fpsRef.current.textContent = `${Math.round((frames * 1000) / (now - fpsSince))} fps`;
+              frames = 0;
+              fpsSince = now;
+            }
+          }
           step(me0, dt, now);
           // Follow your character, unless you just looked around yourself (never in the placement mode).
           if (!edit && now - lastPan > 2500) {
@@ -327,6 +383,10 @@ export function WorldCanvas({
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);
+          }
+          if (first) {
+            first = false;
+            onReadyRef.current?.();
           }
           raf = requestAnimationFrame(frame);
         };
@@ -345,7 +405,7 @@ export function WorldCanvas({
       ro?.disconnect();
       actionsRef.current = null;
     };
-  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit]);
+  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit, arriveAt]);
 
   // Delete removes the selected seat (keyboard, placement mode).
   useEffect(() => {
@@ -390,6 +450,7 @@ export function WorldCanvas({
         {status !== "ready" ? (
           <div className="absolute inset-0 grid place-items-center text-[14px] text-muted">{status === "loading" ? "De wereld laadt…" : "De wereld kon niet laden. Probeer het opnieuw."}</div>
         ) : null}
+        {overlay ? <p ref={fpsRef} className="absolute right-3 top-3 rounded-full bg-text/80 px-3 py-1 text-[12px] tabular-nums text-paper" aria-live="off" /> : null}
         {note ? (
           <p className="absolute inset-x-3 bottom-3 rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" role="status">
             {note}

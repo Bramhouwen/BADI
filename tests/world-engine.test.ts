@@ -6,6 +6,7 @@ import { backToFront, occludersOver } from "@/lib/world/engine/depth";
 import { frameIndex } from "@/lib/world/engine/sprites";
 import { newAvatar, sit, step, walk } from "@/lib/world/engine/avatar";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
+import { SCENES } from "@/lib/world/scenes";
 import { readSeats, seatAt, seatForeground, seatOccluder, sitOrigin } from "@/lib/world/engine/seats";
 
 const grid = buildGrid(WOONKAMER);
@@ -155,4 +156,50 @@ describe("seats", () => {
     expect(x + 160 * 1.25).toBe(1000);
     expect(y + 168 * 1.25).toBe(600);
   });
+});
+
+describe("scenes", () => {
+  const scenes = Object.values(SCENES);
+  it("has the living room, outside, the office and the gym", () => {
+    expect(Object.keys(SCENES).sort()).toEqual(["buiten", "kantoor", "sportschool", "woonkamer"]);
+  });
+  for (const scene of scenes) {
+    describe(scene.id, () => {
+      const grid = buildGrid(scene);
+      const startTile = grid.tileAt(scene.spawn)!;
+      const reach = (p: readonly [number, number]) => {
+        const t = grid.tileAt([p[0], p[1]]);
+        return Boolean(t && grid.isWalkable(...t) && findPath(grid, startTile, t));
+      };
+      it("starts on free floor", () => {
+        expect(grid.isWalkable(...startTile)).toBe(true);
+      });
+      it("every door leads to a scene with a door back, and you can walk to it", () => {
+        for (const d of scene.doors) {
+          expect(reach(d.approach)).toBe(true);
+          expect(d.to && SCENES[d.to]).toBeTruthy();
+          const back = SCENES[d.to!].doors.find((x) => x.id === d.arrive);
+          expect(back?.to).toBe(scene.id);
+          expect(back?.arrive).toBe(d.id);
+        }
+      });
+      it("every seat and spot can be walked to", () => {
+        for (const s of scene.seats) expect(reach(s.approach), s.id).toBe(true);
+        for (const s of scene.spots) {
+          expect(reach(s.approach), s.id).toBe(true);
+          expect(pointInPolygon(s.at, s.tap), s.id).toBe(true);
+        }
+      });
+      it("a seat names furniture that exists", () => {
+        for (const s of scene.seats) if (s.on) expect(scene.occluders.some((o) => o.id === s.on), s.id).toBe(true);
+      });
+      it("finds a route across the scene quickly", () => {
+        let far: [number, number] | null = null;
+        for (let u = grid.nu - 1; u >= 0 && !far; u--) for (let v = grid.nv - 1; v >= 0 && !far; v--) if (grid.isWalkable(u, v) && findPath(grid, startTile, [u, v])) far = [u, v];
+        const t0 = performance.now();
+        expect(findPath(grid, startTile, far!)).not.toBeNull();
+        expect(performance.now() - t0).toBeLessThan(60);
+      });
+    });
+  }
 });

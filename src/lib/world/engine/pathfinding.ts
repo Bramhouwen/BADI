@@ -7,49 +7,91 @@ import type { Grid } from "./grid";
 
 type Tile = [number, number];
 
+/** A small binary heap of [key, priority], lowest priority first. */
+class Heap {
+  private k: number[] = [];
+  private f: number[] = [];
+  get size() {
+    return this.k.length;
+  }
+  push(key: number, pri: number) {
+    const { k, f } = this;
+    let i = k.length;
+    k.push(key);
+    f.push(pri);
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (f[p] <= f[i]) break;
+      [k[p], k[i]] = [k[i], k[p]];
+      [f[p], f[i]] = [f[i], f[p]];
+      i = p;
+    }
+  }
+  pop(): number {
+    const { k, f } = this;
+    const top = k[0];
+    const lk = k.pop()!, lf = f.pop()!;
+    if (k.length) {
+      k[0] = lk;
+      f[0] = lf;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1;
+        let m = i;
+        if (l < k.length && f[l] < f[m]) m = l;
+        if (r < k.length && f[r] < f[m]) m = r;
+        if (m === i) break;
+        [k[m], k[i]] = [k[i], k[m]];
+        [f[m], f[i]] = [f[i], f[m]];
+        i = m;
+      }
+    }
+    return top;
+  }
+}
+
 export function findPath(grid: Grid, from: Tile, to: Tile): Tile[] | null {
-  const n = grid.n;
+  const nv = grid.nv;
   if (!grid.isWalkable(to[0], to[1])) return null;
-  const key = (u: number, v: number) => u * n + v;
-  const g = new Map<number, number>();
-  const came = new Map<number, number>();
-  const open: { k: number; f: number }[] = [];
+  const key = (u: number, v: number) => u * nv + v;
+  const total = grid.nu * nv;
+  const g = new Float64Array(total).fill(Infinity);
+  const came = new Int32Array(total).fill(-1);
+  const closed = new Uint8Array(total);
+  const open = new Heap();
   const h = (u: number, v: number) => {
     const du = Math.abs(u - to[0]), dv = Math.abs(v - to[1]);
     return Math.max(du, dv) + (Math.SQRT2 - 1) * Math.min(du, dv);
   };
   const start = key(from[0], from[1]);
-  g.set(start, 0);
-  open.push({ k: start, f: h(from[0], from[1]) });
-  const closed = new Set<number>();
-  while (open.length) {
-    let bi = 0;
-    for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-    const { k } = open.splice(bi, 1)[0];
-    if (closed.has(k)) continue;
-    closed.add(k);
-    const u = Math.floor(k / n), v = k % n;
+  g[start] = 0;
+  open.push(start, h(from[0], from[1]));
+  while (open.size) {
+    const k = open.pop();
+    if (closed[k]) continue;
+    closed[k] = 1;
+    const u = Math.floor(k / nv), v = k % nv;
     if (u === to[0] && v === to[1]) {
       const path: Tile[] = [[u, v]];
       let c = k;
-      while (came.has(c)) {
-        c = came.get(c)!;
-        path.unshift([Math.floor(c / n), c % n]);
+      while (came[c] !== -1) {
+        c = came[c];
+        path.unshift([Math.floor(c / nv), c % nv]);
       }
       return path;
     }
     for (let du = -1; du <= 1; du++) {
       for (let dv = -1; dv <= 1; dv++) {
         if (!du && !dv) continue;
-        const nu = u + du, nv = v + dv;
-        if (!grid.isWalkable(nu, nv)) continue;
+        const nu = u + du, nvv = v + dv;
+        if (!grid.isWalkable(nu, nvv)) continue;
         if (du && dv && (!grid.isWalkable(u + du, v) || !grid.isWalkable(u, v + dv))) continue;
-        const nk = key(nu, nv);
-        const cost = (g.get(k) ?? 0) + (du && dv ? Math.SQRT2 : 1);
-        if (cost < (g.get(nk) ?? Infinity)) {
-          g.set(nk, cost);
-          came.set(nk, k);
-          open.push({ k: nk, f: cost + h(nu, nv) });
+        const nk = key(nu, nvv);
+        const cost = g[k] + (du && dv ? Math.SQRT2 : 1);
+        if (cost < g[nk]) {
+          g[nk] = cost;
+          came[nk] = k;
+          open.push(nk, cost + h(nu, nvv));
         }
       }
     }

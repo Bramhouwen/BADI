@@ -2,9 +2,15 @@
 import { dist, pointInPolygon, type Polygon, type Pt } from "./geometry";
 import type { Occluder, SceneDef, Seat } from "./scene";
 
+/** The furniture whose outline holds a point (a seat, a spot on a treadmill). */
+export function occluderUnder(occluders: readonly Occluder[], p: Pt): string | null {
+  return occluders.find((o) => pointInPolygon(p, o.outline))?.id ?? null;
+}
+
 /** The furniture whose outline holds the seat: not drawn over the one sitting on it. */
 export function seatOccluder(occluders: readonly Occluder[], seat: Seat): string | null {
-  return occluders.find((o) => pointInPolygon(seat.hip, o.outline))?.id ?? null;
+  if (seat.on !== undefined) return seat.on;
+  return occluderUnder(occluders, seat.hip);
 }
 
 /** The seat whose hip point is nearest to a tap, within `radius` background pixels. */
@@ -43,7 +49,9 @@ export function readSeats(data: unknown): Seat[] {
     const hip = pt(r.hip);
     const approach = pt(r.approach);
     if (typeof r.id !== "string" || !hip || !approach || (r.facing !== "left" && r.facing !== "right")) continue;
-    out.push({ id: r.id, hip, approach, facing: r.facing });
+    const seat: Seat = { id: r.id, hip, approach, facing: r.facing };
+    if (r.on === null || typeof r.on === "string") seat.on = r.on;
+    out.push(seat);
   }
   return out;
 }
