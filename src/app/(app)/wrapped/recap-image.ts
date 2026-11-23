@@ -1,4 +1,4 @@
-import type { GroupWrapped, PersonalWrapped } from "@/lib/wrapped";
+import type { GroupWrapped, PersonalWrapped, SeasonStats } from "@/lib/wrapped";
 
 /** Draws a 1080x1920 personal recap card on a canvas and returns a PNG blob. */
 export async function renderRecapImage({
@@ -6,11 +6,13 @@ export async function renderRecapImage({
   challengeName,
   personal,
   group,
+  season,
 }: {
   name: string;
   challengeName: string;
   personal: PersonalWrapped;
   group: GroupWrapped;
+  season: SeasonStats & { workouts: number; crowns: number };
 }): Promise<Blob> {
   const W = 1080;
   const H = 1920;
@@ -69,7 +71,7 @@ export async function renderRecapImage({
     ctx.stroke();
   };
 
-  card(520, 420);
+  card(520, 500);
   const stats: [string, string, string][] = [
     [String(personal.totalDays), "dagen", "#F0F9FF"],
     [String(personal.longestStreak), "langste streak", "#FB923C"],
@@ -91,19 +93,24 @@ export async function renderRecapImage({
     W / 2,
     870,
   );
+  const nl = (n: number) => new Intl.NumberFormat("nl-NL").format(n);
+  ctx.fillStyle = "#F0F9FF";
+  ctx.font = font(600, 34);
+  const crown = season.crowns > 0 ? ` · ${season.crowns}x Super Badi` : "";
+  ctx.fillText(`${nl(season.points)} punten · ${nl(season.steps)} stappen · ${season.workouts} workouts${crown}`, W / 2, 940, W - 240);
 
-  card(1000, 300);
+  card(1060, 300);
   ctx.fillStyle = "#94AFC8";
   ctx.font = font(600, 28);
   spacing("6px");
-  ctx.fillText("SAMEN MET DE SQUAD", W / 2, 1070);
+  ctx.fillText("SAMEN MET DE SQUAD", W / 2, 1130);
   spacing("0px");
   ctx.fillStyle = "#F0F9FF";
   ctx.font = font(700, 40);
-  ctx.fillText(`${group.totalCheckinDays} check-in dagen · ${group.totalPhotos} foto's · ${group.totalRecipes} recepten`, W / 2, 1150);
+  ctx.fillText(`${group.totalCheckinDays} check-in dagen · ${group.totalPhotos} foto's · ${group.totalRecipes} recepten`, W / 2, 1210);
   ctx.font = font(500, 34);
   ctx.fillStyle = "#94AFC8";
-  ctx.fillText(`${group.fullSquadDays} dagen met de hele squad actief`, W / 2, 1215);
+  ctx.fillText(`${group.fullSquadDays} dagen met de hele squad actief`, W / 2, 1275);
 
   ctx.fillStyle = "#F0F9FF";
   ctx.font = font(800, 64);

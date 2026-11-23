@@ -10,11 +10,23 @@ import { Button } from "@/components/ui/button";
 import { Page } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
 import { firstName } from "@/lib/utils";
-import type { GroupWrapped, PersonalWrapped } from "@/lib/wrapped";
+import type { GroupWrapped, PersonalWrapped, SeasonStats } from "@/lib/wrapped";
+import { formatDateNl } from "@/lib/dates";
 import type { WrappedStatus } from "@/lib/dates";
 import { renderRecapImage } from "./recap-image";
 
-type Personal = PersonalWrapped & { avatarUrl: string | null };
+type Personal = PersonalWrapped & { avatarUrl: string | null; crowns: number };
+export type Group = GroupWrapped & { prizesWon: number; challengesDone: number; crownWeeks: number };
+export type Season = SeasonStats & {
+  workouts: number;
+  runKm: number;
+  waterLiters: number;
+  crowns: number;
+  prizes: { brand: string; name: string }[];
+  challengesDone: number;
+};
+
+const nl = (n: number) => new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(n);
 
 function Stat({ value, label, tone }: { value: number | string; label: string; tone?: "ice" | "gold" | "warm" }) {
   const color = tone === "gold" ? "text-gold" : tone === "warm" ? "text-warm" : "text-water-deep";
@@ -31,13 +43,15 @@ export function WrappedView({
   challengeName,
   meId,
   group,
+  season,
   personal,
   memories,
 }: {
   status: WrappedStatus;
   challengeName: string;
   meId: string;
-  group: GroupWrapped;
+  group: Group;
+  season: Season;
   personal: Personal[];
   memories: { id: string; url: string | null; caption: string | null }[];
 }) {
@@ -51,7 +65,7 @@ export function WrappedView({
     if (!me) return;
     setExporting(true);
     try {
-      const blob = await renderRecapImage({ name: firstName(me.member.display_name), challengeName, personal: me, group });
+      const blob = await renderRecapImage({ name: firstName(me.member.display_name), challengeName, personal: me, group, season });
       const url = URL.createObjectURL(blob);
       const file = new File([blob], "winter-arc-wrapped.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
@@ -97,6 +111,8 @@ export function WrappedView({
             <Stat value={group.totalPhotos} label="foto's op de Wall" />
             <Stat value={group.totalRecipes} label="recepten gedeeld" />
             <Stat value={group.totalCompliments} label="complimenten uitgedeeld" tone="gold" />
+            <Stat value={group.prizesWon} label="prijzen van het Weekrad" tone="warm" />
+            <Stat value={group.challengesDone} label="weekchallenges voltooid" />
           </div>
         </motion.section>
 
@@ -123,7 +139,49 @@ export function WrappedView({
                 <div className="text-[11px] text-muted">complimenten</div>
               </div>
             </div>
+            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-ink/[0.06] pt-4 text-center">
+              <div>
+                <div className="text-2xl font-extrabold tabular-nums">{nl(season.points)}</div>
+                <div className="text-[11px] text-muted">punten</div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold tabular-nums text-water-deep">{nl(season.steps)}</div>
+                <div className="text-[11px] text-muted">stappen</div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold tabular-nums">{season.workouts}</div>
+                <div className="text-[11px] text-muted">{season.workouts === 1 ? "workout" : "workouts"}</div>
+              </div>
+            </div>
             <ul className="mt-4 space-y-1.5 text-sm">
+              <li>
+                <span className="text-muted">Waarvan bonus:</span> {nl(season.bonus)} punten
+              </li>
+              {season.bestWeek ? (
+                <li>
+                  <span className="text-muted">Beste week:</span> {season.bestWeek.points} punten, week van {formatDateNl(season.bestWeek.start, { day: "numeric", month: "long" })}
+                </li>
+              ) : null}
+              {season.crowns > 0 ? (
+                <li>
+                  <span className="text-muted">Super Badi:</span> {season.crowns}x 👑
+                </li>
+              ) : null}
+              {season.waterLiters > 0 ? (
+                <li>
+                  <span className="text-muted">Water:</span> {nl(season.waterLiters)} liter
+                </li>
+              ) : null}
+              {season.runKm > 0 ? (
+                <li>
+                  <span className="text-muted">Hardgelopen:</span> {nl(season.runKm)} km
+                </li>
+              ) : null}
+              {season.challengesDone > 0 ? (
+                <li>
+                  <span className="text-muted">Weekchallenges voltooid:</span> {season.challengesDone}
+                </li>
+              ) : null}
               <li>
                 <span className="text-muted">Vaakst gekozen:</span> {me.topActivity ? `${me.topActivity.emoji} ${me.topActivity.label} (${me.topActivity.count}x)` : "nog geen check-ins"}
               </li>
@@ -134,6 +192,19 @@ export function WrappedView({
                 <span className="text-muted">Uitgedeeld:</span> {me.complimentsSent} {me.complimentsSent === 1 ? "compliment" : "complimenten"}
               </li>
             </ul>
+            {season.prizes.length > 0 ? (
+              <div className="mt-4 rounded-[18px] bg-white/70 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Gewonnen met het Weekrad</p>
+                <ul className="mt-1.5 space-y-1 text-sm">
+                  {season.prizes.map((p, i) => (
+                    <li key={i}>
+                      🎁 {p.brand ? `${p.brand} ` : ""}
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <Button variant="dark" className="mt-5 w-full" onClick={exportRecap} loading={exporting}>
               <Download className="h-4 w-4" /> Bewaar mijn recap als afbeelding
             </Button>
@@ -150,6 +221,7 @@ export function WrappedView({
                   <p className="font-semibold">{firstName(p.member.display_name)}</p>
                   <p className="text-xs text-muted">
                     {p.totalDays} dagen · streak {p.longestStreak} · {p.topActivity ? `${p.topActivity.emoji} ${p.topActivity.label}` : "nog geen check-ins"}
+                    {p.crowns > 0 ? ` · 👑 ${p.crowns}x Super Badi` : ""}
                   </p>
                 </div>
               </li>

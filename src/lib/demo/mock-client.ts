@@ -26,6 +26,7 @@ class Query implements PromiseLike<Result> {
   private orderCol: string | null = null;
   private ascending = true;
   private limitN: number | null = null;
+  private offsetN = 0;
   private mode: "single" | "maybe" | null = null;
   private countExact = false;
   private head = false;
@@ -99,6 +100,12 @@ class Query implements PromiseLike<Result> {
     this.ascending = opts?.ascending ?? true;
     return this;
   }
+  range(from: number, to: number) {
+    this.offsetN = from;
+    this.limitN = to - from + 1;
+    return this;
+  }
+
   limit(n: number) {
     this.limitN = n;
     return this;
@@ -169,7 +176,7 @@ class Query implements PromiseLike<Result> {
         const c = this.orderCol;
         rows = [...rows].sort((a, b) => (String(a[c]) < String(b[c]) ? -1 : String(a[c]) > String(b[c]) ? 1 : 0) * (this.ascending ? 1 : -1));
       }
-      if (this.limitN != null) rows = rows.slice(0, this.limitN);
+      if (this.offsetN || this.limitN != null) rows = rows.slice(this.offsetN, this.limitN != null ? this.offsetN + this.limitN : undefined);
       return this.finish(this.withJoins(rows));
     }
 
