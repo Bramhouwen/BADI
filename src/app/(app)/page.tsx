@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { INTERIM_WRAPPED_OPEN } from "@/lib/wrapped";
 import Link from "next/link";
 import { getSquad, requireContext, rotateMembers } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -161,6 +162,15 @@ async function Content() {
           </Link>
         </Card>
       )}
+
+      {INTERIM_WRAPPED_OPEN && wrapped === "not_yet" && phase === "during" ? (
+        <Link href="/wrapped" className="block">
+          <Card className="ring-1 ring-gold/50">
+            <p className="text-[11px] font-medium tracking-[0.2em] text-muted">TUSSENSTAND</p>
+            <p className="mt-1 font-semibold">Bekijk jullie Winter Arc tot nu toe.</p>
+          </Card>
+        </Link>
+      ) : null}
 
       {wrapped !== "not_yet" && phase !== "after" ? (
         <Link href="/wrapped" className="block">

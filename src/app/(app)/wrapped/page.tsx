@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
-import { addDays, daysUntilFinale, formatDateNl, todayKey, wrappedStatus } from "@/lib/dates";
-import { computeWrapped, crownCounts, seasonStats, wheelSummary } from "@/lib/wrapped";
+import { addDays, diffDays, daysUntilFinale, formatDateNl, todayKey, wrappedStatus } from "@/lib/dates";
+import { INTERIM_WRAPPED_OPEN, computeWrapped, crownCounts, seasonStats, wheelSummary } from "@/lib/wrapped";
 import { loadBonusItems } from "@/lib/bonus";
 import { weekStartOf } from "@/lib/checkin-plan";
 import { Page, PageTitle } from "@/components/ui/page";
@@ -18,12 +18,19 @@ import { isDemo } from "@/lib/demo";
 
 export const metadata = { title: "Wrapped" };
 
-async function Content({ searchParams }: { searchParams: Promise<{ preview?: string | string[] }> }) {
+async function Content({ searchParams }: { searchParams: Promise<{ preview?: string | string[]; tussenstand?: string | string[] }> }) {
   const sp = await searchParams;
   const ctx = await requireContext();
   const now = new Date();
+  const today = todayKey(now, ctx.challenge.timezone);
   // Demo mode only: /wrapped?preview=1 shows the Wrapped layout before the finale.
-  const status = isDemo() && sp.preview === "1" ? "preliminary" : wrappedStatus(ctx.challenge, now);
+  const realStatus = isDemo() && sp.preview === "1" ? "preliminary" : wrappedStatus(ctx.challenge, now);
+  const isAdmin = ctx.membership.role === "admin" || isDemo();
+  const started = today >= ctx.challenge.start_date;
+  // The interim Wrapped: for everyone once opened, before that only for the admin as a test.
+  const interimTest = !INTERIM_WRAPPED_OPEN && isAdmin && sp.tussenstand === "1";
+  const interim = realStatus === "not_yet" && started && (INTERIM_WRAPPED_OPEN || interimTest);
+  const status = interim ? "interim" : realStatus;
 
   if (status === "not_yet") {
     const d = daysUntilFinale(ctx.challenge, now);
@@ -35,10 +42,17 @@ async function Content({ searchParams }: { searchParams: Promise<{ preview?: str
           title={`Nog ${d} ${d === 1 ? "dag" : "dagen"} tot de finale`}
           body={`Op ${formatDateNl(ctx.challenge.end_date)} verschijnt hier jullie voorlopige Wrapped. De definitieve versie volgt zodra de laatste check-in is afgerond.`}
           action={
-            isDemo() ? (
-              <Link href="/wrapped?preview=1">
-                <Button variant="secondary">Demo: bekijk de Wrapped alvast</Button>
-              </Link>
+            isAdmin && started ? (
+              <div className="flex flex-col items-center gap-2">
+                <Link href="/wrapped?tussenstand=1">
+                  <Button variant="secondary">Bekijk de tussenstand (alleen jij)</Button>
+                </Link>
+                {isDemo() ? (
+                  <Link href="/wrapped?preview=1" className="text-[13px] text-muted underline-offset-2 hover:underline">
+                    Demo: bekijk de finale-Wrapped
+                  </Link>
+                ) : null}
+              </div>
             ) : undefined
           }
         />
@@ -48,7 +62,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ preview?: str
 
   const supabase = await createClient();
   const { start_date: start, end_date: end } = ctx.challenge;
-  const until = status === "final" ? end : todayKey(now, ctx.challenge.timezone);
+  const until = status === "final" ? end : today;
   const [
     { data: jokerRows },
     { data: stepRows },
@@ -86,7 +100,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ preview?: str
     recipes: (recipeRows ?? []) as Pick<Recipe, "user_id">[],
     compliments: (complimentRows ?? []) as Pick<Compliment, "sender_id" | "receiver_id">[],
     challenge: ctx.challenge,
-    today: status === "final" ? addDays(ctx.challenge.end_date, 1) : todayKey(now, ctx.challenge.timezone),
+    today: status === "final" ? addDays(ctx.challenge.end_date, 1) : today,
   });
   result.group.totalCompliments = typeof groupComplimentCount === "number" ? groupComplimentCount : result.group.totalCompliments;
 
@@ -112,6 +126,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ preview?: str
   return (
     <WrappedView
       status={status}
+      testOnly={interimTest}
+      endDate={ctx.challenge.end_date}
+      dayOf={{ day: diffDays(ctx.challenge.start_date, today) + 1, total: diffDays(ctx.challenge.start_date, ctx.challenge.end_date) + 1 }}
       challengeName={ctx.challenge.name}
       meId={ctx.userId}
       group={{

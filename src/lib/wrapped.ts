@@ -3,6 +3,13 @@ import { addDays, diffDays, type DateKey } from "./dates";
 import { computeStreakStats } from "./streaks";
 import { stepsByDay, weekScore, weekStartOf, type BonusItem } from "./checkin-plan";
 
+/**
+ * The interim Wrapped ("tussenstand"): a first look at the Winter Arc so far,
+ * before the finale. Closed: only the admin sees it, through /wrapped?tussenstand=1.
+ * Open: every member sees it on /wrapped until the finale.
+ */
+export const INTERIM_WRAPPED_OPEN = false;
+
 export interface WrappedMember {
   id: string;
   display_name: string;

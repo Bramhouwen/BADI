@@ -40,6 +40,9 @@ function Stat({ value, label, tone }: { value: number | string; label: string; t
 
 export function WrappedView({
   status,
+  testOnly = false,
+  endDate,
+  dayOf,
   challengeName,
   meId,
   group,
@@ -47,7 +50,12 @@ export function WrappedView({
   personal,
   memories,
 }: {
-  status: WrappedStatus;
+  /** "interim": the tussenstand before the finale, without memories and recap image. */
+  status: WrappedStatus | "interim";
+  /** The admin's look at the interim Wrapped before the squad gets it. */
+  testOnly?: boolean;
+  endDate: string;
+  dayOf: { day: number; total: number };
   challengeName: string;
   meId: string;
   group: Group;
@@ -59,6 +67,8 @@ export function WrappedView({
   const toast = useToast();
   const [exporting, setExporting] = useState(false);
   const me = personal.find((p) => p.member.id === meId);
+  const interim = status === "interim";
+  const finaleDate = formatDateNl(endDate, { day: "numeric", month: "long" });
   const fade = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 14 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-40px" }, transition: { delay: i * 0.05 } });
 
   async function exportRecap() {
@@ -87,25 +97,42 @@ export function WrappedView({
   return (
     <div className="bg-[radial-gradient(ellipse_at_top,rgba(125,211,252,0.12),transparent_55%)]">
       <Page className="space-y-8 pt-6">
-        <motion.header {...fade(0)} className="text-center">
-          <p className="text-xs font-semibold tracking-[0.3em] text-gold">{status === "final" ? "WINTER ARC WRAPPED" : "VOORLOPIGE WRAPPED"}</p>
-          <h1 className="mt-2 font-display text-4xl leading-tight">
-            We showed up.
-            <br />
-            We grew together.
-          </h1>
-          <p className="mt-3 text-sm text-muted">
-            {status === "final"
-              ? `Dit was ${challengeName}. Geen winnaar, geen podium: vier vrienden die bleven komen.`
-              : "De finale is bezig. Dit overzicht wordt definitief zodra de laatste check-ins binnen zijn."}
+        {testOnly ? (
+          <p className="rounded-[18px] bg-gold/25 px-4 py-3 text-center text-[13px] text-ink" role="note">
+            Testweergave: alleen jij ziet dit. De squad ziet nog de aftelling tot de finale.
           </p>
+        ) : null}
+
+        <motion.header {...fade(0)} className="text-center">
+          <p className="text-xs font-semibold tracking-[0.3em] text-gold">{status === "final" ? "WINTER ARC WRAPPED" : interim ? "TUSSENSTAND" : "VOORLOPIGE WRAPPED"}</p>
+          {interim ? (
+            <>
+              <h1 className="mt-2 font-display text-4xl leading-tight">De Winter Arc tot nu toe</h1>
+              <p className="mt-3 text-sm text-muted">
+                Dag {Math.min(dayOf.day, dayOf.total)} van {dayOf.total}. Jullie cijfers tot en met vandaag. De volledige Wrapped volgt op {finaleDate}.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="mt-2 font-display text-4xl leading-tight">
+                We showed up.
+                <br />
+                We grew together.
+              </h1>
+              <p className="mt-3 text-sm text-muted">
+                {status === "final"
+                  ? `Dit was ${challengeName}. Geen winnaar, geen podium: vier vrienden die bleven komen.`
+                  : "De finale is bezig. Dit overzicht wordt definitief zodra de laatste check-ins binnen zijn."}
+              </p>
+            </>
+          )}
         </motion.header>
 
         <motion.section {...fade(1)}>
           <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Samen</h2>
           <div className="grid grid-cols-2 gap-3">
             <Stat value={group.totalCheckinDays} label="check-in dagen bij elkaar" />
-            <Stat value={group.activeChallengeDays} label={`van ${group.challengeLength} dagen iemand actief`} />
+            <Stat value={group.activeChallengeDays} label={`van ${interim ? Math.min(dayOf.day, dayOf.total) : group.challengeLength} dagen iemand actief`} />
             <Stat value={group.fullSquadDays} label="dagen met de hele squad" tone="gold" />
             <Stat value={group.longestStreakInGroup} label="langste streak in de groep" tone="warm" />
             <Stat value={group.totalPhotos} label="foto's op de Wall" />
@@ -205,9 +232,11 @@ export function WrappedView({
                 </ul>
               </div>
             ) : null}
-            <Button variant="dark" className="mt-5 w-full" onClick={exportRecap} loading={exporting}>
-              <Download className="h-4 w-4" /> Bewaar mijn recap als afbeelding
-            </Button>
+            {interim ? null : (
+              <Button variant="dark" className="mt-5 w-full" onClick={exportRecap} loading={exporting}>
+                <Download className="h-4 w-4" /> Bewaar mijn recap als afbeelding
+              </Button>
+            )}
           </motion.section>
         ) : null}
 
@@ -229,7 +258,7 @@ export function WrappedView({
           </ul>
         </motion.section>
 
-        {memories.length > 0 ? (
+        {!interim && memories.length > 0 ? (
           <motion.section {...fade(4)}>
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">Memories</h2>
             <div className="grid grid-cols-3 gap-2">
@@ -242,18 +271,26 @@ export function WrappedView({
           </motion.section>
         ) : null}
 
-        <motion.footer {...fade(5)} className="glass rounded-[28px] px-6 py-10 text-center">
-          <p className="font-display text-2xl leading-snug">
-            WE SHOWED UP.
-            <br />
-            WE GREW TOGETHER.
-            <br />
-            <span className="text-water-deep">THIS WAS OUR WINTER ARC.</span>
-          </p>
-          <p className="mt-4 text-4xl" aria-hidden>
-            ❄️
-          </p>
-        </motion.footer>
+        {interim ? (
+          <motion.footer {...fade(5)} className="glass rounded-[28px] px-6 py-8 text-center">
+            <p className="text-xs font-semibold tracking-[0.3em] text-gold">{finaleDate.toUpperCase()}</p>
+            <p className="mt-2 font-display text-2xl leading-snug">De volledige Wrapped</p>
+            <p className="mt-2 text-sm text-muted">Met jullie memories van de Wall en je recap als afbeelding.</p>
+          </motion.footer>
+        ) : (
+          <motion.footer {...fade(5)} className="glass rounded-[28px] px-6 py-10 text-center">
+            <p className="font-display text-2xl leading-snug">
+              WE SHOWED UP.
+              <br />
+              WE GREW TOGETHER.
+              <br />
+              <span className="text-water-deep">THIS WAS OUR WINTER ARC.</span>
+            </p>
+            <p className="mt-4 text-4xl" aria-hidden>
+              ❄️
+            </p>
+          </motion.footer>
+        )}
       </Page>
     </div>
   );

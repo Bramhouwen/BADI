@@ -6,6 +6,7 @@ import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
 import { formatDateNl, wrappedStatus } from "@/lib/dates";
+import { INTERIM_WRAPPED_OPEN } from "@/lib/wrapped";
 import { Page, PageTitle } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ async function Content() {
             href="/wrapped"
             icon={Sparkles}
             title="Winter Arc Wrapped"
-            body={wrapped === "final" ? "Jullie definitieve terugblik." : wrapped === "preliminary" ? "Voorlopige terugblik tijdens de finale." : `Beschikbaar vanaf ${formatDateNl(ctx.challenge.end_date, { day: "numeric", month: "long" })}.`}
+            body={wrapped === "final" ? "Jullie definitieve terugblik." : wrapped === "preliminary" ? "Voorlopige terugblik tijdens de finale." : INTERIM_WRAPPED_OPEN ? `Tussenstand tot nu toe. De volledige terugblik volgt op ${formatDateNl(ctx.challenge.end_date, { day: "numeric", month: "long" })}.` : `Beschikbaar vanaf ${formatDateNl(ctx.challenge.end_date, { day: "numeric", month: "long" })}.`}
           />
         </div>
       </section>
