@@ -206,10 +206,10 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
   - Per zitplek: kijkrichting wisselen, "Probeer met je poppetje" (je loopt erheen en gaat zitten), verwijderen (knop of Delete-toets).
   - Opslaan schrijft `src/lib/world/scenes/<ruimte>.zitplekken.json` (route `src/app/api/wereld/zitplekken`, alleen bij `npm run dev` en voor de beheerder). Online kopieert de knop de JSON naar het klembord.
 - Een zitplek is nu `{ id, hip, facing, approach }` in pixels van de achtergrond. Op welk meubel je zit, volgt uit het meubel waar de heupen in liggen.
-- Per poppetje een `zitAnker` in het manifest (in `scripts/make-wereld-poppetjes.mjs`): het punt in het zit-frame waar de heupen zitten. Bij zitten komt dat punt precies op de zitplek, op dezelfde schaal als staan. Anne (160, 168), Daphne (162, 166), Irene (135, 168), Bram (130, 203).
+- Per poppetje een `zitAnker` in het manifest (in `scripts/make-wereld-poppetjes.mjs`): het punt in het zit-frame waar de heupen zitten. Bij zitten komt dat punt precies op de zitplek, op dezelfde schaal als staan. Anne (158, 168), Daphne (155, 166), Irene (138, 168), Bram (147, 203).
 - Getest op telefoonformaat: zitplek toevoegen, slepen, verwijderen, proberen, opslaan. Tests voor het inlezen van zitplekken, raken, het meubel onder een zitplek en het zitAnker.
 
 **Open**
 - Uitgeknipte voorgrondlaag per meubel met arm- of rugleuning, boven het zittende poppetje (stap 3 van deze tussendoor), na akkoord op de plaatsingsmodus.
-- De vier zitplekken in `woonkamer.zitplekken.json` zijn nog de oude schattingen: opnieuw plaatsen in de plaatsingsmodus.
-- De zitAnkers zijn gemeten op de frames; per poppetje controleren met "Probeer".
+- ~~De vier zitplekken zijn nog schattingen~~ Opgelost: geplaatst en gecontroleerd door alle vier poppetjes op alle vier plekken te renderen met de rekenregels van de engine (`docs/wereld/zitplekken-controle.png`, rijen zit-1 t/m zit-4, kolommen Anne, Daphne, Irene, Bram). De middelste plek valt samen met Bram in het stijlvoorbeeld. De plaatsingsmodus is er voor correcties achteraf.
+- zitAnker x is het midden van de romp: Anne 158, Daphne 155, Irene 138, Bram 147.

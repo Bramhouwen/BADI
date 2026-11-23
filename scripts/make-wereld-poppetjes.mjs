@@ -51,13 +51,14 @@ const BRAM = {
 /**
  * zitAnker: the point in the sitting frame where the hips rest on the seat
  * (frame pixels). When sitting, this point goes exactly on the seat's hip
- * point, at the same scale as standing. Measured on each zitten-01.png.
+ * point, at the same scale as standing. Measured on each zitten-01.png: x is
+ * the middle of the torso, y the underside of the seat of the trousers.
  */
 const PEOPLE = [
-  { key: "anne", name: "Anne", layout: STANDARD, zitAnker: { x: 160, y: 168 } },
-  { key: "daphne", name: "Daphne", layout: STANDARD, zitAnker: { x: 162, y: 166 } },
-  { key: "irene", name: "Irene", layout: STANDARD, zitAnker: { x: 135, y: 168 } },
-  { key: "bram", name: "Bram", layout: BRAM, zitAnker: { x: 130, y: 203 } },
+  { key: "anne", name: "Anne", layout: STANDARD, zitAnker: { x: 158, y: 168 } },
+  { key: "daphne", name: "Daphne", layout: STANDARD, zitAnker: { x: 155, y: 166 } },
+  { key: "irene", name: "Irene", layout: STANDARD, zitAnker: { x: 138, y: 168 } },
+  { key: "bram", name: "Bram", layout: BRAM, zitAnker: { x: 147, y: 203 } },
 ];
 
 /**
