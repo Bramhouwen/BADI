@@ -299,3 +299,11 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Supabase raadt aan "Allow public access" in de Realtime-instellingen uit te zetten om alleen privékanalen toe te staan. Niet doen: het bestaande "wie is online"-kanaal van de app is openbaar en zou dan stoppen.
 - Noor verschijnt pas offline op de bank in de demo na een herstart van `npm run dev:demo` (de voorbeelddata wordt bij het starten ingelezen).
 - De echte test met twee telefoons, zodra de wereld opengaat.
+
+### Tussendoor: typen zonder dat de wereld wegschuift (23-11-2026)
+
+- De wereld volgt het zichtbare deel van het scherm (`visualViewport`): opent het toetsenbord, dan krimpt het beeld tot boven het toetsenbord in plaats van omhoog te schuiven.
+- De pagina eronder scrollt niet meer zolang je in de wereld bent.
+- Tik je in "Zeg iets…", dan zoomt de camera in op je poppetje, zodat je jezelf en wie bij je staat ziet terwijl je typt.
+- Het tekstvak heeft letters van 16 px, zodat een iPhone niet vanzelf inzoomt.
+- Getest met een half zo hoog scherm in de browser. Met een echt toetsenbord op iPhone en Android nog controleren.

@@ -7,7 +7,7 @@ import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
 import type { Door } from "@/lib/world/engine/scene";
 import { SPEECH_MAX, type WorldPresence } from "@/lib/world/engine/presence";
 import { relativeTimeNl } from "@/lib/dates";
-import { WorldCanvas, type PickedMember, type WorldMember } from "./world-canvas";
+import { WorldCanvas, type PickedMember, type WorldCanvasApi, type WorldMember } from "./world-canvas";
 import { createWorldLink, type WorldLink } from "./world-link";
 
 const FADE_MS = 220;
@@ -55,6 +55,33 @@ export function WorldView({
   const [picked, setPicked] = useState<PickedMember | null>(null);
   const [text, setText] = useState("");
   const lastSaid = useRef(0);
+  const canvasApi = useRef<WorldCanvasApi | null>(null);
+  // The part of the screen you can see: smaller while the keyboard is open.
+  const [visible, setVisible] = useState<{ top: number; height: number; keyboard: boolean } | null>(null);
+
+  useEffect(() => {
+    const v = window.visualViewport;
+    if (!v) return;
+    const update = () => setVisible({ top: v.offsetTop, height: v.height, keyboard: window.innerHeight - v.height > 120 });
+    v.addEventListener("resize", update);
+    v.addEventListener("scroll", update);
+    return () => {
+      v.removeEventListener("resize", update);
+      v.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  // The page underneath never scrolls: the world stays put when the keyboard opens.
+  useEffect(() => {
+    const html = document.documentElement, body = document.body;
+    const before = [html.style.overflow, body.style.overflow];
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = before[0];
+      body.style.overflow = before[1];
+    };
+  }, []);
 
   useEffect(() => {
     for (const s of Object.values(SCENES)) {
@@ -103,7 +130,11 @@ export function WorldView({
   };
 
   return (
-    <div className="fixed inset-0 z-40 overflow-hidden overscroll-none bg-[#f6ece4]">
+    <div
+      className="fixed inset-x-0 top-0 z-40 overflow-hidden overscroll-none bg-[#f6ece4]"
+      // Follows the visible part of the screen, so the world shrinks above the keyboard instead of sliding away.
+      style={visible ? { top: visible.top, height: visible.height } : { bottom: 0 }}
+    >
       <div className="absolute inset-0" style={{ opacity: dim ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }}>
         {edit || link ? (
           <WorldCanvas
@@ -122,6 +153,7 @@ export function WorldView({
             onDoor={onDoor}
             onReady={() => setDim(false)}
             onPick={setPicked}
+            apiRef={canvasApi}
           />
         ) : null}
       </div>
@@ -178,7 +210,7 @@ export function WorldView({
       ) : null}
 
       {!edit ? (
-        <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom: "calc(var(--sab) + 12px)" }}>
+        <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom: visible?.keyboard ? 8 : "calc(var(--sab) + 12px)" }}>
           {picked ? (
             <div className="flex items-center gap-3 rounded-[18px] bg-white/95 px-4 py-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" role="status">
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${picked.online ? "bg-[#3f8f4f]" : "bg-ink/20"}`} aria-hidden />
@@ -205,7 +237,12 @@ export function WorldView({
               enterKeyHint="send"
               placeholder="Zeg iets…"
               aria-label={`Zeg iets tegen iedereen in ${scene.name}`}
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-muted"
+              onFocus={() => {
+                setShowWho(false);
+                canvasApi.current?.focusMe();
+              }}
+              // 16px or more, so a phone does not zoom the page in when you tap the field.
+              className="min-w-0 flex-1 bg-transparent text-[16px] text-text outline-none placeholder:text-muted"
             />
             <button type="submit" disabled={!text.trim()} aria-label="Zeg het" className="espresso grid h-10 w-10 shrink-0 place-items-center rounded-full disabled:opacity-40">
               <SendHorizontal className="h-4.5 w-4.5" aria-hidden />

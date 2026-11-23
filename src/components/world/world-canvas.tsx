@@ -52,6 +52,12 @@ export interface WorldMember {
   updatedAt: string;
 }
 
+/** What the screen around the world can ask of the canvas. */
+export interface WorldCanvasApi {
+  /** Look at your own character from close by, for example while you type. */
+  focusMe(): void;
+}
+
 /** Who you tapped. */
 export interface PickedMember {
   id: string;
@@ -85,6 +91,7 @@ export function WorldCanvas({
   onDoor,
   onReady,
   onPick,
+  apiRef,
 }: {
   scene: SceneDef;
   me: { id: string; name: string; character: string | null };
@@ -107,6 +114,8 @@ export function WorldCanvas({
   onReady?: () => void;
   /** You tapped someone (or next to them: null). */
   onPick?: (who: PickedMember | null) => void;
+  /** Filled with the canvas controls while the scene runs. */
+  apiRef?: { current: WorldCanvasApi | null };
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
@@ -401,6 +410,15 @@ export function WorldCanvas({
           return Boolean(hit);
         };
 
+        if (apiRef)
+          apiRef.current = {
+            focusMe() {
+              follow = true;
+              const l = zoomLimits();
+              if (cam.zoom < l.close * 0.95) zoomTo = l.close;
+            },
+          };
+
         // Debug only: drive the character from the console (window.__wereld.tap(x, y) in background pixels).
         if (debug) (window as unknown as { __wereld?: unknown }).__wereld = { tap: (x: number, y: number) => tapScene([x, y]), me: me0, others };
 
@@ -559,10 +577,11 @@ export function WorldCanvas({
       clearTimeout(saveTimer);
       detach?.();
       cleanupLink?.();
+      if (apiRef) apiRef.current = null;
       ro?.disconnect();
       actionsRef.current = null;
     };
-  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit, arriveAt, restore, link]);
+  }, [scene, me.id, me.name, me.character, startX, startY, debug, overlay, edit, arriveAt, restore, link, apiRef]);
 
   // Delete removes the selected seat (keyboard, placement mode).
   useEffect(() => {
