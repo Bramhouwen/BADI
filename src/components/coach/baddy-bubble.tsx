@@ -13,6 +13,7 @@ function hiddenOn(path: string): boolean {
   if (path === "/" || path.startsWith("/coach") || path.startsWith("/squad") || path.startsWith("/profile") || path.startsWith("/checkin")) return true;
   if (path.endsWith("/new") || path.endsWith("/edit")) return true;
   if (path.startsWith("/fitness/workout") || path.startsWith("/fitness/start/")) return true;
+  if (path.startsWith("/wereld")) return true;
   return false;
 }
 

@@ -99,5 +99,5 @@ export const BUITEN: SceneDef = {
   spots: [],
   spawn: [592, 470],
   characterHeight: 112,
-  startZoom: 1.7,
+  startZoom: 1.6,
 };

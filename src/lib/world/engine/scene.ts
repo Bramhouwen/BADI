@@ -91,6 +91,6 @@ export interface SceneDef {
   characterHeight: number;
   /** Walking speed in background pixels per second, so steps match the walk animation at this size. */
   walkSpeed?: number;
-  /** Zoom the camera starts at, relative to the zoom that fits the whole scene; outside starts closer. */
+  /** Zoom the camera starts at, relative to the zoom where the picture just fills the screen; outside starts closer. */
   startZoom?: number;
 }

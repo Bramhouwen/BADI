@@ -254,3 +254,10 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - fps meten op een echte telefoon: open `/wereld?debug=1` en kijk rechtsboven, binnen en buiten.
 - De kat staat niet in de illustratie en er is nog geen getekende kat.
 - Zitten aan de voorkant van bureaus en tafels: daar zie je de rugleuning, en er is geen achteraanzicht van de poppetjes.
+
+### Tussendoor: wereld schermvullend (23-11-2026)
+
+- `/wereld` vult het hele scherm, zoals een game. Kop, tabbalk en Baddy's bubbel zijn daar weg (`isFullscreenPath` in `src/components/app/hide-on-chat.tsx`).
+- Linksboven een terugknop naar de app en de naam van de ruimte. De plaatsingsmodus ligt als paneel onderin over de wereld.
+- De camera zoomt nooit verder uit dan het punt waarop de illustratie het scherm vult, dus er zijn geen lege randen. Je start op die zoom en de camera volgt je poppetje; buiten start iets dichterbij (`startZoom`).
+- De squadlijst onder de wereld is weg. Wie waar is, komt in fase 2 in de wereld zelf.

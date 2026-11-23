@@ -147,10 +147,11 @@ export function WorldCanvas({
     let cam: Camera = { x: scene.width / 2, y: scene.height / 2, zoom: 0.5 };
     let lastPan = -Infinity;
     const zoomLimits = () => {
-      const min = Math.min(view.width / scene.width, view.height / scene.height);
+      // The picture always fills the screen: never zoom out past the point where empty edges show.
+      const min = Math.max(view.width / scene.width, view.height / scene.height);
       // The closest zoom keeps a character as large as it can be in the rooms, also outside where characters are drawn smaller.
       const max = Math.max(min, (1.3 * 340) / scene.characterHeight);
-      return { min, max, start: Math.max(min, Math.min(max, (view.height / (scene.height * 0.8)) * (scene.startZoom ?? 1))) };
+      return { min, max, start: Math.min(max, min * (scene.startZoom ?? 1)) };
     };
     const resize = () => {
       const r = box.getBoundingClientRect();
@@ -444,22 +445,26 @@ export function WorldCanvas({
   }
 
   return (
-    <div className="space-y-3">
-      <div ref={boxRef} className="relative h-[calc(100dvh-var(--nav-h)-var(--sab)-210px)] min-h-[380px] w-full touch-none select-none overflow-hidden rounded-[24px] bg-[#f6ece4] ring-1 ring-ink/[0.06]">
+    <div className="absolute inset-0">
+      <div ref={boxRef} className="absolute inset-0 touch-none select-none overflow-hidden bg-[#f6ece4]">
         <canvas ref={canvasRef} className="block h-full w-full" aria-label={`${scene.name}: tik om te lopen, sleep om rond te kijken`} role="img" />
         {status !== "ready" ? (
           <div className="absolute inset-0 grid place-items-center text-[14px] text-muted">{status === "loading" ? "De wereld laadt…" : "De wereld kon niet laden. Probeer het opnieuw."}</div>
         ) : null}
-        {overlay ? <p ref={fpsRef} className="absolute right-3 top-3 rounded-full bg-text/80 px-3 py-1 text-[12px] tabular-nums text-paper" aria-live="off" /> : null}
+        {overlay ? <p ref={fpsRef} className="absolute right-3 rounded-full bg-text/80 px-3 py-1 text-[12px] tabular-nums text-paper" style={{ top: "calc(var(--sat) + 14px)" }} aria-live="off" /> : null}
         {note ? (
-          <p className="absolute inset-x-3 bottom-3 rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" role="status">
+          <p className="absolute inset-x-4 mx-auto max-w-md rounded-full bg-text/90 px-4 py-2 text-center text-[13px] text-paper" style={{ bottom: "calc(var(--sab) + 18px)" }} role="status">
             {note}
           </p>
         ) : null}
       </div>
 
       {edit ? (
-        <section aria-label="Plaatsingsmodus" className="space-y-3 rounded-[20px] bg-white/85 p-4 ring-1 ring-ink/[0.06]">
+        <section
+          aria-label="Plaatsingsmodus"
+          className="absolute inset-x-3 mx-auto max-h-[42dvh] max-w-xl space-y-3 overflow-y-auto rounded-[20px] bg-white/92 p-4 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur"
+          style={{ bottom: "calc(var(--sab) + 12px)" }}
+        >
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">Plaatsingsmodus · {scene.name}</p>
             <p className="mt-1 text-[13px] leading-snug text-text">
