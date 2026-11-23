@@ -9,7 +9,9 @@ import {
   challengePhase,
   daysUntilFinale,
   daysUntilStart,
+  addDays,
   greeting,
+  hourInTz,
   isEditableDate,
   todayKey,
   wrappedStatus,
@@ -23,7 +25,7 @@ import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { HeroCard } from "@/components/home/hero-card";
-import { WEEKLY_TARGETS, dailyScore, weekScore, weekStartOf, WEEKLY_STEPS_GOAL, WEEKLY_STEP_POINTS, stepPoints, stepsByDay } from "@/lib/checkin-plan";
+import { WEEKLY_TARGETS, dailyScore, weekProgress, weekScore, weekStartOf, WEEKLY_STEPS_GOAL, WEEKLY_STEP_POINTS, stepPoints, stepsByDay } from "@/lib/checkin-plan";
 import { AskField, BADDY_PHOTO } from "@/components/coach/baddy-ask";
 import { Avatar } from "@/components/ui/avatar";
 import { StepsSlide, TodayCarousel, TrainingSlide, WaterSlide, WeekSlide } from "@/components/home/today-slides";
@@ -35,6 +37,10 @@ import { SquadPreview } from "@/components/home/squad-preview";
 import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
+import { WelcomeSplash } from "@/components/sprite/welcome-splash";
+import { spriteFor } from "@/lib/sprites";
+import { welcomeMessage } from "@/lib/welcome";
+import { CHALLENGE_META } from "@/lib/wheel";
 import { WATER_GOAL_ML } from "@/lib/constants";
 import type { WaterEntry } from "@/lib/types";
 import type { DailyCheckin, Recipe, WallPost } from "@/lib/types";
@@ -118,9 +124,52 @@ async function Content() {
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
 
+  // Your own character says hello once a day, with a line about your day.
+  const mySprite = spriteFor(ctx.profile.display_name);
+  const welcome = mySprite && phase === "during" ? await loadWelcome() : null;
+  async function loadWelcome() {
+    const [{ data: toMe }, { data: reads }] = await Promise.all([
+      supabase.from("squad_messages").select("user_id, created_at, is_coach").eq("challenge_id", ctx.challenge.id).eq("recipient_id", ctx.userId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("direct_reads").select("peer_id, last_read_at").eq("user_id", ctx.userId),
+    ]);
+    const readAt = new Map(((reads ?? []) as { peer_id: string; last_read_at: string }[]).map((r) => [r.peer_id, r.last_read_at]));
+    const unreadIds = [
+      ...new Set(
+        ((toMe ?? []) as { user_id: string; created_at: string; is_coach: boolean | null }[])
+          .filter((m) => !m.is_coach && m.user_id !== ctx.userId && (!readAt.has(m.user_id) || m.created_at > readAt.get(m.user_id)!))
+          .map((m) => m.user_id),
+      ),
+    ];
+    const yesterday = mine.find((c) => c.checkin_date === addDays(today, -1));
+    const training = weekProgress(weekStart, mine.filter((c) => c.checkin_date >= weekStart), []).totals;
+    const openChallenge = mySpin?.category === "challenge" && mySpin.challenge_key && !mySpin.challenge_completed_at && !challengeProgress?.complete ? CHALLENGE_META[mySpin.challenge_key].title : null;
+    return welcomeMessage({
+      name: firstName(ctx.profile.display_name),
+      userId: ctx.userId,
+      date: today,
+      hour: hourInTz(now, ctx.challenge.timezone),
+      weekday: (new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7,
+      checkedInToday: Boolean(todayCheckin),
+      yesterdayComplete: yesterday ? dailyScore(yesterday.activities).complete : false,
+      streak: myStats.current,
+      weekSteps: mySteps,
+      stepsGoal: WEEKLY_STEPS_GOAL,
+      run: { done: training.run.done, target: WEEKLY_TARGETS.run },
+      strength: { done: training.strength.done, target: WEEKLY_TARGETS.strength },
+      waterMl: waterTotal,
+      waterGoalMl: WATER_GOAL_ML,
+      superBadi: crowned.has(ctx.userId),
+      canSpin: !mySpin,
+      openChallenge,
+      unreadFrom: unreadIds.map((id) => ({ id, name: nameOf(id) })),
+      finaleIn: finale,
+    });
+  }
+
   return (
     <Page className="space-y-4"><div className="h-1" />
       <WelcomeToast />
+      {welcome && mySprite ? <WelcomeSplash userId={ctx.userId} date={today} sheet={mySprite} message={welcome} /> : null}
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="flex items-end justify-between gap-3 px-1">

@@ -5,6 +5,7 @@ import { SquadUnreadDot } from "@/components/app/squad-unread";
 import { BaddyBubble } from "@/components/coach/baddy-bubble";
 import { PresenceJoin } from "@/components/app/presence";
 import { HideOnChat } from "@/components/app/hide-on-chat";
+import { MessageSpriteJoin } from "@/components/sprite/message-sprite-join";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -18,6 +19,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <BaddyBubble />
       <Suspense fallback={null}>
         <PresenceJoin />
+      </Suspense>
+      <Suspense fallback={null}>
+        <MessageSpriteJoin />
       </Suspense>
       <HideOnChat>
         <BottomNav
