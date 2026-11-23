@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowUp, Check, CheckCheck, ChefHat, Clock3, Copy, FileText, Paperclip, Plus, Smile, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, CheckCheck, ChefHat, ChevronRight, Clock3, Copy, FileText, Paperclip, Plus, Smile, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BADDY_ID, CHAT_PAGE_SIZE, asSender, attachmentHref, attachmentLabel, formatTime, groupMessages, type ChatMember, type ChatMessage } from "@/lib/chat";
 import { QUICK_REACTIONS, SQUAD_KEY, dmKey, groupReactions, inConversation, readByPeer, typingLabel, type ReactionRow } from "@/lib/conversations";
@@ -11,6 +11,7 @@ import { mentionsBaddy } from "@/lib/coach/prompt";
 import type { DateKey } from "@/lib/dates";
 import { deleteMessage, loadNewerMessages, loadOlderMessages, markChatRead, sendMessage, toggleReaction, type MessageAttachment } from "@/app/actions/chat";
 import { applyMention, mentionQuery, mentionSuggestions, splitMentions, type MentionMember } from "@/lib/mentions";
+import { extractAppLinks } from "@/lib/app-links";
 import { announceTyping, stopTyping, useIsOnline, useTyping } from "@/lib/presence";
 import { Avatar } from "@/components/ui/avatar";
 import { MemberAvatar } from "@/components/ui/member-avatar";
@@ -384,6 +385,7 @@ export function ChatThread(props: Props) {
                         const url = m.attachment_path ? signed[m.attachment_path] : undefined;
                         const thumb = m.attachment_type === "recipe" ? recipes.find((r) => r.id === m.ref_id)?.image : m.attachment_type === "post" ? posts.find((p) => p.id === m.ref_id)?.image : undefined;
                         const msgReactions = reactions[m.id] ?? [];
+                        const { text: shownBody, links: appLinks } = extractAppLinks(m.body ?? "");
                         const read = !group && mine && readByPeer(m, peerLastRead);
                         const meta = (
                           <span className={cn("float-right ml-2 mt-1.5 flex translate-y-[3px] items-center gap-0.5 text-[10.5px] tabular-nums leading-none", mine ? "text-paper/65" : "text-muted")}>
@@ -449,9 +451,9 @@ export function ChatThread(props: Props) {
                                     </span>
                                   </span>
                                 ) : null}
-                                {m.body ? (
+                                {shownBody ? (
                                   <span className={cn("block whitespace-pre-wrap break-words text-[14.5px] leading-[1.38]", m.attachment_type && "px-2 pb-1 pt-1.5")}>
-                                    {splitMentions(m.body, mentionMembers).map((t, ti) =>
+                                    {splitMentions(shownBody, mentionMembers).map((t, ti) =>
                                       t.member ? (
                                         <span key={ti} className={cn("rounded-md px-1 font-semibold", mine ? "bg-white/15" : "bg-sage/20 text-ink", t.member.id === me && "ring-1 ring-sage")}>
                                           {t.text}
@@ -486,6 +488,16 @@ export function ChatThread(props: Props) {
                                 </span>
                               ) : null}
                             </div>
+
+                            {appLinks.length > 0 ? (
+                              <div className={cn("mt-1 flex flex-wrap gap-1.5", mine ? "justify-end" : "justify-start", msgReactions.length > 0 && "mt-5")}>
+                                {appLinks.map((l) => (
+                                  <Link key={l.href} href={l.href} className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12.5px] font-medium text-ink shadow-sm ring-1 ring-ink/[0.06] hover:bg-blush">
+                                    {l.label} <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : null}
 
                             {selected === m.id ? (
                               <div className={cn("relative z-20 mt-2 flex flex-col gap-1.5", mine ? "items-end" : "items-start", msgReactions.length > 0 && "mt-5")}>

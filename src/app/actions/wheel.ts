@@ -11,7 +11,7 @@ import { todayKey } from "@/lib/dates";
 import { weekStartOf } from "@/lib/checkin-plan";
 import { friendlyError } from "@/lib/errors";
 import { isOwnedMediaPath, signedUrl } from "@/lib/storage";
-import { CATEGORY_META, CHALLENGE_META, formatEuro, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
+import { CATEGORY_META, CHALLENGE_META, formatEuro, isDuplicateWin, swapOptions, type OwnedSpin, PRIZE_CATEGORIES, WHEEL_CATEGORIES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
 import type { ActionResult } from "@/lib/types";
 
 export interface PrizeChoice {
@@ -75,22 +75,20 @@ function postAsBaddy(ctx: Ctx, supabase: Supa, body: string) {
   });
 }
 
-/** Other prizes in the same level that can be won now and that this member does not have yet. */
-async function alternativesFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<PrizeChoice[]> {
-  const [{ data: ids }, { data: prizes }, { data: mine }] = await Promise.all([
+/** Other prizes in the same level that can be won now, of a brand this member does not have yet. */
+async function alternativesFor(ctx: Ctx, supabase: Supa, spin: SpinRecord, mine: OwnedSpin[]): Promise<PrizeChoice[]> {
+  const [{ data: ids }, { data: prizes }] = await Promise.all([
     supabase.rpc("wheel_available_ids", { p_challenge: ctx.challenge.id }),
-    supabase.from("prizes").select("id, brand, name").eq("challenge_id", ctx.challenge.id).eq("category", spin.category),
-    supabase.from("wheel_spins").select("prize_id").eq("user_id", ctx.userId).not("prize_id", "is", null),
+    supabase.from("prizes").select("id, brand, name, category").eq("challenge_id", ctx.challenge.id).eq("category", spin.category),
   ]);
   const available = new Set(((ids ?? []) as (string | { wheel_available_ids: string })[]).map((r) => (typeof r === "string" ? r : r.wheel_available_ids)));
-  const owned = new Set(((mine ?? []) as { prize_id: string }[]).map((r) => r.prize_id));
-  return ((prizes ?? []) as PrizeChoice[]).filter((p) => available.has(p.id) && !owned.has(p.id));
+  return swapOptions(spin, (prizes ?? []) as (PrizeChoice & { category: string })[], available, mine).map(({ id, brand, name }) => ({ id, brand, name }));
 }
 
 /**
- * Everything the reveal needs. A prize this member already won before is a
- * duplicate: it is not shared yet, and the member may spin again or pick
- * another prize in the same level.
+ * Everything the reveal needs. A prize this member already won before, or
+ * anything of the same brand, is a duplicate: it is not shared yet, and the
+ * member may spin again or pick another prize in the same level.
  */
 async function outcomeFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<SpinOutcome> {
   let description: string | null = null;
@@ -102,18 +100,19 @@ async function outcomeFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<S
   let duplicate = false;
   let alternatives: PrizeChoice[] = [];
   if (spin.prize_id) {
-    const [{ data: prize }, { count }] = await Promise.all([
+    const [{ data: prize }, { data: mineRows }] = await Promise.all([
       supabase.from("prizes").select("description, value_cents, url, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle(),
-      supabase.from("wheel_spins").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).eq("prize_id", spin.prize_id).neq("id", spin.id),
+      supabase.from("wheel_spins").select("id, prize_id, prize_brand").eq("user_id", ctx.userId).not("prize_id", "is", null),
     ]);
+    const mine = (mineRows ?? []) as OwnedSpin[];
     description = (prize?.description as string | null) ?? null;
     valueCents = (prize?.value_cents as number | null) ?? null;
     url = (prize?.url as string | null) ?? null;
     variants = (prize?.variants as string[] | null) ?? [];
     variantLabel = variants.length ? ((prize?.variant_label as string | null) ?? "Keuze") : null;
     image = prize?.image_path ? await signedUrl("prizes", prize.image_path as string) : null;
-    duplicate = (count ?? 0) > 0;
-    if (duplicate) alternatives = await alternativesFor(ctx, supabase, spin);
+    duplicate = isDuplicateWin(spin, mine);
+    if (duplicate) alternatives = await alternativesFor(ctx, supabase, spin, mine);
     else shareWin(ctx, supabase, spin, valueCents);
   } else if (spin.challenge_key) {
     shareChallenge(ctx, supabase, spin.challenge_key);

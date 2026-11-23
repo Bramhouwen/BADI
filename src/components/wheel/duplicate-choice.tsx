@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * level that you do not have yet. `onRespin` lets the wheel animate the new
  * spin; without it the new result shows up in the prize cabinet.
  */
-export function DuplicateChoice({ spinId, alternatives, onRespin, dark = false }: { spinId: string; alternatives: PrizeChoice[]; onRespin?: () => void; dark?: boolean }) {
+export function DuplicateChoice({ spinId, brand, alternatives, onRespin, dark = false }: { spinId: string; brand?: string | null; alternatives: PrizeChoice[]; onRespin?: () => void; dark?: boolean }) {
   const router = useRouter();
   const [pick, setPick] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,8 @@ export function DuplicateChoice({ spinId, alternatives, onRespin, dark = false }
 
   return (
     <div className={cn("space-y-3 rounded-[18px] p-3.5 text-left", dark ? "bg-[#fbf7f2] text-text" : "bg-gold/15")}>
-      <p className="text-[13.5px] font-semibold text-text">Deze heb je al gewonnen.</p>
-      <p className="-mt-2 text-[12.5px] leading-snug text-muted">Draai opnieuw, of kies iets anders uit dezelfde categorie.</p>
+      <p className="text-[13.5px] font-semibold text-text">{brand ? `Je hebt al iets van ${brand} gewonnen.` : "Deze heb je al gewonnen."}</p>
+      <p className="-mt-2 text-[12.5px] leading-snug text-muted">Draai opnieuw, kies iets anders uit dezelfde categorie, of hou deze gewoon.</p>
       <Button type="button" variant="secondary" size="sm" className="w-full" disabled={pending} onClick={respin}>
         <RotateCw className="h-4 w-4" strokeWidth={1.8} aria-hidden /> Opnieuw draaien
       </Button>

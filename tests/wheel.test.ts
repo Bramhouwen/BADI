@@ -152,3 +152,38 @@ describe("timing", () => {
     expect(countdownLabel(12 * 60_000)).toBe("12 min");
   });
 });
+
+describe("duplicates by brand", () => {
+  it("counts the same prize or the same brand as a duplicate", async () => {
+    const { isDuplicateWin, swapOptions } = await import("@/lib/wheel");
+    const mine = [
+      { id: "s1", prize_id: "mat", prize_brand: "Flowee" },
+      { id: "s2", prize_id: "pillow", prize_brand: "flowee" },
+      { id: "s3", prize_id: "bar", prize_brand: "Upfront" },
+    ];
+    expect(isDuplicateWin(mine[1], mine)).toBe(true);
+    expect(isDuplicateWin(mine[2], mine)).toBe(false);
+    const prizes = [
+      { id: "pillow", brand: "Flowee", category: "large" },
+      { id: "box", brand: "Upfront", category: "large" },
+      { id: "starter", brand: "Oot Granola", category: "large" },
+      { id: "bloom", brand: "Cabau Lifestyle", category: "large" },
+      { id: "duo", brand: "Cabau Lifestyle", category: "jackpot" },
+    ];
+    const options = swapOptions({ ...mine[1], category: "large" }, prizes, new Set(["pillow", "box", "starter", "bloom", "duo"]), mine);
+    // Not Flowee (this brand), not Upfront (already won), not another level.
+    expect(options.map((p) => p.id)).toEqual(["starter", "bloom"]);
+  });
+});
+
+describe("app links in chat", () => {
+  it("turns app paths into chips and leaves them out of the text", async () => {
+    const { extractAppLinks } = await import("@/lib/app-links");
+    expect(extractAppLinks("@Irene kies iets anders in je prijzenkast: /wheel/prizes. Zo niet, veel plezier!")).toEqual({
+      text: "@Irene kies iets anders in je prijzenkast. Zo niet, veel plezier!",
+      links: [{ href: "/wheel/prizes", label: "Naar je prijzenkast" }],
+    });
+    expect(extractAppLinks("Kijk op https://badi-mu.vercel.app/wheel nu").links).toEqual([{ href: "/wheel", label: "Naar het Weekrad" }]);
+    expect(extractAppLinks("Gewoon tekst met 1/2 portie").links).toEqual([]);
+  });
+});

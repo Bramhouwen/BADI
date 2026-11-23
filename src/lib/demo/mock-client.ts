@@ -7,7 +7,7 @@ import { buildSeed, demoId, type Row, type Store } from "./seed";
 import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
 import { personalRecords, weekStartOf, type RecordSession } from "@/lib/checkin-plan";
 import { todayKey } from "@/lib/dates";
-import { availablePrizes, expectedCost, wheelOdds, WHEEL_CHALLENGES, type PrizeLike, type WheelCategory } from "@/lib/wheel";
+import { availablePrizes, expectedCost, isDuplicateWin, swapOptions, wheelOdds, WHEEL_CHALLENGES, type OwnedSpin, type PrizeLike, type WheelCategory } from "@/lib/wheel";
 
 type Result = { data: unknown; error: { message: string } | null; count: number | null };
 
@@ -339,15 +339,16 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       const fail = (message: string) => Promise.resolve({ data: null, error: { message }, count: null });
       if (!spin) return fail("NOT_FOUND");
       if (spin.status !== "won") return fail("ALREADY_CLAIMED");
-      const owned = s.wheel_spins.filter((x) => x.user_id === DEMO_USER_ID && x.prize_id);
-      if (!owned.some((x) => x.id !== spin.id && x.prize_id === spin.prize_id)) return fail("NOT_DUPLICATE");
+      const owned = s.wheel_spins.filter((x) => x.user_id === DEMO_USER_ID && x.prize_id) as unknown as OwnedSpin[];
+      if (!isDuplicateWin(spin as unknown as OwnedSpin, owned)) return fail("NOT_DUPLICATE");
       const old = s.prizes.find((p) => p.id === spin.prize_id);
       if (name === "wheel_respin") {
         if (old) old.stock = Number(old.stock) + 1;
         s.wheel_spins.splice(s.wheel_spins.indexOf(spin), 1);
         return Promise.resolve(spinWheelTwin(s));
       }
-      const next = demoAvailable(s).find((p) => p.id === args.p_prize && p.category === spin.category && !owned.some((x) => x.prize_id === p.id));
+      const avail = demoAvailable(s);
+      const next = swapOptions(spin as unknown as OwnedSpin & { category: string }, avail as unknown as (PrizeLike & Row & { brand: string })[], new Set(avail.map((p) => p.id)), owned).find((p) => p.id === args.p_prize);
       if (!next) return fail("NOT_AVAILABLE");
       if (old) old.stock = Number(old.stock) + 1;
       next.stock = Number(next.stock) - 1;

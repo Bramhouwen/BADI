@@ -150,6 +150,36 @@ export function landingRotation(segs: readonly Segment[], category: WheelCategor
 }
 
 /* --------------------------------------------------------------------------
+ * Duplicates
+ * ------------------------------------------------------------------------ */
+
+export interface OwnedSpin {
+  id: string;
+  prize_id: string | null;
+  prize_brand: string | null;
+}
+
+const sameBrand = (a: string | null, b: string | null) => Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
+
+/** A win is a duplicate when the member already won this prize, or anything of the same brand. Same rule as wheel_is_duplicate. */
+export function isDuplicateWin(spin: OwnedSpin, mine: readonly OwnedSpin[]): boolean {
+  if (!spin.prize_id) return false;
+  return mine.some((o) => o.id !== spin.id && o.prize_id && (o.prize_id === spin.prize_id || sameBrand(o.prize_brand, spin.prize_brand)));
+}
+
+/** Prizes to swap a duplicate for: same level, available now, of a brand the member has not won. */
+export function swapOptions<P extends { id: string; brand: string; category: string }>(spin: OwnedSpin & { category: string }, prizes: readonly P[], available: ReadonlySet<string>, mine: readonly OwnedSpin[]): P[] {
+  const others = mine.filter((o) => o.id !== spin.id && o.prize_id);
+  return prizes.filter(
+    (p) =>
+      p.category === spin.category &&
+      available.has(p.id) &&
+      !sameBrand(p.brand, spin.prize_brand) &&
+      !others.some((o) => o.prize_id === p.id || sameBrand(o.prize_brand, p.brand)),
+  );
+}
+
+/* --------------------------------------------------------------------------
  * Budget
  * ------------------------------------------------------------------------ */
 

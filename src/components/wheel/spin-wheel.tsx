@@ -169,7 +169,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
                   <div className={cn(jackpot && "rounded-[18px] bg-[#fbf7f2] p-3 text-text")}>
                     <PrizeInfo category={outcome.category} valueCents={outcome.valueCents} description={outcome.description} url={outcome.url} center />
                   </div>
-                  {outcome.duplicate ? <DuplicateChoice spinId={outcome.spinId} alternatives={outcome.alternatives} onRespin={() => spin(outcome.spinId)} dark={jackpot} /> : null}
+                  {outcome.duplicate ? <DuplicateChoice spinId={outcome.spinId} brand={outcome.brand} alternatives={outcome.alternatives} onRespin={() => spin(outcome.spinId)} dark={jackpot} /> : null}
                   <ClaimForm spinId={outcome.spinId} variantLabel={outcome.variantLabel} variants={outcome.variants} />
                   <Link href="/wheel/prizes" className={cn("block text-[13px] underline-offset-2 hover:underline", jackpot ? "text-[#f3d488]" : "text-muted")}>
                     Naar mijn prijzenkast

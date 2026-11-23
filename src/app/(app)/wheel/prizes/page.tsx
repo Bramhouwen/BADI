@@ -5,7 +5,7 @@ import { Check, Gift, Trophy } from "lucide-react";
 import { getSquad, requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { loadPrizes, myChallengeProgress, prizeImages, SPIN_COLUMNS, type SpinRow } from "@/lib/wheel-server";
-import { CATEGORY_META, CHALLENGE_META, STATUS_LABELS, type ChallengeProgress } from "@/lib/wheel";
+import { CATEGORY_META, CHALLENGE_META, STATUS_LABELS, isDuplicateWin, swapOptions, type ChallengeProgress } from "@/lib/wheel";
 import { formatDateNl, todayKey } from "@/lib/dates";
 import { weekStartOf } from "@/lib/checkin-plan";
 import { firstName, cn } from "@/lib/utils";
@@ -91,9 +91,8 @@ async function Content() {
   ]);
   // A prize won twice: until it is claimed, spin again or pick another one in the same level.
   const available = new Set(((availableRows ?? []) as (string | { wheel_available_ids: string })[]).map((r) => (typeof r === "string" ? r : r.wheel_available_ids)));
-  const owned = new Set(myPrizes.map((s) => s.prize_id).filter(Boolean));
-  const isDuplicate = (s: SpinRow) => Boolean(s.prize_id) && myPrizes.some((o) => o.id !== s.id && o.prize_id === s.prize_id);
-  const alternativesFor = (s: SpinRow) => prizes.filter((p) => p.category === s.category && available.has(p.id) && !owned.has(p.id)).map((p) => ({ id: p.id, brand: p.brand, name: p.name }));
+  const isDuplicate = (s: SpinRow) => isDuplicateWin(s, myPrizes);
+  const alternativesFor = (s: SpinRow) => swapOptions(s, prizes, available, myPrizes).map((p) => ({ id: p.id, brand: p.brand, name: p.name }));
   const codes = new Map(((codeRows ?? []) as { spin_id: string; code: string }[]).map((c) => [c.spin_id, c.code]));
   const prizeOf = (id: string | null) => prizes.find((p) => p.id === id) ?? null;
   const current = myChallenges.find((s) => s.week_start === thisWeek) ?? null;
@@ -160,7 +159,7 @@ async function Content() {
                   ) : null}
                   {s.status === "won" && isDuplicate(s) ? (
                     <div className="mt-3">
-                      <DuplicateChoice spinId={s.id} alternatives={alternativesFor(s)} />
+                      <DuplicateChoice spinId={s.id} brand={s.prize_brand} alternatives={alternativesFor(s)} />
                     </div>
                   ) : null}
                   {s.status === "won" ? (
