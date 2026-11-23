@@ -51,3 +51,12 @@ describe("who sees the world", () => {
     expect(canSeeWorld(null)).toBe(false);
   });
 });
+
+describe("sitting", () => {
+  it("every character has a sitting pose without its own chair, so it fits any seat", () => {
+    for (const key of WORLD_SPRITES) {
+      const manifest = JSON.parse(fs.readFileSync(path.join(PUBLIC, "poppetjes", key, "manifest.json"), "utf8")) as SpriteManifest;
+      expect(manifest.animations.zitten.withChair, key).toBeFalsy();
+    }
+  });
+});

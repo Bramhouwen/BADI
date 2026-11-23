@@ -185,7 +185,7 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 - Zitten op de eettafelstoelen zit er nog niet in: je zou met je rug naar de kijker zitten en er is geen achteraanzicht.
 
 **Open**
-- Bram kan nog niet zitten: zijn zitpose zit in zijn eigen leunstoel. Hij loopt naar de zitplek en blijft staan, met een melding.
+- ~~Bram kan nog niet zitten~~ Opgelost: losse zitpose `docs/wereld/bron/bram-zitten.png`, op de maat van het stijlvoorbeeld (204 px figuurhoogte in het frame).
 - De deur leidt nog nergens heen: buiten, kantoor en sportschool zijn stap 1b.
 - Snelheid op een echte telefoon nog meten (doel 60 fps).
 

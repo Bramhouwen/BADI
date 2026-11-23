@@ -33,16 +33,14 @@
     },
     "zitten": {
       "frames": [
-        "zitten-01.png",
-        "zitten-02.png"
+        "zitten-01.png"
       ],
       "fps": 1,
       "loop": true,
       "anchor": {
-        "x": 171,
-        "y": 272
-      },
-      "withChair": true
+        "x": 167,
+        "y": 266
+      }
     },
     "slapen": {
       "frames": [
