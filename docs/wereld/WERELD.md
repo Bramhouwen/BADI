@@ -307,3 +307,30 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Tik je in "Zeg iets…", dan zoomt de camera in op je poppetje, zodat je jezelf en wie bij je staat ziet terwijl je typt.
 - Het tekstvak heeft letters van 16 px, zodat een iPhone niet vanzelf inzoomt.
 - Getest met een half zo hoog scherm in de browser. Met een echt toetsenbord op iPhone en Android nog controleren.
+
+### Fase 3: privé praten (23-11-2026)
+
+**Gedaan**
+- Privéberichten in de wereld zijn de bestaande privéchat van de app (`squad_messages` met een ontvanger, `direct_reads` voor gelezen). Een bericht uit de wereld staat ook in Squad > Chat en andersom. De database laat alleen de twee deelnemers lezen.
+- Tik op iemand en kies "Privé praten": een gesprekspaneel met de laatste berichten, een tekstvak, "typt…" en "Open in chat" voor foto's en reacties (`src/components/world/world-dm.tsx`).
+- Ballon met slotje: een privébericht verschijnt boven de afzender als jullie in dezelfde ruimte zijn. Alleen jullie twee ontvangen het bericht, dus niemand anders ziet die ballon (`src/lib/world/dm.ts`).
+- Enveloppen:
+  - boven je eigen poppetje een envelop met het aantal ongelezen berichten; tik erop voor het postvak;
+  - boven wie je schreef een kleine envelop, alleen voor jou.
+- Postvak: knop bovenin met het aantal ongelezen. Je ziet al je privégesprekken met het laatste bericht en het aantal ongelezen, en wie online is en waar.
+- Typpuntjes boven wie jou een privébericht aan het schrijven is. Dat gebruikt het bestaande typsignaal en wordt niet opgeslagen.
+- Pushmelding bij een privébericht en bewaren als de ander offline is: dat deed de app al.
+- Verplichte privacytest: `supabase/tests/privechat.sql`, te draaien in de SQL Editor van Supabase.
+  - Een derde lid probeert een privégesprek van twee anderen te lezen, te wijzigen, te verwijderen, uit naam van een ander te sturen, de leesstatus te zien en erop te reageren.
+  - Uitkomst als tabel; het testbericht wordt altijd teruggedraaid.
+  - Lokaal gedraaid in PGlite (echte Postgres) tegen dezelfde tabellen en regels: alle controles slagen. Met een expres lekke leesregel meldt het script FOUT.
+- Demo: Sam schrijft je na een tijdje privé, met typpuntjes vooraf.
+- Tests voor wie welke ballon en envelop ziet en hoe ongelezen wordt geteld.
+
+**Anders gegaan**
+- Geen nieuwe tabellen `conversations`, `conversation_members` en `messages`: de app had privéchat al, met dezelfde afscherming en leesstatus. Nieuwe tabellen zouden een tweede, losse chat maken.
+
+**Open**
+- Privacytest draaien in de echte database (SQL Editor).
+- Gesprek in je eigen kamer met de deur dicht (type 'room'): wacht op de eigen kamers in fase 4.
+- "Is aan het typen" gaat over het openbare online-kanaal: wie daar meeluistert ziet wie naar wie typt, niet wat. Dichtzetten kan door dat kanaal privé te maken.

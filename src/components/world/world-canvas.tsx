@@ -14,6 +14,7 @@ import { seatAt } from "@/lib/world/engine/seats";
 import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites";
 import type { Door, SceneDef, Seat } from "@/lib/world/engine/scene";
 import type { WorldLink } from "./world-link";
+import { lockBalloonOver, totalUnread, type WorldDm } from "@/lib/world/dm";
 
 const PAGE = "#f6ece4";
 
@@ -56,6 +57,12 @@ export interface WorldMember {
 export interface WorldCanvasApi {
   /** Look at your own character from close by, for example while you type. */
   focusMe(): void;
+  /** A private message between you and someone in this room: a balloon with a lock over the sender. */
+  showPrivate(dm: WorldDm): void;
+  /** Unread private messages per sender: envelopes over them and the total over you. */
+  setUnread(unread: Readonly<Record<string, number>>): void;
+  /** Who is typing a private message to you. */
+  setTyping(ids: readonly string[]): void;
 }
 
 /** Who you tapped. */
@@ -65,6 +72,8 @@ export interface PickedMember {
   online: boolean;
   /** When they were last in the world, for someone offline. */
   lastSeen: string | null;
+  /** You tapped yourself. */
+  self?: boolean;
 }
 
 /**
@@ -402,8 +411,16 @@ export function WorldCanvas({
         // Coming in through a door: that is your place in this scene now.
         if (door) remember();
         let picked: string | null = null;
+        let unread = new Map<string, number>();
+        let typing = new Set<string>();
         const pick = (sx: number, sy: number): boolean => {
-          const hit = avatarAt(sx, sy, avatars.filter((a) => a !== me0), characters, scene, cam, view);
+          const hit = avatarAt(sx, sy, avatars, characters, scene, cam, view);
+          // Yourself: only when there is post, to open the post box.
+          if (hit === me0) {
+            if (!(unread.get(me.id) ?? 0)) return false;
+            onPickRef.current?.({ id: me.id, name: me.name, online: true, lastSeen: null, self: true });
+            return true;
+          }
           picked = hit ? hit.id : null;
           const o = hit ? others.get(hit.id) : null;
           onPickRef.current?.(hit && o ? { id: hit.id, name: hit.name, online: o.live, lastSeen: o.lastSeen } : null);
@@ -416,6 +433,20 @@ export function WorldCanvas({
               follow = true;
               const l = zoomLimits();
               if (cam.zoom < l.close * 0.95) zoomTo = l.close;
+            },
+            showPrivate(dm) {
+              const inRoom = (id: string) => id === me.id || Boolean(others.get(id)?.live);
+              const over = lockBalloonOver(dm, me.id, inRoom);
+              const who = over === me.id ? me0 : over ? others.get(over)?.av : null;
+              if (who) who.speech = { text: dm.text, until: performance.now() + speechSeconds(dm.text) * 1000, private: true };
+            },
+            setUnread(next) {
+              unread = new Map(Object.entries(next).filter(([, n]) => n > 0));
+              const total = totalUnread(next);
+              if (total) unread.set(me.id, total);
+            },
+            setTyping(ids) {
+              typing = new Set(ids);
             },
           };
 
@@ -553,7 +584,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, labels: edit ? undefined : { me: me.id, selected: picked, unread, typing } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

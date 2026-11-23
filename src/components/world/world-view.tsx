@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, SendHorizontal, Users, X } from "lucide-react";
+import { ChevronLeft, Lock, Mail, SendHorizontal, Users, X } from "lucide-react";
 import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
 import type { Door } from "@/lib/world/engine/scene";
 import { SPEECH_MAX, type WorldPresence } from "@/lib/world/engine/presence";
 import { relativeTimeNl } from "@/lib/dates";
 import { WorldCanvas, type PickedMember, type WorldCanvasApi, type WorldMember } from "./world-canvas";
 import { createWorldLink, type WorldLink } from "./world-link";
+import { WorldPostBox, WorldThread, useLiveDms } from "./world-dm";
+import { loadWorldInbox, type WorldInboxItem } from "@/app/actions/world";
+import { totalUnread, withUnread, type WorldDm } from "@/lib/world/dm";
+import { useTypingAll } from "@/lib/presence";
 
 const FADE_MS = 220;
 
@@ -56,6 +60,15 @@ export function WorldView({
   const [text, setText] = useState("");
   const lastSaid = useRef(0);
   const canvasApi = useRef<WorldCanvasApi | null>(null);
+  // Private messages: unread per sender, the post box and an open conversation.
+  const [unread, setUnread] = useState<Record<string, number>>({});
+  const [inbox, setInbox] = useState<WorldInboxItem[] | null>(null);
+  const [post, setPost] = useState<{ kind: "box" } | { kind: "thread"; peer: { id: string; name: string } } | null>(null);
+  const [incoming, setIncoming] = useState<WorldDm[]>([]);
+  const openWith = post?.kind === "thread" ? post.peer.id : null;
+  const typingAll = useTypingAll();
+  const typingToMe = [...typingAll.keys()].filter((k) => k.startsWith("dm:")).map((k) => k.slice(3));
+  const typingKey = typingToMe.join(",");
   // The part of the screen you can see: smaller while the keyboard is open.
   const [visible, setVisible] = useState<{ top: number; height: number; keyboard: boolean } | null>(null);
 
@@ -108,6 +121,53 @@ export function WorldView({
     };
   }, [edit, me.id, challengeId]);
 
+  // The post box, with unread counts per member.
+  const refreshInbox = () =>
+    void loadWorldInbox().then((r) => {
+      if (!r.ok || !r.data) return;
+      setInbox(r.data);
+      setUnread(Object.fromEntries(r.data.filter((i) => i.unread > 0).map((i) => [i.userId, i.unread])));
+    });
+  useEffect(() => {
+    if (!edit) refreshInbox();
+  }, [edit]);
+
+  // A private message you sent or received, live.
+  const onDm = (dm: WorldDm) => {
+    canvasApi.current?.showPrivate(dm);
+    setUnread((u) => withUnread(u, dm, me.id, openWith));
+    const peer = dm.from === me.id ? dm.to : dm.from;
+    if (peer === openWith) setIncoming((list) => (list.some((m) => m.id === dm.id) ? list : [...list, dm]));
+    if (post?.kind === "box") refreshInbox();
+  };
+  useLiveDms(me.id, challengeId, !edit, onDm);
+
+  // The canvas shows envelopes and typing dots; it gets them again after every door.
+  useEffect(() => {
+    canvasApi.current?.setUnread(unread);
+  }, [unread]);
+  useEffect(() => {
+    canvasApi.current?.setTyping(typingKey ? typingKey.split(",") : []);
+  }, [typingKey]);
+  const syncCanvas = () => {
+    canvasApi.current?.setUnread(unread);
+    canvasApi.current?.setTyping(typingToMe);
+  };
+
+  const openThread = (peer: { id: string; name: string }) => {
+    setPicked(null);
+    setShowWho(false);
+    setIncoming([]);
+    setUnread((u) => ({ ...u, [peer.id]: 0 }));
+    setPost({ kind: "thread", peer });
+  };
+  const openBox = () => {
+    setPicked(null);
+    setShowWho(false);
+    setPost({ kind: "box" });
+    refreshInbox();
+  };
+
   const onDoor = (door: Door) => {
     const to = door.to;
     if (!to || !SCENES[to]) return;
@@ -151,8 +211,11 @@ export function WorldView({
             overlay={overlay}
             edit={edit}
             onDoor={onDoor}
-            onReady={() => setDim(false)}
-            onPick={setPicked}
+            onReady={() => {
+              setDim(false);
+              syncCanvas();
+            }}
+            onPick={(who) => (who?.self ? openBox() : setPicked(who))}
             apiRef={canvasApi}
           />
         ) : null}
@@ -173,9 +236,22 @@ export function WorldView({
         {!edit ? (
           <button
             type="button"
+            onClick={() => (post ? setPost(null) : openBox())}
+            aria-label={totalUnread(unread) ? `Postvak, ${totalUnread(unread)} ongelezen` : "Postvak"}
+            className="pointer-events-auto relative ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/90 text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur"
+          >
+            <Mail className="h-[18px] w-[18px]" aria-hidden />
+            {totalUnread(unread) ? (
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#c9573a] px-1 text-[11px] font-bold text-white">{totalUnread(unread) > 9 ? "9+" : totalUnread(unread)}</span>
+            ) : null}
+          </button>
+        ) : null}
+        {!edit ? (
+          <button
+            type="button"
             onClick={() => setShowWho((v) => !v)}
             aria-expanded={showWho}
-            className="pointer-events-auto ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3.5 text-[13.5px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur"
+            className="pointer-events-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3.5 text-[13.5px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur"
           >
             <Users className="h-4 w-4" aria-hidden />
             {peers.length + 1} online
@@ -209,7 +285,31 @@ export function WorldView({
         </div>
       ) : null}
 
-      {!edit ? (
+      {!edit && post?.kind === "box" ? (
+        <WorldPostBox
+          items={inbox}
+          unread={unread}
+          where={new Map(peers.map(([id, p]) => [id, SCENES[p.scene]?.name ?? "In de wereld"]))}
+          bottom={visible?.keyboard ? 8 : "calc(var(--sab) + 12px)"}
+          onOpen={openThread}
+          onClose={() => setPost(null)}
+        />
+      ) : null}
+      {!edit && post?.kind === "thread" ? (
+        <WorldThread
+          key={post.peer.id}
+          me={me.id}
+          peer={post.peer}
+          incoming={incoming}
+          bottom={visible?.keyboard ? 8 : "calc(var(--sab) + 12px)"}
+          onSent={(dm) => canvasApi.current?.showPrivate(dm)}
+          onBack={openBox}
+          onClose={() => setPost(null)}
+          onFocusInput={() => canvasApi.current?.focusMe()}
+        />
+      ) : null}
+
+      {!edit && !post ? (
         <div className="absolute inset-x-3 mx-auto max-w-md space-y-2" style={{ bottom: visible?.keyboard ? 8 : "calc(var(--sab) + 12px)" }}>
           {picked ? (
             <div className="flex items-center gap-3 rounded-[18px] bg-white/95 px-4 py-3 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur" role="status">
@@ -218,7 +318,15 @@ export function WorldView({
                 <p className="truncate text-[15px] font-semibold text-text">{picked.name}</p>
                 <p className="truncate text-[12.5px] text-muted">{picked.online ? "Online" : picked.lastSeen ? `Offline · ${relativeTimeNl(picked.lastSeen)}` : "Offline"}</p>
               </div>
-              <button type="button" onClick={() => setPicked(null)} aria-label="Sluiten" className="ml-auto grid h-9 w-9 place-items-center rounded-full text-muted">
+              <button
+                type="button"
+                onClick={() => openThread({ id: picked.id, name: picked.name })}
+                className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#2b1d18] px-3.5 text-[13px] font-semibold text-white"
+              >
+                <Lock className="h-3.5 w-3.5" aria-hidden />
+                Privé praten
+              </button>
+              <button type="button" onClick={() => setPicked(null)} aria-label="Sluiten" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted">
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </div>

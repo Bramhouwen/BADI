@@ -89,6 +89,16 @@ function subscribeTyping(listener: () => void) {
   return () => typingListeners.delete(listener);
 }
 
+/** Everyone typing right now, by conversation ("squad" or "dm:<sender>"). */
+export function useTypingAll(): ReadonlyMap<string, readonly string[]> {
+  return useSyncExternalStore(
+    subscribeTyping,
+    () => typing,
+    () => EMPTY_MAP,
+  );
+}
+const EMPTY_MAP: ReadonlyMap<string, readonly string[]> = new Map();
+
 /** Member ids typing in a conversation right now. */
 export function useTyping(key: string): readonly string[] {
   return useSyncExternalStore(

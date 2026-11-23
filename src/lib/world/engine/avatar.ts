@@ -28,8 +28,8 @@ export interface Avatar {
   since: number;
   /** Called once when the route is done. */
   onArrive: (() => void) | null;
-  /** A speech balloon above the head until `until` (performance.now()). */
-  speech: { text: string; until: number } | null;
+  /** A speech balloon above the head until `until` (performance.now()); `private` adds a lock (a private message). */
+  speech: { text: string; until: number; private?: boolean } | null;
   /** Not in the world right now: shown where they were last, in a rest pose. */
   offline: boolean;
 }

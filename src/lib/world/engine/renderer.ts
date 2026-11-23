@@ -97,6 +97,10 @@ export interface Labels {
   me: string;
   /** The character someone tapped: shows its name. */
   selected: string | null;
+  /** Unread private messages: over the sender (only you see it), and the total over yourself. */
+  unread?: ReadonlyMap<string, number>;
+  /** Who is typing a private message to you. */
+  typing?: ReadonlySet<string>;
 }
 
 export interface RenderInput {
@@ -221,6 +225,26 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.fill();
       ctx.restore();
     }
+    // unread private messages: an envelope with the number
+    const count = labels.unread?.get(a.id) ?? 0;
+    if (count > 0) {
+      drawEnvelope(ctx, hx - (a.offline ? 18 : 0), top - 14, count);
+      top -= 30;
+    }
+    // typing a private message to you: three dots
+    if (labels.typing?.has(a.id)) {
+      roundRect(ctx, hx - 22, top - 24, 44, 22, 11);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fill();
+      for (let i = 0; i < 3; i++) {
+        const lift = Math.sin(now / 160 - i * 0.9) * 2;
+        ctx.fillStyle = "#8a7468";
+        ctx.beginPath();
+        ctx.arc(hx - 10 + i * 10, top - 13 + lift, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      top -= 28;
+    }
     // name tag of the one you tapped
     if (labels.selected === a.id && a.id !== labels.me) {
       ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
@@ -236,7 +260,8 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
     if (a.speech && a.speech.until > now) {
       ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
       const lines = wrap(ctx, a.speech.text, 190);
-      const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 24;
+      const lock = a.speech.private ? 18 : 0;
+      const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 24 + lock;
       const h = lines.length * 18 + 14;
       const fade = Math.min(1, (a.speech.until - now) / 400);
       ctx.globalAlpha = fade;
@@ -256,10 +281,59 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.lineTo(hx + 7, by + h - 1);
       ctx.closePath();
       ctx.fill();
+      if (lock) drawLock(ctx, bx + 16, by + h / 2);
       ctx.fillStyle = "#2b1d18";
-      lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 7 + 9 + i * 18));
+      lines.forEach((l, i) => ctx.fillText(l, bx + lock + (w - lock) / 2, by + 7 + 9 + i * 18));
       ctx.globalAlpha = 1;
     }
+  }
+  ctx.restore();
+}
+
+/** A small padlock: a private message, only for the two of you. */
+function drawLock(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.save();
+  ctx.strokeStyle = "#8a5a2b";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(cx, cy - 2, 3.6, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillStyle = "#b5803f";
+  roundRect(ctx, cx - 5.5, cy - 2, 11, 8.5, 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** An envelope in a white circle with the number of unread messages. */
+function drawEnvelope(ctx: CanvasRenderingContext2D, cx: number, cy: number, count: number) {
+  ctx.save();
+  ctx.shadowColor = "rgba(43,29,24,0.2)";
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.fillStyle = "#c9573a";
+  roundRect(ctx, cx - 7.5, cy - 5, 15, 10.5, 2);
+  ctx.fill();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(cx - 7, cy - 4.3);
+  ctx.lineTo(cx, cy + 1);
+  ctx.lineTo(cx + 7, cy - 4.3);
+  ctx.stroke();
+  if (count > 1) {
+    const label = count > 9 ? "9+" : String(count);
+    ctx.font = "700 10.5px ui-sans-serif, system-ui, sans-serif";
+    const w = Math.max(16, ctx.measureText(label).width + 8);
+    roundRect(ctx, cx + 6, cy - 16, w, 16, 8);
+    ctx.fillStyle = "#2b1d18";
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.fillText(label, cx + 6 + w / 2, cy - 8);
   }
   ctx.restore();
 }
