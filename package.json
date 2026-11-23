@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
-    "sprite": "node scripts/make-sprite.mjs"
+    "sprite": "node scripts/make-sprite.mjs",
+    "wereld:poppetjes": "node scripts/make-wereld-poppetjes.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

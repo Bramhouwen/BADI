@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { Activity, Bell } from "lucide-react";
+import { Activity, Bell, Map as MapIcon } from "lucide-react";
 import { getContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrl } from "@/lib/storage";
@@ -30,7 +30,7 @@ async function HeaderStatus() {
   const unread = count ?? 0;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       {phase === "during" ? <span className="sr-only">Dag {day} van {total}</span> : null}
       {phase === "during" ? (
         <Link
@@ -46,6 +46,9 @@ async function HeaderStatus() {
           ) : null}
         </Link>
       ) : null}
+      <Link href="/wereld" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="BADI Wereld">
+        <MapIcon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+      </Link>
       <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="Mijn performance">
         <Activity className="h-[18px] w-[18px]" strokeWidth={1.7} />
       </Link>

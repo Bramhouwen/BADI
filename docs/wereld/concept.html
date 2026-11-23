@@ -1,0 +1,687 @@
+<title>BADI Wereld</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Geist:wght@400;500;600&display=swap">
+<style>
+  /* Layout: phone-width column. A large isometric town in a pannable frame; the house opens into four rooms. */
+  :root {
+    --bg: #f6ece4;
+    --paper: #fbf3ec;
+    --blush: #efdfd4;
+    --card: #ffffff;
+    --ink: #6e4034;
+    --text: #3b2a24;
+    --muted: #8f7469;
+    --sage: #8c9e7a;
+    --gold: #d2b27a;
+    --line: rgba(110, 64, 52, 0.12);
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --body: "Geist", -apple-system, "Segoe UI", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 48px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .wrap > *, main { min-width: 0; }
+  main { display: grid; gap: 14px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  header { display: grid; gap: 6px; }
+  .eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink); display: flex; gap: 8px; align-items: center; margin: 0; }
+  .eyebrow span { background: var(--blush); border-radius: 999px; padding: 2px 9px; letter-spacing: 0.12em; }
+  h1 { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1.02; margin: 0; text-wrap: balance; }
+  h1 em { font-weight: 400; color: var(--ink); }
+  .lede { margin: 0; color: var(--muted); max-width: 48ch; }
+
+  .me { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 3px; box-shadow: 0 6px 16px -12px rgba(95,53,41,.45); }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 500; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+  /* The map */
+  .map-card { background: #b9c99f; border-radius: 26px; overflow: hidden; position: relative; box-shadow: 0 30px 50px -36px rgba(60,70,40,.7); }
+  .viewport { height: min(66vh, 560px); overflow: auto; overscroll-behavior: contain; scrollbar-width: none; cursor: grab; }
+  .viewport::-webkit-scrollbar { display: none; }
+  .viewport.dragging { cursor: grabbing; }
+  .world { position: relative; width: 1180px; height: 820px; }
+  .world svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hint { position: absolute; left: 12px; bottom: 12px; background: rgba(255,255,255,.85); border-radius: 999px; padding: 5px 11px; font-size: 12px; color: var(--text); pointer-events: none; }
+  .place { position: absolute; transform: translate(-50%, -50%); border: 0; background: var(--text); color: var(--paper); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; box-shadow: 0 10px 20px -12px rgba(0,0,0,.6); }
+  .place small { font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .75; margin-left: 4px; }
+  .tag { position: absolute; transform: translate(-50%, 0); background: var(--card); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap; box-shadow: 0 6px 12px -8px rgba(0,0,0,.5); pointer-events: none; }
+
+  .sprite { position: absolute; transform: translate(-50%, -100%); aspect-ratio: 320 / 272; background-repeat: no-repeat; background-size: 600% 400%; pointer-events: none; }
+  .sprite.flip { transform: translate(-50%, -100%) scaleX(-1); }
+  .badge { position: absolute; transform: translate(-50%, -100%); font-size: 16px; pointer-events: none; animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 50% { translate: 0 -4px; } }
+
+  .goto { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 6px 12px 6px 9px; background: var(--card); box-shadow: 0 6px 16px -12px rgba(95,53,41,.45); font-size: 13px; font-weight: 500; white-space: nowrap; }
+
+  .who { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .who button { width: 100%; text-align: left; border: 0; background: var(--card); border-radius: 18px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 24px -22px rgba(95,53,41,.7); }
+  .who img { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+  .who .t { min-width: 0; flex: 1; display: grid; }
+  .who b { font-size: 14.5px; }
+  .who span { font-size: 13px; color: var(--muted); }
+  .who .visit { color: var(--ink); font-weight: 500; }
+
+  /* House and rooms */
+  .head { display: flex; align-items: center; gap: 10px; }
+  .back { border: 0; background: var(--card); border-radius: 999px; width: 40px; height: 40px; display: grid; place-items: center; flex: none; box-shadow: 0 6px 16px -12px rgba(95,53,41,.5); font-size: 20px; }
+  .head h2 { font-family: var(--display); font-weight: 600; font-size: 28px; margin: 0; line-height: 1.1; }
+  .head p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .floors { background: var(--paper); border-radius: 24px; padding: 12px; display: grid; gap: 12px; border: 1px solid var(--line); }
+  .floor { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .floor-label { grid-column: 1 / -1; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 2px 2px -4px; }
+  .tile { text-align: left; border: 0; background: var(--bg); border-radius: 18px; padding: 8px 8px 10px; display: grid; gap: 4px; }
+  .tile .name { font-weight: 600; font-size: 14px; }
+  .tile .status { font-size: 12.5px; color: var(--muted); }
+  .stage { position: relative; width: 100%; aspect-ratio: 440 / 330; }
+  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .room-box { background: var(--paper); border-radius: 24px; border: 1px solid var(--line); padding: 8px; position: relative; }
+  .empty { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); background: rgba(255,255,255,.92); border-radius: 16px; padding: 8px 14px; font-size: 13.5px; text-align: center; max-width: 80%; }
+  .bubble { position: absolute; transform: translate(-50%, -100%); background: var(--card); border-radius: 14px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; box-shadow: 0 10px 22px -14px rgba(95,53,41,.6); white-space: nowrap; pointer-events: none; }
+  .seen { background: var(--blush); border-radius: 16px; padding: 10px 14px; font-size: 13.5px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 999px; padding: 11px 18px; font-weight: 600; font-size: 14px; background: var(--ink); color: var(--paper); }
+  .btn.soft { background: var(--card); color: var(--ink); box-shadow: 0 6px 16px -12px rgba(95,53,41,.5); }
+  .panel { background: var(--card); border-radius: 20px; padding: 14px 16px; display: grid; gap: 10px; box-shadow: 0 14px 30px -26px rgba(95,53,41,.6); }
+  .panel h3 { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .pick { border: 1px solid var(--line); background: var(--paper); border-radius: 14px; padding: 7px 4px; display: grid; justify-items: center; gap: 1px; font-size: 12px; font-weight: 500; }
+  .pick span { font-size: 19px; line-height: 1.2; }
+  .pick[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .stats { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+  .stats li { display: flex; gap: 10px; align-items: baseline; }
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--text); color: var(--paper); border-radius: 999px; padding: 10px 16px; font-size: 13.5px; box-shadow: 0 14px 30px -16px rgba(0,0,0,.5); max-width: calc(100% - 32px); text-align: center; }
+
+  .how { display: grid; gap: 10px; }
+  .how h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 6px 0 0; }
+  .how dl { margin: 0; display: grid; gap: 10px; }
+  .how div { background: var(--paper); border-radius: 16px; padding: 12px 14px; border: 1px solid var(--line); }
+  .how dt { font-weight: 600; }
+  .how dd { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .badge { animation: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">BADI <span>Concept</span></p>
+    <h1>BADI <em>Wereld</em></h1>
+    <p class="lede">Een eigen kamer in het BADI-huis, en een wereld eromheen: het park, de sportschool en Traffic Today. Je ziet waar iedereen is en wie bij wie op bezoek is.</p>
+  </header>
+  <div class="me">Jij bent <div class="seg" id="me" role="group" aria-label="Kies wie je bent"></div></div>
+  <main id="view"></main>
+
+  <section class="how" aria-labelledby="how-title">
+    <h2 id="how-title">Zo werkt het</h2>
+    <dl>
+      <div><dt>Status bepaalt waar je bent</dt><dd>Hardlopen zet je in het park, sportschool in de sportschool, werken bij Traffic Today. Thuis, chillen, koken en slapen zijn in je eigen kamer. Na 4 uur zonder update ga je vanzelf terug naar huis.</dd></div>
+      <div><dt>Op bezoek is zichtbaar</dt><dd>Loop je iemands kamer binnen, dan staat jouw poppetje daar. De hele squad ziet "Bram is op bezoek bij Irene", op de kaart, in het raam en in de lijst. Ga je weg, dan verdwijnt het.</dd></div>
+      <div><dt>Je kamer groeit mee</dt><dd>Weekrad-prijzen op de plank, een plant die groeit met je streak en de kroon boven je bed als je Super Badi bent.</dd></div>
+      <div><dt>Rustig en privé</dt><dd>Alleen jullie vieren zien de wereld. Een status of bezoek geeft geen pushmelding.</dd></div>
+    </dl>
+    <p class="note">Concept met voorbeeldstatussen. Niets hiervan staat al in de app.</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- Characters ----------
+  const STANDARD = {
+    run: { frames: [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5]], fps: 11 },
+    gym: { frames: [[2,0],[2,1],[2,2],[2,3],[2,4],[2,5]], fps: 7 },
+    stand: { frames: [[3,0]], fps: 1 },
+    desk: { frames: [[3,2]], fps: 1 },
+    sleep: { frames: [[3,4]], fps: 1 },
+    wave: { frames: [[3,0],[3,1]], fps: 3 },
+    chill: { frames: [[3,3]], fps: 1 },
+  };
+  const BRAM = {
+    run: { frames: [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5]], fps: 11 },
+    gym: { frames: [[1,0],[1,1],[1,2],[1,3],[1,4],[1,5]], fps: 7 },
+    stand: { frames: [[3,0]], fps: 1 },
+    desk: { frames: [[3,1]], fps: 1 },
+    sleep: { frames: [[3,4],[3,5]], fps: 0.7 },
+    wave: { frames: [[2,1],[2,2],[2,3],[2,2]], fps: 4 },
+    chill: { frames: [[3,3]], fps: 1 },
+  };
+  const STATUS = {
+    hardlopen: { label: "Hardlopen", icon: "🏃", where: "park", anim: "run" },
+    sportschool: { label: "Sportschool", icon: "🏋️", where: "gym", anim: "gym" },
+    werken: { label: "Werken", icon: "💼", where: "office", anim: "stand" },
+    thuis: { label: "Thuis", icon: "🏠", where: "home", anim: "wave" },
+    chillen: { label: "Chillen", icon: "🛋️", where: "home", anim: "chill" },
+    koken: { label: "Koken", icon: "🍳", where: "home", anim: "stand" },
+    slapen: { label: "Slapen", icon: "😴", where: "home", anim: "sleep" },
+  };
+  const PLACES = {
+    park: { name: "Het park", short: "Park" },
+    gym: { name: "De sportschool", short: "Sportschool" },
+    office: { name: "Traffic Today", short: "Traffic Today" },
+    home: { name: "BADI-huis", short: "BADI-huis" },
+  };
+  // Example squad (concept data).
+  const people = [
+    { key: "anne", name: "Anne", sheet: "sprites/anne.webp", face: "sprites/anne-face.png", anims: STANDARD, status: "hardlopen", since: "18:30", wall: "#d3d8c2", streak: 12, prizes: 2, crown: false },
+    { key: "daphne", name: "Daphne", sheet: "sprites/daphne.webp", face: "sprites/daphne-face.png", anims: STANDARD, status: "sportschool", since: "18:05", wall: "#ecd3c3", streak: 8, prizes: 1, crown: false },
+    { key: "irene", name: "Irene", sheet: "sprites/irene.webp", face: "sprites/irene-face.png", anims: STANDARD, status: "koken", since: "19:10", wall: "#cfdde6", streak: 5, prizes: 3, crown: false },
+    { key: "bram", name: "Bram", sheet: "sprites/bram.webp", face: "sprites/bram-face.png", anims: BRAM, status: "werken", since: "16:40", wall: "#ead9b4", streak: 6, prizes: 1, crown: true },
+  ];
+  const byKey = (k) => people.find((p) => p.key === k);
+  let me = "bram";
+  /** Who is visiting whose room: visitor key -> host key. */
+  const visits = new Map();
+  const visitingHost = (p) => visits.get(p.key) ?? null;
+  const visitorsOf = (host) => people.filter((p) => visits.get(p.key) === host.key);
+  function whereText(p) {
+    const host = visitingHost(p);
+    if (host) return `op bezoek bij ${byKey(host).name}`;
+    const s = STATUS[p.status];
+    return s.where === "home" ? `${s.label.toLowerCase()}, thuis` : `${s.label.toLowerCase()} · ${PLACES[s.where].name}`;
+  }
+
+  // ---------- Animation ----------
+  const live = new Set();
+  function spriteEl(p, anim, heightCss) {
+    const el = document.createElement("div");
+    el.className = "sprite";
+    el.style.backgroundImage = `url(${p.sheet})`;
+    el.style.height = heightCss;
+    el._p = p;
+    el._anim = anim;
+    el._start = performance.now();
+    live.add(el);
+    paint(el, el._start);
+    return el;
+  }
+  function paint(el, now) {
+    const a = el._p.anims[el._anim];
+    const i = reduce ? 0 : Math.floor(((now - el._start) / 1000) * a.fps) % a.frames.length;
+    const [r, c] = a.frames[i];
+    el.style.backgroundPosition = `${c * 20}% ${(r * 100) / 3}%`;
+  }
+  const movers = new Set();
+  function loop(now) {
+    for (const el of live) {
+      if (!el.isConnected) { live.delete(el); continue; }
+      paint(el, now);
+    }
+    for (const m of movers) {
+      if (!m.el.isConnected) { movers.delete(m); continue; }
+      m.step(now);
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- Isometric helpers ----------
+  const shade = (hex, f) => {
+    const n = parseInt(hex.slice(1), 16);
+    const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.max(0, Math.min(255, Math.round(v * f))));
+    return `rgb(${c.join(",")})`;
+  };
+  function iso(TW, TH, OX, OY) {
+    const P = (x, y, z = 0) => [OX + (x - y) * TW / 2, OY + (x + y) * TH / 2 - z];
+    const pts = (list) => list.map(([x, y, z]) => P(x, y, z).map((v) => v.toFixed(1)).join(",")).join(" ");
+    const box = (x, y, w, d, h, color, z = 0) => {
+      const top = pts([[x, y, z + h], [x + w, y, z + h], [x + w, y + d, z + h], [x, y + d, z + h]]);
+      const left = pts([[x, y + d, z], [x + w, y + d, z], [x + w, y + d, z + h], [x, y + d, z + h]]);
+      const right = pts([[x + w, y, z], [x + w, y + d, z], [x + w, y + d, z + h], [x + w, y, z + h]]);
+      return `<polygon points="${left}" fill="${shade(color, 0.84)}"/><polygon points="${right}" fill="${shade(color, 0.7)}"/><polygon points="${top}" fill="${color}"/>`;
+    };
+    // A flat rectangle on the front (y = const) or right (x = const) face of a block.
+    const onY = (y, x1, x2, z1, z2, fill) => `<polygon points="${pts([[x1, y, z1], [x2, y, z1], [x2, y, z2], [x1, y, z2]])}" fill="${fill}"/>`;
+    const onX = (x, y1, y2, z1, z2, fill) => `<polygon points="${pts([[x, y1, z1], [x, y2, z1], [x, y2, z2], [x, y1, z2]])}" fill="${fill}"/>`;
+    return { P, pts, box, onY, onX };
+  }
+
+  // ---------- The world map ----------
+  const MW = 1180, MH = 820;
+  const M = iso(56, 28, MW / 2, 70);
+  // Four quarters around the crossroads: park at the top, house left, Traffic Today right, gym at the bottom.
+  const HOUSE = { x: 2.5, y: 12, w: 4, d: 4, h: 170 };
+  // Windows on the front face of the house: two floors, two rooms each.
+  const WINDOWS = { anne: [2.85, 4.35, 105, 150], daphne: [4.65, 6.15, 105, 150], irene: [2.85, 4.35, 30, 75], bram: [4.65, 6.15, 30, 75] };
+  const TRACK = { cx: 4.4, cy: 4.4, rx: 2.8, ry: 2.1 };
+  const SPOTS = { gym: [[13.2, 16.5], [14.6, 16.7], [16.0, 16.5]], office: [[13.0, 7.9], [14.5, 8.1], [15.9, 7.9]] };
+  const AT = { park: [TRACK.cx, TRACK.cy], gym: [14.5, 14], office: [14.2, 4.8], home: [HOUSE.x + 2, HOUSE.y + 2] };
+
+  function worldSvg() {
+    const { P, pts, box, onY, onX } = M;
+    let s = `<svg viewBox="0 0 ${MW} ${MH}" aria-hidden="true">`;
+    // land, roads and park
+    s += `<polygon points="${pts([[0,0,0],[20,0,0],[20,20,0],[0,20,0]])}" fill="#c8d6a8"/>`;
+    s += `<polygon points="${pts([[0,20,0],[20,20,0],[20,20,-22],[0,20,-22]])}" fill="#a8946f"/><polygon points="${pts([[20,0,0],[20,20,0],[20,20,-22],[20,0,-22]])}" fill="#8e7a58"/>`;
+    s += `<polygon points="${pts([[0,0,0],[8.6,0,0],[8.6,8.6,0],[0,8.6,0]])}" fill="#b5c98f"/>`;
+    s += box(8.6, 0, 1.4, 20, 1, "#d8cbbd") + box(0, 8.8, 20, 1.4, 1, "#d8cbbd");
+    for (let i = 0; i < 20; i += 1.6) s += box(9.22, i, 0.16, 0.7, 1.2, "#fbf3ec") + box(i, 9.42, 0.7, 0.16, 1.2, "#fbf3ec");
+    // running track: an oval
+    const track = [];
+    for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.12) track.push(P(TRACK.cx + TRACK.rx * Math.cos(t), TRACK.cy + TRACK.ry * Math.sin(t), 1));
+    s += `<polyline points="${track.map((p) => p.join(",")).join(" ")}" fill="none" stroke="#d9a98c" stroke-width="22" stroke-linejoin="round"/>`;
+    s += `<polyline points="${track.map((p) => p.join(",")).join(" ")}" fill="none" stroke="#e8c2a8" stroke-width="2" stroke-dasharray="6 8"/>`;
+    // trees
+    const tree = (x, y, r = 22) => {
+      const [tx, ty] = P(x, y, 0);
+      return box(x - 0.1, y - 0.1, 0.2, 0.2, 18, "#8a6a4f") + `<ellipse cx="${tx}" cy="${ty - 34}" rx="${r}" ry="${r * 1.05}" fill="#7f9a72"/><ellipse cx="${tx - 6}" cy="${ty - 42}" rx="${r * 0.55}" ry="${r * 0.55}" fill="#97b087"/>`;
+    };
+    [[0.7, 0.8], [7.9, 0.9], [0.9, 7.8], [7.8, 7.6], [4.4, 0.5], [0.5, 4.4]].forEach(([x, y]) => (s += tree(x, y)));
+    [[0.8, 10.9], [7.9, 18.7], [18.8, 18.8], [18.7, 10.9], [10.9, 0.8], [18.8, 0.8], [11, 18.6], [18.6, 9.2]].forEach(([x, y]) => (s += tree(x, y, 18)));
+    // bench in the park
+    s += box(6.6, 7.9, 1.2, 0.35, 10, "#a26a55");
+
+    // BADI house
+    const { x, y, w, d, h } = HOUSE;
+    s += box(x - 0.4, y - 0.4, w + 0.8, d + 0.8, 4, "#e2d2c2");
+    s += box(x, y, w, d, h, "#f2e3d6");
+    // floors line
+    s += onY(y + d, x, x + w, 88, 92, "#e6d3c3") + onX(x + w, y, y + d, 88, 92, "#d6c1b0");
+    // windows (front face), lit when someone is home
+    for (const [k, [x1, x2, z1, z2]] of Object.entries(WINDOWS)) {
+      const p = byKey(k);
+      const home = STATUS[p.status].where === "home" || visitorsOf(p).length > 0;
+      s += onY(y + d, x1 - 0.06, x2 + 0.06, z1 - 4, z2 + 4, "#8a5a48");
+      s += onY(y + d, x1, x2, z1, z2, home ? "#ffe7b8" : "#9fb3c1");
+      s += `<polyline points="${pts([[ (x1 + x2) / 2, y + d, z1], [(x1 + x2) / 2, y + d, z2]])}" stroke="#8a5a48" stroke-width="2"/>`;
+    }
+    // door and side windows
+    s += onX(x + w, y + 1.4, y + 2.6, 0, 60, "#8a5a48") + onX(x + w, y + 1.5, y + 2.5, 2, 56, "#a26a55");
+    for (const yy of [0.4, 3.0]) for (const zz of [30, 110]) s += onX(x + w, y + yy, y + yy + 0.7, zz, zz + 40, "#c9d6df");
+    // roof
+    const apex = P(x + w / 2, y + d / 2, h + 70);
+    const r1 = P(x, y + d, h), r2 = P(x + w, y + d, h), r3 = P(x + w, y, h);
+    s += `<polygon points="${[r1, r2, apex].map((p) => p.join(",")).join(" ")}" fill="#7a4537"/><polygon points="${[r2, r3, apex].map((p) => p.join(",")).join(" ")}" fill="#5f3529"/>`;
+
+    // Sportschool
+    s += box(12, 12, 5, 3.6, 6, "#d9d2c8");
+    s += box(12, 12, 5, 3.6, 96, "#e3e9ee") + box(12, 12, 5, 3.6, 8, "#7fa3bd", 96);
+    s += onY(15.6, 12.4, 16.6, 14, 74, "#b8cfdd") + onY(15.6, 14.2, 14.8, 0, 60, "#5f7d93");
+    for (let i = 12.9; i < 16.6; i += 0.9) s += `<polyline points="${pts([[i, 15.6, 14], [i, 15.6, 74]])}" stroke="#e3e9ee" stroke-width="2"/>`;
+    s += box(12.6, 16, 3.8, 1.2, 1.5, "#8c9e7a");
+    // Traffic Today office
+    s += box(12, 2.4, 4.4, 4.6, 6, "#d9d2c8");
+    s += box(12, 2.4, 4.4, 4.6, 160, "#3f3b3a") + box(12, 2.4, 4.4, 4.6, 6, "#d2b27a", 160);
+    for (let zz = 18; zz < 150; zz += 26) {
+      s += onY(7, 12.3, 16.1, zz, zz + 16, "#9fc0d4");
+      s += onX(16.4, 2.7, 6.7, zz, zz + 16, "#7fa3bd");
+    }
+    s += onY(7, 13.6, 14.8, 0, 46, "#d2b27a") + onY(7, 13.7, 14.7, 2, 42, "#f4e6c2");
+    s += `</svg>`;
+    return s;
+  }
+
+  function worldView() {
+    view.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "map-card";
+    const vp = document.createElement("div");
+    vp.className = "viewport";
+    vp.setAttribute("aria-label", "Kaart van de BADI-wereld. Sleep om rond te kijken.");
+    const world = document.createElement("div");
+    world.className = "world";
+    world.innerHTML = worldSvg();
+    vp.appendChild(world);
+    card.append(vp);
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Sleep om rond te kijken";
+    card.append(hint);
+
+    const { P } = M;
+    const at = (el, [x, y], z = 0, dx = 0, dy = 0) => {
+      const [sx, sy] = P(x, y, z);
+      el.style.left = sx + dx + "px";
+      el.style.top = sy + dy + "px";
+      return el;
+    };
+    // place labels (buttons)
+    const label = (text, count, pos, z, go) => {
+      const b = document.createElement("button");
+      b.className = "place";
+      b.type = "button";
+      b.innerHTML = `${text}<small>${count ? count + " " + (count === 1 ? "persoon" : "personen") : "leeg"}</small>`;
+      at(b, pos, z);
+      if (go) b.addEventListener("click", go);
+      world.appendChild(b);
+      return b;
+    };
+    const countAt = (where) => people.filter((p) => !visitingHost(p) && STATUS[p.status].where === where).length;
+    label("BADI-huis", countAt("home") + visits.size, AT.home, HOUSE.h + 96, () => (location.hash = "huis"));
+    label("Park", countAt("park"), [TRACK.cx - 2.6, TRACK.cy - 2.6], 40);
+    label("Sportschool", countAt("gym"), AT.gym, 140);
+    label("Traffic Today", countAt("office"), AT.office, 196);
+
+    // faces in the house windows
+    for (const p of people) {
+      const inRoom = [p, ...visitorsOf(p)].filter((q) => (q === p ? STATUS[p.status].where === "home" && !visitingHost(p) : true));
+      const [x1, x2, z1] = WINDOWS[p.key];
+      inRoom.forEach((q, i) => {
+        const img = document.createElement("img");
+        img.src = q.face;
+        img.alt = "";
+        img.style.cssText = "position:absolute;width:34px;height:34px;border-radius:50%;transform:translate(-50%,-100%);box-shadow:0 0 0 2px #fff;pointer-events:none;";
+        at(img, [x1 + (x2 - x1) * (inRoom.length > 1 ? 0.3 + i * 0.4 : 0.5), HOUSE.y + HOUSE.d], z1 + 6);
+        world.appendChild(img);
+      });
+    }
+    // people outside
+    const groups = { gym: [], office: [] };
+    for (const p of people) {
+      if (visitingHost(p)) continue;
+      const s = STATUS[p.status];
+      if (s.where === "park") {
+        const el = spriteEl(p, "run", "78px");
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = p.name;
+        world.append(el, tag);
+        let t = people.indexOf(p) * 1.7;
+        let last = performance.now();
+        movers.add({
+          el,
+          step(now) {
+            const dt = Math.min(0.05, (now - last) / 1000);
+            last = now;
+            if (!reduce) t += dt * 0.32;
+            const pos = [TRACK.cx + TRACK.rx * Math.cos(t), TRACK.cy + TRACK.ry * Math.sin(t)];
+            const ahead = P(TRACK.cx + TRACK.rx * Math.cos(t + 0.05), TRACK.cy + TRACK.ry * Math.sin(t + 0.05));
+            const [sx, sy] = P(pos[0], pos[1], 2);
+            el.style.left = sx + "px";
+            el.style.top = sy + "px";
+            el.classList.toggle("flip", ahead[0] < sx);
+            tag.style.left = sx + "px";
+            tag.style.top = sy + 4 + "px";
+          },
+        });
+      } else if (s.where in groups) groups[s.where].push(p);
+    }
+    for (const [where, list] of Object.entries(groups)) {
+      list.forEach((p, i) => {
+        const pos = SPOTS[where][i % SPOTS[where].length];
+        const el = at(spriteEl(p, STATUS[p.status].anim, "78px"), pos, 2);
+        const tag = at(document.createElement("div"), pos, 0, 0, 4);
+        tag.className = "tag";
+        tag.textContent = p.name;
+        world.append(el, tag);
+      });
+    }
+
+    // drag to pan (mouse); touch scrolls natively
+    let drag = null;
+    vp.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.target.closest("button")) return;
+      drag = { x: e.clientX, y: e.clientY, l: vp.scrollLeft, t: vp.scrollTop };
+      vp.classList.add("dragging");
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      vp.scrollLeft = drag.l - (e.clientX - drag.x);
+      vp.scrollTop = drag.t - (e.clientY - drag.y);
+    });
+    window.addEventListener("pointerup", () => { drag = null; vp.classList.remove("dragging"); });
+
+    const goto = document.createElement("div");
+    goto.className = "goto";
+    goto.setAttribute("aria-label", "Ga naar");
+    const centerOn = ([x, y], z = 0) => {
+      const [sx, sy] = P(x, y, z);
+      vp.scrollTo({ left: sx - vp.clientWidth / 2, top: sy - vp.clientHeight / 2, behavior: reduce ? "auto" : "smooth" });
+    };
+    const targets = [
+      ["🏠 BADI-huis", AT.home, 80],
+      ["🏃 Park", AT.park, 0],
+      ["🏋️ Sportschool", AT.gym, 40],
+      ["💼 Traffic Today", AT.office, 80],
+    ];
+    targets.forEach(([text, pos, z]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.textContent = text;
+      b.addEventListener("click", () => centerOn(pos, z));
+      goto.appendChild(b);
+    });
+
+    const list = document.createElement("ul");
+    list.className = "who";
+    list.setAttribute("aria-label", "Wie is waar");
+    for (const p of people) {
+      const li = document.createElement("li");
+      const host = visitingHost(p);
+      li.innerHTML = `<button type="button"><img src="${p.face}" alt=""><span class="t"><b>${p.name}${p.key === me ? " (jij)" : ""}${p.crown ? " 👑" : ""}</b><span class="${host ? "visit" : ""}">${host ? "🚪" : STATUS[p.status].icon} ${whereText(p)} · sinds ${p.since}</span></span><span aria-hidden="true">›</span></button>`;
+      li.querySelector("button").addEventListener("click", () => {
+        const s = STATUS[p.status];
+        if (host) location.hash = "kamer-" + host;
+        else if (s.where === "home") location.hash = "kamer-" + p.key;
+        else centerOn(AT[s.where], 40);
+      });
+      list.appendChild(li);
+    }
+    view.append(card, goto, list);
+    requestAnimationFrame(() => centerOn([10, 9], 40));
+  }
+
+  // ---------- House and rooms ----------
+  const R = iso(60, 30, 220, 134);
+  const RW = 440, RH = 330, N = 6, WALL = 120;
+  const ROOM_SPOTS = { slapen: [1.6, 4.9, 26], koken: [1.75, 1.2, 0], chillen: [4.9, 4.55, 18], thuis: [2.6, 3.4, 0] };
+  function roomSvg(p) {
+    const { P, pts, box, onY, onX } = R;
+    let s = `<svg viewBox="0 0 ${RW} ${RH}" role="img" aria-label="Kamer van ${p.name}">`;
+    s += `<polygon points="${pts([[0,0,0],[0,N,0],[0,N,WALL],[0,0,WALL]])}" fill="${shade(p.wall, 0.94)}"/>`;
+    s += `<polygon points="${pts([[0,0,0],[N,0,0],[N,0,WALL],[0,0,WALL]])}" fill="${p.wall}"/>`;
+    s += `<polygon points="${pts([[0,0,0],[N,0,0],[N,N,0],[0,N,0]])}" fill="#e6cdb8"/>`;
+    for (let i = 1; i < N; i++) s += `<polyline points="${pts([[i,0,0],[i,N,0]])}" stroke="#dcc0aa" stroke-width="1" fill="none"/>`;
+    s += onY(0, 2.1, 3.6, 52, 102, "#f4f8fb") + `<polyline points="${pts([[2.85,0,52],[2.85,0,102]])}" stroke="#d9e3ea" stroke-width="2"/>`;
+    s += onX(0, 2.2, 3.4, 64, 98, "#fbf3ec") + onX(0, 2.4, 3.2, 70, 92, p.wall);
+    s += box(0, 0.6, 0.35, 1.5, 4, "#a77a5c", 62);
+    for (let i = 0; i < Math.min(p.prizes, 3); i++) s += box(0.06, 0.75 + i * 0.45, 0.22, 0.22, 12, "#e2b656", 66);
+    if (p.crown) {
+      const [cx, cy] = P(0, 4.9, 104);
+      s += `<text x="${cx}" y="${cy}" font-size="22" text-anchor="middle">👑</text>`;
+    }
+    s += box(0, 0.2, 0.95, 2.3, 30, "#f2e6da") + box(0.08, 0.55, 0.6, 0.55, 3, "#3b2a24", 30) + box(0.08, 1.4, 0.6, 0.55, 3, "#3b2a24", 30);
+    s += box(4.1, 0.15, 1.7, 0.95, 26, "#b98a68") + box(4.65, 0.3, 0.6, 0.06, 18, "#3b2a24", 26) + box(4.45, 1.35, 0.6, 0.6, 14, "#7a5a4a");
+    const leaf = Math.min(46, 18 + p.streak * 2);
+    s += box(5.35, 0.15, 0.5, 0.5, 14, "#c9845f");
+    const [px, py] = P(5.6, 0.4, 14 + leaf / 2);
+    s += `<ellipse cx="${px}" cy="${py}" rx="${leaf * 0.55}" ry="${leaf * 0.6}" fill="#7f9a72"/><ellipse cx="${px - 6}" cy="${py - 6}" rx="${leaf * 0.3}" ry="${leaf * 0.35}" fill="#93ad84"/>`;
+    s += box(1.7, 2.6, 2.0, 1.7, 1, "#d9b9a1");
+    s += box(0.15, 4.0, 2.1, 1.75, 22, "#f6efe8") + box(0.2, 4.05, 0.55, 1.65, 6, "#ffffff", 22) + box(0.8, 4.0, 1.45, 1.75, 4, shade(p.wall, 0.8), 22);
+    s += box(4.2, 5.05, 1.7, 0.7, 30, "#a26a55") + box(4.2, 4.0, 1.7, 1.05, 16, "#b97a62") + box(5.6, 4.0, 0.3, 1.75, 24, "#a26a55");
+    s += `</svg>`;
+    return s;
+  }
+  function put(stage, el, [x, y, z]) {
+    const [sx, sy] = R.P(x, y, z);
+    el.style.left = (sx / RW) * 100 + "%";
+    el.style.top = ((sy + 6) / RH) * 100 + "%";
+    stage.appendChild(el);
+    return el;
+  }
+  function fillRoom(stage, p, scale) {
+    const s = STATUS[p.status];
+    const home = s.where === "home" && !visitingHost(p);
+    let own = null;
+    if (home) {
+      own = put(stage, spriteEl(p, s.anim, scale + "%"), ROOM_SPOTS[p.status]);
+      if (p.status === "koken" || p.status === "slapen") {
+        const b = document.createElement("div");
+        b.className = "badge";
+        b.textContent = p.status === "koken" ? "♨️" : "💤";
+        const [x, y, z] = ROOM_SPOTS[p.status];
+        const [bx, by] = R.P(x, y, z + (p.status === "slapen" ? 52 : 92));
+        b.style.left = (bx / RW) * 100 + "%";
+        b.style.top = (by / RH) * 100 + "%";
+        stage.appendChild(b);
+      }
+    }
+    visitorsOf(p).forEach((v, i) => put(stage, spriteEl(v, "wave", scale + "%"), [3.6 + i * 0.6, 4.3 - i * 0.3, 0]));
+    return { own, home };
+  }
+
+  function houseView() {
+    view.innerHTML = "";
+    const head = document.createElement("div");
+    head.className = "head";
+    head.innerHTML = `<button class="back" type="button" aria-label="Terug naar de kaart">‹</button><div><h2>BADI-huis</h2><p>Vier kamers. Tik om binnen te lopen.</p></div>`;
+    head.querySelector(".back").addEventListener("click", () => (location.hash = "wereld"));
+    const floors = document.createElement("div");
+    floors.className = "floors";
+    [["2e verdieping", people.slice(0, 2)], ["Begane grond", people.slice(2)]].forEach(([label, list]) => {
+      const floor = document.createElement("div");
+      floor.className = "floor";
+      floor.innerHTML = `<p class="floor-label">${label}</p>`;
+      list.forEach((p) => {
+        const tile = document.createElement("button");
+        tile.className = "tile";
+        tile.type = "button";
+        tile.innerHTML = `<div class="stage">${roomSvg(p)}</div><div class="name">${p.name}${p.key === me ? " (jij)" : ""}</div><div class="status">${visitingHost(p) ? "🚪" : STATUS[p.status].icon} ${whereText(p)}</div>`;
+        tile.setAttribute("aria-label", `Kamer van ${p.name}: ${whereText(p)}. Loop binnen.`);
+        fillRoom(tile.querySelector(".stage"), p, 34);
+        tile.addEventListener("click", () => (location.hash = "kamer-" + p.key));
+        floor.appendChild(tile);
+      });
+      floors.appendChild(floor);
+    });
+    view.append(head, floors);
+  }
+
+  function roomView(p) {
+    // Walking into someone else's room makes you their visitor, for everyone to see.
+    visits.clear();
+    if (p.key !== me) visits.set(me, p.key);
+    view.innerHTML = "";
+    const mine = p.key === me;
+    const head = document.createElement("div");
+    head.className = "head";
+    head.innerHTML = `<button class="back" type="button" aria-label="${mine ? "Terug naar het huis" : "Weggaan en terug naar het huis"}">‹</button><div><h2>Kamer van ${p.name}</h2><p>${visitingHost(p) ? "🚪" : STATUS[p.status].icon} ${whereText(p)} · sinds ${p.since}</p></div>`;
+    head.querySelector(".back").addEventListener("click", () => {
+      visits.clear();
+      location.hash = "huis";
+    });
+    const box = document.createElement("div");
+    box.className = "room-box";
+    const stage = document.createElement("div");
+    stage.className = "stage";
+    stage.innerHTML = roomSvg(p);
+    box.appendChild(stage);
+    const { own, home } = fillRoom(stage, p, 34);
+    if (!home) {
+      const e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = `${p.name} is er niet: ${whereText(p)}.`;
+      stage.appendChild(e);
+    }
+    const parts = [head, box];
+
+    if (!mine) {
+      const seen = document.createElement("p");
+      seen.className = "seen";
+      const others = people.filter((q) => q.key !== me).map((q) => q.name);
+      seen.textContent = `👀 ${others.join(", ").replace(/, ([^,]*)$/, " en $1")} zien nu: ${byKey(me).name} is op bezoek bij ${p.name}.`;
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      actions.innerHTML = `<button class="btn" type="button" data-a="wave">👋 Zwaai</button><button class="btn soft" type="button" data-a="compliment">💌 Compliment</button><button class="btn soft" type="button" data-a="map">🗺️ Bekijk de kaart</button><button class="btn soft" type="button" data-a="leave">Weggaan</button>`;
+      actions.addEventListener("click", (e) => {
+        const a = e.target.closest("button")?.dataset.a;
+        if (a === "wave") {
+          if (own) {
+            own._anim = "wave";
+            own._start = performance.now();
+            const [x, y, z] = ROOM_SPOTS[p.status];
+            const [bx, by] = R.P(x, y, z + 120);
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.textContent = "Hoi! 👋";
+            bubble.style.left = (bx / RW) * 100 + "%";
+            bubble.style.top = (by / RH) * 100 + "%";
+            stage.appendChild(bubble);
+            setTimeout(() => { bubble.remove(); own._anim = STATUS[p.status].anim; }, 2200);
+          }
+          say(home ? `${p.name} zwaait terug.` : `${p.name} ziet later dat je langs was.`);
+        }
+        if (a === "compliment") say(`In de app opent hier het compliment voor ${p.name}.`);
+        if (a === "leave") { visits.clear(); location.hash = "wereld"; }
+        // Look at the map while you stay on visit: your face is in the window, the list says where you are.
+        if (a === "map") location.hash = "wereld";
+      });
+      parts.push(seen, actions);
+    } else {
+      const picker = document.createElement("div");
+      picker.className = "panel";
+      picker.innerHTML = `<h3>Jouw status</h3><div class="picker">${Object.entries(STATUS)
+        .map(([k, s]) => `<button class="pick" type="button" data-s="${k}" aria-pressed="${k === p.status}"><span>${s.icon}</span>${s.label}</button>`)
+        .join("")}</div>`;
+      picker.addEventListener("click", (e) => {
+        const k = e.target.closest("button")?.dataset.s;
+        if (!k) return;
+        p.status = k;
+        p.since = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+        if (STATUS[k].where === "home") roomView(p);
+        else { say(`Je poppetje gaat naar ${PLACES[STATUS[k].where].name}.`); location.hash = "wereld"; }
+      });
+      parts.push(picker);
+    }
+    const stats = document.createElement("div");
+    stats.className = "panel";
+    stats.innerHTML = `<h3>In deze kamer</h3><ul class="stats">
+      <li><span>🏆</span><span>${p.prizes} ${p.prizes === 1 ? "prijs" : "prijzen"} uit het Weekrad op de plank</span></li>
+      <li><span>🌱</span><span>Plant groeit met de streak: ${p.streak} dagen op rij</span></li>
+      ${p.crown ? `<li><span>👑</span><span>Kroon boven het bed: Super Badi van vorige week</span></li>` : ""}
+    </ul>`;
+    parts.push(stats);
+    view.append(...parts);
+  }
+
+  // ---------- Shell ----------
+  const view = document.getElementById("view");
+  const toast = document.getElementById("toast");
+  let toastTimer;
+  function say(text) {
+    toast.textContent = text;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast.hidden = true), 2600);
+  }
+  const meBox = document.getElementById("me");
+  function renderMe() {
+    meBox.innerHTML = people.map((p) => `<button type="button" data-k="${p.key}" aria-pressed="${p.key === me}">${p.name}</button>`).join("");
+  }
+  meBox.addEventListener("click", (e) => {
+    const k = e.target.closest("button")?.dataset.k;
+    if (!k) return;
+    me = k;
+    visits.clear();
+    renderMe();
+    route();
+  });
+  function route() {
+    const h = location.hash.replace("#", "");
+    const p = people.find((x) => "kamer-" + x.key === h);
+    if (p) roomView(p);
+    else if (h === "huis") houseView();
+    else worldView();
+    window.scrollTo({ top: 0 });
+  }
+  window.addEventListener("hashchange", route);
+  renderMe();
+  route();
+})();
+</script>

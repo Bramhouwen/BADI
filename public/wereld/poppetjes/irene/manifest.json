@@ -1,0 +1,114 @@
+{
+  "name": "Irene",
+  "frameWidth": 320,
+  "frameHeight": 272,
+  "mirrorForLeft": true,
+  "animations": {
+    "staan": {
+      "frames": [
+        "staan-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 173,
+        "y": 259
+      }
+    },
+    "lopen": {
+      "frames": [
+        "lopen-01.png",
+        "lopen-02.png",
+        "lopen-03.png",
+        "lopen-04.png",
+        "lopen-05.png",
+        "lopen-06.png"
+      ],
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 156,
+        "y": 272
+      }
+    },
+    "zitten": {
+      "frames": [
+        "zitten-01.png",
+        "zitten-02.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 252
+      }
+    },
+    "slapen": {
+      "frames": [
+        "slapen-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 225,
+        "y": 255
+      }
+    },
+    "zwaaien": {
+      "frames": [
+        "zwaaien-01.png",
+        "zwaaien-02.png"
+      ],
+      "fps": 2.5,
+      "loop": true,
+      "anchor": {
+        "x": 167,
+        "y": 259
+      }
+    },
+    "juichen": {
+      "frames": [
+        "juichen-01.png",
+        "juichen-02.png"
+      ],
+      "fps": 3,
+      "loop": true,
+      "anchor": {
+        "x": 169,
+        "y": 259
+      }
+    },
+    "blij": {
+      "frames": [
+        "blij-01.png",
+        "blij-02.png",
+        "blij-03.png",
+        "blij-04.png",
+        "blij-05.png",
+        "blij-06.png"
+      ],
+      "fps": 7,
+      "loop": true,
+      "anchor": {
+        "x": 135,
+        "y": 272
+      }
+    },
+    "sprongsquat": {
+      "frames": [
+        "sprongsquat-01.png",
+        "sprongsquat-02.png",
+        "sprongsquat-03.png",
+        "sprongsquat-04.png",
+        "sprongsquat-05.png",
+        "sprongsquat-06.png"
+      ],
+      "fps": 7,
+      "loop": true,
+      "anchor": {
+        "x": 144,
+        "y": 247
+      }
+    }
+  }
+}
