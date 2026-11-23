@@ -8,6 +8,7 @@ import { STEPS_PER_POINT, WEEKLY_STEP_POINTS, WEEKLY_STEPS_GOAL, stepPoints, ste
 import { addDays, formatDateNl, weekdayShortNl } from "@/lib/dates";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { celebrate } from "@/lib/celebrate";
 
 const nl = new Intl.NumberFormat("nl-NL");
 const StepsIcon = ACTIVITY_ICONS.steps;
@@ -79,6 +80,9 @@ export function StepsCard({
   function save() {
     if (!changed) return;
     const before = logs;
+    // This week's total before and after, for the moment the weekly goal is reached.
+    const after = day >= weekStart ? total - (perDay[day] ?? 0) + (typed ?? 0) : total;
+    const reached = total < WEEKLY_STEPS_GOAL && after >= WEEKLY_STEPS_GOAL;
     setLogs((l) => (typed === null ? l.filter((x) => x.log_date !== day) : [...l.filter((x) => x.log_date !== day), { log_date: day, steps: typed }]));
     start(async () => {
       const r = await setSteps({ date: day, steps: typed });
@@ -88,7 +92,8 @@ export function StepsCard({
         return;
       }
       if (r.data?.stats) onStreak(r.data.stats.current);
-      toast("Stappen opgeslagen", "success");
+      if (reached) celebrate("steps");
+      else toast("Stappen opgeslagen", "success");
     });
   }
 

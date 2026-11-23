@@ -42,6 +42,7 @@ import { SPRITE_SHEETS, spriteFor } from "@/lib/sprites";
 import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW } from "@/lib/announcement";
 import { announcementSent } from "@/lib/announcement-server";
 import type { SplashItem } from "@/components/sprite/welcome-splash";
+import { HomeBuddy } from "@/components/sprite/home-buddy";
 import { welcomeMessage } from "@/lib/welcome";
 import { CHALLENGE_META } from "@/lib/wheel";
 import { WATER_GOAL_ML } from "@/lib/constants";
@@ -195,10 +196,17 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="flex items-end justify-between gap-3 px-1">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-display text-[19px] leading-none text-text/80">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
           <h1 className="mt-1 truncate font-display text-[36px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
         </div>
+        {mySprite ? (
+          <HomeBuddy
+            sheet={mySprite}
+            status={!todayCheckin ? "sleep" : dailyScore(todayCheckin.activities, Boolean(jokerRow)).complete ? "done" : "busy"}
+            canTalk={Boolean(welcome)}
+          />
+        ) : null}
         {phase === "during" ? (
           <span className="mb-1.5 shrink-0 rounded-full bg-white/70 px-3 py-1 shadow-sm ring-1 ring-ink/[0.05]">
             <span className="text-[12px] font-medium tabular-nums text-ink">

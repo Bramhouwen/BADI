@@ -1,7 +1,7 @@
 /**
  * Turns a 6x4 pose sheet on a white background into a BADI sprite sheet.
  *
- *   npm run sprite -- <sheet.png|webp> <name>
+ *   npm run sprite -- <sheet.png|webp> <name> [--face=row,col]
  *
  * Writes public/sprites/<name>.webp: the white background removed, every pose
  * redrawn in a uniform 320x272 cell, anchored on the head in rows 1 to 3 (so
@@ -10,10 +10,16 @@
  * row 1 walk, row 2 happy jump, row 3 squat jump, row 4 stand, wave, sit,
  * lean back, lie, cheer. A sheet with another order works too: give it its
  * own animation frames in src/lib/sprites.ts.
+ *
+ * Also writes public/sprites/<name>-face.png, the head on a cream square for
+ * push notifications, cut from the standing pose (row 4, column 1 by default;
+ * pass --face=row,col counted from 1 for another layout).
  */
 import sharp from "sharp";
 
-const [, , src, name] = process.argv;
+const [, , src, name, ...flags] = process.argv;
+const faceFlag = flags.find((f) => f.startsWith("--face="));
+const [faceRow, faceCol] = faceFlag ? faceFlag.slice(7).split(",").map((n) => Number(n) - 1) : [3, 0];
 if (!src || !name || !/^[a-z0-9-]+$/.test(name)) {
   console.error("Gebruik: npm run sprite -- <bestand> <naam in kleine letters>");
   process.exit(1);
@@ -152,6 +158,33 @@ for (const px of poses) {
   }
 }
 
+// Face for notifications: the head of the standing pose, on a cream square.
+{
+  const SW = CW * COLS;
+  let top = -1, hx = 0, hn = 0;
+  for (let y = CH * faceRow; y < CH * (faceRow + 1) && top < 0; y++) {
+    for (let x = CW * faceCol; x < CW * (faceCol + 1); x++) if (out[(y * SW + x) * 4 + 3] > 128) { top = y; break; }
+  }
+  if (top < 0) {
+    console.error(`Geen pose gevonden voor het gezicht in rij ${faceRow + 1}, kolom ${faceCol + 1}.`);
+    process.exit(1);
+  }
+  for (let y = top; y < top + 80; y++) {
+    for (let x = CW * faceCol; x < CW * (faceCol + 1); x++) if (out[(y * SW + x) * 4 + 3] > 128) { hx += x; hn++; }
+  }
+  const size = 120;
+  const left = Math.max(CW * faceCol, Math.min(CW * (faceCol + 1) - size, Math.round(hx / hn - size / 2)));
+  const head = await sharp(out, { raw: { width: SW, height: CH * ROWS, channels: 4 } })
+    .extract({ left, top: Math.max(0, top - 6), width: size, height: size })
+    .resize(168)
+    .png()
+    .toBuffer();
+  await sharp({ create: { width: 192, height: 192, channels: 4, background: "#f6ede6" } })
+    .composite([{ input: head, top: 18, left: 12 }])
+    .png()
+    .toFile(`public/sprites/${name}-face.png`);
+}
+
 const file = `public/sprites/${name}.webp`;
 await sharp(out, { raw: { width: CW * COLS, height: CH * ROWS, channels: 4 } }).webp({ quality: 88, alphaQuality: 100, effort: 6 }).toFile(file);
-console.log(`Klaar: ${file}. Voeg "${name}" toe aan SPRITE_SHEETS in src/lib/sprites.ts.`);
+console.log(`Klaar: ${file} en public/sprites/${name}-face.png. Voeg "${name}" toe aan SPRITE_SHEETS in src/lib/sprites.ts.`);

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { pushIconFor } from "@/lib/sprites";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -120,7 +121,7 @@ export async function spendJoker(date: string): Promise<ActionResult<{ used: num
   if (message) await supabase.from("alcohol_exceptions").update({ chat_message_id: (message as { id: string }).id }).eq("id", (exception as { id: string }).id);
 
   const name = firstName(ctx.profile.display_name);
-  after(() => sendPush(supabase, "jokers", { title: "Joker ingezet 🃏", body: `${name} zet ${day} een joker in.`, url: "/squad", tag: "joker" }));
+  after(() => sendPush(supabase, "jokers", { title: "Joker ingezet 🃏", body: `${name} zet ${day} een joker in.`, url: "/squad", tag: "joker", icon: pushIconFor(ctx.profile.display_name) }));
 
   const { count } = await supabase.from("alcohol_exceptions").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).eq("challenge_id", ctx.challenge.id);
   revalidatePath("/", "layout");

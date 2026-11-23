@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { CelebrateOnce } from "@/components/sprite/celebrate-once";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireContext } from "@/lib/data";
@@ -41,6 +42,7 @@ async function Content({ params, searchParams }: { params: Promise<{ id: string 
     <Page className="space-y-4">
       <PageTitle title={s.title} subtitle={`${meta.label} · ${formatDateNl(s.workout_date)}`} back="/fitness/history" />
 
+      {done ? <CelebrateOnce kind="workout" id={id} /> : null}
       {done ? (
         <Card variant="dark" className="rounded-[22px] p-5">
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-paper/70">Training voltooid</p>

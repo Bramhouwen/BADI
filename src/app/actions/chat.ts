@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { pushIconFor } from "@/lib/sprites";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { mentionsBaddy } from "@/lib/coach/prompt";
@@ -72,7 +73,7 @@ export async function sendMessage(input: { body: string; attachment?: MessageAtt
   const preview = (body || (attachment ? attachmentLabel({ attachment_type: attachment.type, attachment_name: (row.attachment_name as string | null) ?? null }) ?? "Bijlage" : "")).slice(0, 160);
 
   if (to) {
-    after(() => sendPush(supabase, "direct", { title: sender, body: preview, url: `/squad/chat/${ctx.userId}`, tag: `dm-${ctx.userId}` }, { only: to }));
+    after(() => sendPush(supabase, "direct", { title: sender, body: preview, url: `/squad/chat/${ctx.userId}`, tag: `dm-${ctx.userId}`, icon: pushIconFor(ctx.profile.display_name) }, { only: to }));
     await upsertDirectRead(ctx.challenge.id, ctx.userId, to);
     return { ok: true, data: data as ChatMessage };
   }
@@ -82,8 +83,8 @@ export async function sendMessage(input: { body: string; attachment?: MessageAtt
     after(() => replyAsBaddyInSquad(supabase, ctx, body));
   }
   after(async () => {
-    for (const id of mentions) await sendPush(supabase, "mentions", { title: `${sender} noemde je`, body: preview, url: "/squad/chat", tag: "squad-mention" }, { only: id });
-    await sendPush(supabase, "chat", { title: `${sender} in de squad`, body: preview, url: "/squad/chat", tag: "squad-chat" }, { exclude: mentions });
+    for (const id of mentions) await sendPush(supabase, "mentions", { title: `${sender} noemde je`, body: preview, url: "/squad/chat", tag: "squad-mention", icon: pushIconFor(ctx.profile.display_name) }, { only: id });
+    await sendPush(supabase, "chat", { title: `${sender} in de squad`, body: preview, url: "/squad/chat", tag: "squad-chat", icon: pushIconFor(ctx.profile.display_name) }, { exclude: mentions });
   });
   await supabase.from("squad_chat_reads").upsert({ challenge_id: ctx.challenge.id, user_id: ctx.userId, last_read_at: new Date().toISOString() }, { onConflict: "challenge_id,user_id" });
   return { ok: true, data: data as ChatMessage };

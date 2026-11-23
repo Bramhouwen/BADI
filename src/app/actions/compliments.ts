@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { pushIconFor } from "@/lib/sprites";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { sendPush } from "@/lib/push";
@@ -29,7 +30,7 @@ export async function sendCompliment(input: { receiver_id: string; message: stri
   });
   if (error) return { ok: false, error: friendlyError(error) };
   const sender = firstName(ctx.profile.display_name);
-  after(() => sendPush(supabase, "compliments", { title: `Compliment van ${sender}`, body: parsed.data.message, url: "/squad/compliments", tag: "compliment" }, { only: parsed.data.receiver_id }));
+  after(() => sendPush(supabase, "compliments", { title: `Compliment van ${sender}`, body: parsed.data.message, url: "/squad/compliments", tag: "compliment", icon: pushIconFor(ctx.profile.display_name) }, { only: parsed.data.receiver_id }));
   revalidatePath("/squad");
   return { ok: true };
 }

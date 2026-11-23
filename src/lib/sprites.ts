@@ -40,12 +40,14 @@ const BRAM_ANIMS: Record<SpriteAnim, Frames> = {
 
 export interface SpriteSheet {
   src: string;
+  /** Head on a cream square, for push notifications. */
+  face: string;
   anims: Record<SpriteAnim, Frames>;
 }
 
 /** Sheets by lower-case first name. */
 export const SPRITE_SHEETS: Record<string, SpriteSheet> = {
-  anne: { src: "/sprites/anne.webp", anims: SPRITE_ANIMS },
+  anne: { src: "/sprites/anne.webp", face: "/sprites/anne-face.png", anims: SPRITE_ANIMS },
 };
 void BRAM_ANIMS;
 
@@ -55,4 +57,10 @@ export function spriteFor(displayName: string | null | undefined): SpriteSheet |
   if (SPRITE_SHEETS[first]) return SPRITE_SHEETS[first];
   if (isDemo()) return Object.values(SPRITE_SHEETS)[0] ?? null;
   return null;
+}
+
+/** Notification icon for a push from this member: their character's face, or the app icon. */
+export function pushIconFor(displayName: string | null | undefined): string | undefined {
+  const first = (displayName ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  return SPRITE_SHEETS[first]?.face;
 }

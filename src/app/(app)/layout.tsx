@@ -6,6 +6,7 @@ import { BaddyBubble } from "@/components/coach/baddy-bubble";
 import { PresenceJoin } from "@/components/app/presence";
 import { HideOnChat } from "@/components/app/hide-on-chat";
 import { MessageSpriteJoin } from "@/components/sprite/message-sprite-join";
+import { CelebrationsJoin } from "@/components/sprite/celebrations-join";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
@@ -22,6 +23,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </Suspense>
       <Suspense fallback={null}>
         <MessageSpriteJoin />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CelebrationsJoin />
       </Suspense>
       <HideOnChat>
         <BottomNav

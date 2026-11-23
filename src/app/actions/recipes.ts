@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { pushIconFor } from "@/lib/sprites";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { aiImagesAvailable, generateRecipePhotoFor } from "@/lib/recipe-image";
@@ -74,7 +75,7 @@ export async function createRecipe(formData: FormData): Promise<ActionResult> {
   if (error) return { ok: false, error: friendlyError(error) };
   const sender = firstName(ctx.profile.display_name);
   const title = parsed.data.title || fallbackTitle(ctx.profile.display_name);
-  after(() => sendPush(supabase, "recipes", { title: "Nieuw recept in de Kitchen", body: `${sender} deelde ${title}.`, url: `/kitchen/${data.id}`, tag: "recipe" }));
+  after(() => sendPush(supabase, "recipes", { title: "Nieuw recept in de Kitchen", body: `${sender} deelde ${title}.`, url: `/kitchen/${data.id}`, tag: "recipe", icon: pushIconFor(ctx.profile.display_name) }));
   // No photo: make an AI photo in the background; the recipe page refreshes until it is there.
   if (!parsed.data.image_path && aiImagesAvailable()) after(() => generateRecipePhotoFor(supabase, ctx, data.id as string));
   revalidatePath("/kitchen");

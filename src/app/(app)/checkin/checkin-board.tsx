@@ -12,6 +12,7 @@ import { spendJoker, toggleActivity, togglePlan, undoJoker } from "@/app/actions
 import { Ring } from "@/components/ui/ring";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { celebrate, isStreakMilestone } from "@/lib/celebrate";
 import type { Habit } from "@/lib/habits";
 import { MyHabits } from "./my-habits";
 import { StepsCard } from "./steps-card";
@@ -72,6 +73,10 @@ export function CheckinBoard(props: Props) {
       }
       setActs((a) => ({ ...a, [day]: r.data!.activities }));
       setStreak(r.data!.stats.current);
+      // Your character reacts: a new full week of check-ins, or every daily habit done.
+      const hasJoker = jokers.includes(day);
+      if (r.data!.stats.current > streak && isStreakMilestone(r.data!.stats.current)) celebrate("streak", r.data!.stats.current);
+      else if (on && !dailyScore(before[day] ?? [], hasJoker).complete && dailyScore(r.data!.activities, hasJoker).complete) celebrate("day");
     });
     return true;
   }
