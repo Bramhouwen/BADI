@@ -24,18 +24,18 @@ export const SPRITE_ANIMS: Record<SpriteAnim, Frames> = {
 };
 
 /**
- * Bram's sheet: three rows, no walk, sit or lie. Row 1 stand to squat, row 2
- * jumps, row 3 squat, thumbs up and stand.
+ * Bram's sheet: row 1 walk, row 2 squat jump with cheering, row 3 stand and
+ * wave, row 4 stand, then sitting and lying back in a chair.
  */
 const BRAM_ANIMS: Record<SpriteAnim, Frames> = {
-  walk: { frames: [[0, 0], [0, 1], [0, 2], [0, 1]], fps: 6 },
-  happy: { frames: [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]], fps: 7 },
-  squat: { frames: [[0, 3], [0, 4], [0, 5], [1, 1], [1, 2], [1, 4]], fps: 7 },
-  wave: { frames: [[2, 2], [2, 3]], fps: 2.5 },
-  cheer: { frames: [[1, 2], [1, 1]], fps: 3 },
-  sit: { frames: [[2, 4], [2, 5]], fps: 1 },
-  sleep: { frames: [[2, 5]], fps: 1 },
-  stand: { frames: [[0, 0]], fps: 1 },
+  walk: { frames: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]], fps: 8 },
+  happy: { frames: [[1, 1], [1, 2], [1, 3], [1, 2]], fps: 6 },
+  squat: { frames: [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]], fps: 7 },
+  wave: { frames: [[2, 1], [2, 2], [2, 3], [2, 2]], fps: 4 },
+  cheer: { frames: [[1, 3], [1, 2]], fps: 3 },
+  sit: { frames: [[3, 1], [3, 2]], fps: 1 },
+  sleep: { frames: [[3, 4], [3, 5]], fps: 0.7 },
+  stand: { frames: [[2, 0]], fps: 1 },
 };
 
 export interface SpriteSheet {
@@ -52,8 +52,8 @@ export const SPRITE_SHEETS: Record<string, SpriteSheet> = {
   anne: { src: "/sprites/anne.webp", face: "/sprites/anne-face.png", anims: SPRITE_ANIMS },
   irene: { src: "/sprites/irene.webp", face: "/sprites/irene-face.png", anims: SPRITE_ANIMS, live: false },
   daphne: { src: "/sprites/daphne.webp", face: "/sprites/daphne-face.png", anims: SPRITE_ANIMS, live: false },
+  bram: { src: "/sprites/bram.webp", face: "/sprites/bram-face.png", anims: BRAM_ANIMS, live: false },
 };
-void BRAM_ANIMS;
 
 /** The key of a member's character: their lower-case first name. */
 export function spriteKey(displayName: string | null | undefined): string {

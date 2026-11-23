@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { celebrationText, isStreakMilestone } from "@/lib/celebrate";
-import { sheetFor, spriteKey, unreleasedKeys } from "@/lib/sprites";
+import { SPRITE_CELL, SPRITE_SHEETS, sheetFor, spriteKey, unreleasedKeys } from "@/lib/sprites";
 
 describe("celebrations", () => {
   it("celebrates every full week of check-ins", () => {
@@ -29,8 +29,24 @@ describe("characters", () => {
   it("keeps a character out until the admin released it", () => {
     expect(sheetFor("Irene")).toBeNull();
     expect(sheetFor("Daphne")).toBeNull();
+    expect(sheetFor("Bram")).toBeNull();
     expect(sheetFor("Irene", new Set(["irene"]))?.src).toBe("/sprites/irene.webp");
-    expect(unreleasedKeys()).toEqual(expect.arrayContaining(["irene", "daphne"]));
+    expect(unreleasedKeys()).toEqual(expect.arrayContaining(["irene", "daphne", "bram"]));
     expect(unreleasedKeys()).not.toContain("anne");
+  });
+});
+
+describe("frames", () => {
+  it("only points at cells that exist in every sheet", () => {
+    for (const sheet of Object.values(SPRITE_SHEETS)) {
+      for (const { frames } of Object.values(sheet.anims)) {
+        for (const [r, c] of frames) {
+          expect(r).toBeGreaterThanOrEqual(0);
+          expect(r).toBeLessThan(SPRITE_CELL.rows);
+          expect(c).toBeGreaterThanOrEqual(0);
+          expect(c).toBeLessThan(SPRITE_CELL.cols);
+        }
+      }
+    }
   });
 });
