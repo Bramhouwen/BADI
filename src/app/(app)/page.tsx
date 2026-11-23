@@ -25,7 +25,7 @@ import { Page } from "@/components/ui/page";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { HeroCard } from "@/components/home/hero-card";
-import { WEEKLY_TARGETS, dailyScore, weekProgress, weekScore, weekStartOf, WEEKLY_STEPS_GOAL, WEEKLY_STEP_POINTS, stepPoints, stepsByDay } from "@/lib/checkin-plan";
+import { WEEKLY_TARGETS, dailyScore, weekScore, weekStartOf, WEEKLY_STEPS_GOAL, WEEKLY_STEP_POINTS, stepPoints, stepsByDay } from "@/lib/checkin-plan";
 import { AskField, BADDY_PHOTO } from "@/components/coach/baddy-ask";
 import { Avatar } from "@/components/ui/avatar";
 import { StepsSlide, TodayCarousel, TrainingSlide, WaterSlide, WeekSlide } from "@/components/home/today-slides";
@@ -43,9 +43,8 @@ import { memberSprite, releasedSprites } from "@/lib/sprites-server";
 import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW, OWN_SPRITE_PREVIEW, ownSpriteIntro } from "@/lib/announcement";
 import { announcementSent } from "@/lib/announcement-server";
 import type { SplashItem } from "@/components/sprite/welcome-splash";
-import { HomeBuddy } from "@/components/sprite/home-buddy";
-import { welcomeMessage } from "@/lib/welcome";
-import { CHALLENGE_META } from "@/lib/wheel";
+import { BuddyCard } from "@/components/sprite/buddy-card";
+import { buddyBrief } from "@/lib/welcome";
 import { WATER_GOAL_ML } from "@/lib/constants";
 import type { WaterEntry } from "@/lib/types";
 import type { DailyCheckin, Recipe, WallPost } from "@/lib/types";
@@ -143,11 +142,13 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
   // The admin can look at anyone's introduction first: /?poppetje=irene.
   const previewKey = ctx.membership.role === "admin" && typeof sp[OWN_SPRITE_PREVIEW] === "string" ? (sp[OWN_SPRITE_PREVIEW] as string).toLowerCase() : null;
   const previewSheet = previewKey ? SPRITE_SHEETS[previewKey] ?? null : null;
-  const welcome = mySprite && phase === "during" ? await loadWelcome() : null;
-  async function loadWelcome() {
-    const [{ data: toMe }, { data: reads }] = await Promise.all([
+  // Your character's card: news, wins and the squad, never a to-do.
+  const brief = mySprite && phase === "during" ? await loadBrief() : null;
+  async function loadBrief() {
+    const [{ data: toMe }, { data: reads }, { count: complimentsUnread }] = await Promise.all([
       supabase.from("squad_messages").select("user_id, created_at, is_coach").eq("challenge_id", ctx.challenge.id).eq("recipient_id", ctx.userId).order("created_at", { ascending: false }).limit(50),
       supabase.from("direct_reads").select("peer_id, last_read_at").eq("user_id", ctx.userId),
+      supabase.from("compliments").select("id", { count: "exact", head: true }).eq("receiver_id", ctx.userId).is("read_at", null),
     ]);
     const readAt = new Map(((reads ?? []) as { peer_id: string; last_read_at: string }[]).map((r) => [r.peer_id, r.last_read_at]));
     const unreadIds = [
@@ -157,28 +158,50 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
           .map((m) => m.user_id),
       ),
     ];
-    const yesterday = mine.find((c) => c.checkin_date === addDays(today, -1));
-    const training = weekProgress(weekStart, mine.filter((c) => c.checkin_date >= weekStart), []).totals;
-    const openChallenge = mySpin?.category === "challenge" && mySpin.challenge_key && !mySpin.challenge_completed_at && !challengeProgress?.complete ? CHALLENGE_META[mySpin.challenge_key].title : null;
-    return welcomeMessage({
-      name: firstName(ctx.profile.display_name),
+    const yesterdayKey = addDays(today, -1);
+    const yesterday = mine.find((c) => c.checkin_date === yesterdayKey);
+    const recent = (iso: string) => todayKey(new Date(iso), ctx.challenge.timezone) >= yesterdayKey;
+    const newest = [
+      ...posts.filter((p) => p.user_id !== ctx.userId && recent(p.created_at)).map((p) => ({ at: p.created_at, name: nameOf(p.user_id), kind: "post" as const, href: `/wall/${p.id}` })),
+      ...recipes.filter((r) => r.user_id !== ctx.userId && recent(r.created_at)).map((r) => ({ at: r.created_at, name: nameOf(r.user_id), kind: "recipe" as const, href: `/kitchen/${r.id}` })),
+    ].sort((a, b) => (a.at < b.at ? 1 : -1))[0];
+    const others = squad.filter((m) => m.user_id !== ctx.userId);
+    const completeYesterday = others
+      .filter((m) => {
+        const c = checkins.find((x) => x.user_id === m.user_id && x.checkin_date === yesterdayKey);
+        const joker = weekJokers.some((j) => j.user_id === m.user_id && j.exception_date === yesterdayKey);
+        return c ? dailyScore(c.activities, joker).complete : false;
+      })
+      .map((m) => firstName(m.profile.display_name));
+    const squadWeekSteps = squad.reduce(
+      (sum, m) =>
+        sum +
+        Object.values(
+          stepsByDay(
+            weekStart,
+            weekSteps.filter((s) => s.user_id === m.user_id),
+            checkins.filter((c) => c.user_id === m.user_id && c.checkin_date >= weekStart),
+          ),
+        ).reduce((a, b) => a + b, 0),
+      0,
+    );
+    return buddyBrief({
       userId: ctx.userId,
       date: today,
       hour: hourInTz(now, ctx.challenge.timezone),
       weekday: (new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7,
-      checkedInToday: Boolean(todayCheckin),
       yesterdayComplete: yesterday ? dailyScore(yesterday.activities).complete : false,
       streak: myStats.current,
       weekSteps: mySteps,
       stepsGoal: WEEKLY_STEPS_GOAL,
-      run: { done: training.run.done, target: WEEKLY_TARGETS.run },
-      strength: { done: training.strength.done, target: WEEKLY_TARGETS.strength },
-      waterMl: waterTotal,
-      waterGoalMl: WATER_GOAL_ML,
+      lastWorkoutDate: lastWorkout?.workout_date ?? null,
       superBadi: crowned.has(ctx.userId),
       canSpin: !mySpin,
-      openChallenge,
       unreadFrom: unreadIds.map((id) => ({ id, name: nameOf(id) })),
+      complimentsUnread: complimentsUnread ?? 0,
+      squadNew: newest ? { name: newest.name, kind: newest.kind, href: newest.href } : null,
+      squadCompleteYesterday: completeYesterday,
+      squadWeekSteps,
       finaleIn: finale,
     });
   }
@@ -211,7 +234,6 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
             announcement: { label: ANNOUNCEMENT.label, title: ANNOUNCEMENT.title, intro: ANNOUNCEMENT.intro, features: ANNOUNCEMENT.features, cta: ANNOUNCEMENT.cta },
           });
         }
-        if (welcome && mySprite) items.push({ storageKey: "badi:welcome", value: `${ctx.userId}:${today}`, sheet: mySprite, message: welcome });
         return items.length ? <WelcomeSplash items={items} /> : null;
       })()}
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
@@ -221,13 +243,6 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
           <p className="font-display text-[19px] leading-none text-text/80">{greeting(now, ctx.challenge.timezone).replace("!", ",")}</p>
           <h1 className="mt-1 truncate font-display text-[36px] leading-[1.05] text-text">{firstName(ctx.profile.display_name)}</h1>
         </div>
-        {mySprite ? (
-          <HomeBuddy
-            sheet={mySprite}
-            status={!todayCheckin ? "sleep" : dailyScore(todayCheckin.activities, Boolean(jokerRow)).complete ? "done" : "busy"}
-            canTalk={Boolean(welcome)}
-          />
-        ) : null}
         {phase === "during" ? (
           <span className="mb-1.5 shrink-0 rounded-full bg-white/70 px-3 py-1 shadow-sm ring-1 ring-ink/[0.05]">
             <span className="text-[12px] font-medium tabular-nums text-ink">
@@ -236,6 +251,15 @@ async function Content({ searchParams }: { searchParams: Promise<Record<string, 
           </span>
         ) : null}
       </div>
+
+      {brief && mySprite ? (
+        <BuddyCard
+          sheet={mySprite}
+          status={!todayCheckin ? "sleep" : dailyScore(todayCheckin.activities, Boolean(jokerRow)).complete ? "done" : "busy"}
+          brief={brief}
+          dayKey={`${ctx.userId}:${today}`}
+        />
+      ) : null}
 
       {phase === "during" ? (
         <TodayCarousel label="Vandaag">

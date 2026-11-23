@@ -1,39 +1,20 @@
 /**
- * What your character says when you open the app for the first time each day:
- * a greeting by time of day and one line about your own day, chosen from your
- * real numbers. Pure, so it is the same on every render of one day and differs
- * from the day before.
+ * What your character tells you on Home. It has one role: your buddy brings
+ * news and celebrates with you. It never tells you what you still have to do;
+ * reminders are Baddy's job (07:00 and 21:00) and the cards on Home.
+ *
+ * Three kinds of lines, at most three in total:
+ * - news: something happened for you (a message, a compliment, Super Badi,
+ *   a new spin on Monday, something new from the squad, the finale nearing);
+ * - win: something you achieved (yesterday complete, a streak, the steps
+ *   goal, yesterday's training);
+ * - squad: how the others are doing.
+ * Pure, so the brief is the same all day and rotates from day to day.
  */
-import { diffDays, type DateKey } from "./dates";
+import { addDays, diffDays, type DateKey } from "./dates";
 import type { SpriteAnim } from "./sprites";
 
-export interface WelcomeFacts {
-  name: string;
-  userId: string;
-  date: DateKey;
-  /** Hour of the day in the challenge timezone, 0 to 23. */
-  hour: number;
-  /** 0 is Monday, 6 is Sunday. */
-  weekday: number;
-  checkedInToday: boolean;
-  yesterdayComplete: boolean;
-  streak: number;
-  weekSteps: number;
-  stepsGoal: number;
-  run: { done: number; target: number };
-  strength: { done: number; target: number };
-  waterMl: number;
-  waterGoalMl: number;
-  superBadi: boolean;
-  canSpin: boolean;
-  /** Title of this week's open Weekrad challenge. */
-  openChallenge: string | null;
-  /** Members with unread private messages to you. */
-  unreadFrom: { id: string; name: string }[];
-  /** Days until the last challenge day. */
-  finaleIn: number;
-}
-
+/** A line spoken in a full-screen moment (announcement, own introduction). */
 export interface WelcomeMessage {
   greeting: string;
   line: string;
@@ -41,209 +22,130 @@ export interface WelcomeMessage {
   action: { label: string; href: string } | null;
 }
 
-const nl = (n: number) => new Intl.NumberFormat("nl-NL").format(Math.round(n));
-const liters = (ml: number) => new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1 }).format(ml / 1000);
+export interface BuddyFacts {
+  userId: string;
+  date: DateKey;
+  /** Hour of the day in the challenge timezone, 0 to 23. */
+  hour: number;
+  /** 0 is Monday, 6 is Sunday. */
+  weekday: number;
+  yesterdayComplete: boolean;
+  streak: number;
+  weekSteps: number;
+  stepsGoal: number;
+  /** Date of your last finished workout. */
+  lastWorkoutDate: DateKey | null;
+  superBadi: boolean;
+  canSpin: boolean;
+  /** Members with unread private messages to you. */
+  unreadFrom: { id: string; name: string }[];
+  complimentsUnread: number;
+  /** The newest Wall photo or recipe by someone else since yesterday. */
+  squadNew: { name: string; kind: "post" | "recipe"; href: string } | null;
+  /** First names of the others who had every daily habit done yesterday. */
+  squadCompleteYesterday: string[];
+  /** Steps of the whole squad this week, as far as members share them. */
+  squadWeekSteps: number;
+  /** Days until the last challenge day. */
+  finaleIn: number;
+}
 
-/** Stable number for a string. */
+export type BriefKind = "news" | "win" | "squad";
+
+export interface BriefItem {
+  kind: BriefKind;
+  icon: string;
+  text: string;
+  href: string | null;
+}
+
+export interface BuddyBrief {
+  items: BriefItem[];
+  /** How the character moves while it tells this. */
+  anim: SpriteAnim;
+}
+
+const nl = (n: number) => new Intl.NumberFormat("nl-NL").format(Math.round(n));
+
+/** "Sam", "Sam en Noor", "Sam, Noor en Alex". */
+export function joinNl(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} en ${names[names.length - 1]}`;
+}
+
 function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
 }
 
-/** Index for today that is never the same as yesterday's (for lists of 2 or more). */
-function rotate(length: number, facts: WelcomeFacts, salt: string): number {
-  if (length < 2) return 0;
-  const day = diffDays("2026-01-01", facts.date);
-  return (day + (hash(facts.userId + salt) % length)) % length;
+/** One of `list` for today, never the same as yesterday's (for 2 or more). */
+function pick<T>(list: readonly T[], f: BuddyFacts, salt: string): T {
+  if (list.length < 2) return list[0];
+  const day = diffDays("2026-01-01", f.date);
+  return list[(day + (hash(f.userId + salt) % list.length)) % list.length];
 }
 
-function pick<T>(list: readonly T[], facts: WelcomeFacts, salt: string): T {
-  return list[rotate(list.length, facts, salt)];
-}
-
-type Daypart = "night" | "morning" | "afternoon" | "evening";
-
-export function daypart(hour: number): Daypart {
-  if (hour < 6) return "night";
-  if (hour < 12) return "morning";
-  if (hour < 18) return "afternoon";
-  return "evening";
-}
-
-const GREETINGS: Record<Daypart, ((n: string) => string)[]> = {
-  morning: [
-    (n) => `Hi ${n}, laten we er een mooie dag van maken.`,
-    (n) => `Goedemorgen ${n}! Klaar voor vandaag?`,
-    (n) => `Morning ${n}! Nieuwe dag, nieuwe kansen.`,
-    (n) => `Hé ${n}, lekker dat je er bent.`,
-    (n) => `Goedemorgen ${n}. Vandaag pakken we hem.`,
-    (n) => `Hi ${n}! Koffie erbij en gaan.`,
-    (n) => `Rise and shine, ${n}!`,
-    (n) => `Daar ben je, ${n}. Wat gaan we vandaag doen?`,
-  ],
-  afternoon: [
-    (n) => `Hi ${n}, hoe gaat je dag tot nu toe?`,
-    (n) => `Goedemiddag ${n}! Halverwege de dag.`,
-    (n) => `Hé ${n}, goed om je te zien.`,
-    (n) => `Hi ${n}! Even een check-moment.`,
-    (n) => `Middag ${n}. De dag is nog lang genoeg.`,
-    (n) => `Daar is ${n}! Hoe staat het ervoor?`,
-  ],
-  evening: [
-    (n) => `Goedenavond ${n}, hoe was je dag?`,
-    (n) => `Hi ${n}, nog even de dag afronden?`,
-    (n) => `Hé ${n}, fijn dat je even binnenkomt.`,
-    (n) => `Avond ${n}! Tijd om de balans op te maken.`,
-    (n) => `Hi ${n}. Bijna klaar voor vandaag.`,
-    (n) => `Goedenavond ${n}! Nog één rondje langs je doelen.`,
-  ],
-  night: [
-    (n) => `Nog wakker, ${n}?`,
-    (n) => `Hi ${n}, het is al laat. Slaap telt ook mee.`,
-    (n) => `Nachtuil ${n}! Morgen weer een dag.`,
-  ],
-};
-
-interface Candidate {
-  /** Higher goes first; within one level the day decides which one you get. */
-  weight: number;
-  lines: string[];
-  anim: SpriteAnim;
-  action: WelcomeMessage["action"];
-}
-
-function candidates(f: WelcomeFacts): Candidate[] {
-  const out: Candidate[] = [];
-  const part = daypart(f.hour);
-  const daysLeft = 7 - f.weekday;
-
+function news(f: BuddyFacts): BriefItem[] {
+  const out: BriefItem[] = [];
   if (f.unreadFrom.length > 0) {
     const names = f.unreadFrom.map((u) => u.name);
-    const who = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} en ${names[names.length - 1]}`;
     out.push({
-      weight: 5,
-      lines: [`${who} ${f.unreadFrom.length === 1 ? "heeft" : "hebben"} je een bericht gestuurd.`, `Er ligt een bericht van ${who} op je te wachten.`],
-      anim: "wave",
-      action: { label: f.unreadFrom.length === 1 ? "Lees je bericht" : "Lees je berichten", href: f.unreadFrom.length === 1 ? `/squad/chat/${f.unreadFrom[0].id}` : "/squad" },
+      kind: "news",
+      icon: "💬",
+      text: names.length === 1 ? `${names[0]} stuurde je een bericht.` : `${joinNl(names)} stuurden je een bericht.`,
+      href: names.length === 1 ? `/squad/chat/${f.unreadFrom[0].id}` : "/squad",
     });
   }
-  if (f.superBadi) {
-    out.push({
-      weight: 4,
-      lines: ["Jij bent deze week de Super Badi. Hou je de kroon vast?", "De kroon is van jou deze week. Laat zien waarom.", "Super Badi van de week! Iedereen wil je troon."],
-      anim: "cheer",
-      action: null,
-    });
+  if (f.complimentsUnread > 0) {
+    out.push({ kind: "news", icon: "💌", text: f.complimentsUnread === 1 ? "Je hebt een nieuw compliment." : `Je hebt ${f.complimentsUnread} nieuwe complimenten.`, href: "/squad/compliments" });
   }
-  if (f.canSpin) {
-    out.push({
-      weight: 4,
-      lines: ["Je hebt deze week nog een draai aan het Weekrad tegoed.", "Het Weekrad staat klaar. Wat ga jij winnen?", "Er wacht nog een draai op je bij het Weekrad."],
-      anim: "happy",
-      action: { label: "Naar het Weekrad", href: "/wheel" },
-    });
-  }
-  if (f.openChallenge) {
-    out.push({
-      weight: 3,
-      lines: [`Je weekchallenge staat nog open: ${f.openChallenge}.`, `Vergeet je challenge niet: ${f.openChallenge}. Goed voor +5 bonus.`],
-      anim: "squat",
-      action: { label: "Bekijk je challenge", href: "/wheel/prizes" },
-    });
-  }
-  if (!f.checkedInToday && part === "evening") {
-    out.push({
-      weight: 4,
-      lines: ["Je check-in van vandaag staat nog open.", "Nog even afvinken wat je vandaag gedaan hebt?"],
-      anim: "wave",
-      action: { label: "Naar je check-in", href: "/checkin" },
-    });
-  }
-  if (f.yesterdayComplete) {
-    out.push({
-      weight: 2,
-      lines: ["Gisteren had je alles afgevinkt. Zo door!", "Gisteren een volle dag. Doen we dat nog een keer?", "Alles gehaald gisteren. Sterk bezig."],
-      anim: "happy",
-      action: null,
-    });
-  }
-  if (f.weekSteps >= f.stepsGoal) {
-    out.push({
-      weight: 2,
-      lines: [`Je weekdoel van ${nl(f.stepsGoal)} stappen heb je al binnen.`, `${nl(f.weekSteps)} stappen deze week. Doel gehaald!`],
-      anim: "cheer",
-      action: null,
-    });
-  } else if (f.weekday > 0 || f.weekSteps > 0) {
-    const left = f.stepsGoal - f.weekSteps;
-    out.push({
-      weight: 2,
-      lines: [
-        `Nog ${nl(left)} stappen voor je weekdoel, zo'n ${nl(left / daysLeft)} per dag.`,
-        `Je staat op ${nl(f.weekSteps)} stappen deze week. Nog ${nl(left)} te gaan.`,
-      ],
-      anim: "walk",
-      action: { label: "Stappen invullen", href: "/checkin" },
-    });
-  }
-  const runLeft = f.run.target - f.run.done;
-  if (runLeft > 0) {
-    out.push({
-      weight: 1,
-      lines: [`Nog ${runLeft}x hardlopen deze week voor je doel.`, `${f.run.done} van de ${f.run.target} hardlooprondjes gedaan deze week.`],
-      anim: "walk",
-      action: null,
-    });
-  }
-  const strengthLeft = f.strength.target - f.strength.done;
-  if (strengthLeft > 0) {
-    out.push({
-      weight: 1,
-      lines: [`Nog ${strengthLeft}x krachttraining deze week voor je doel.`, `${f.strength.done} van de ${f.strength.target} krachttrainingen staan erop deze week.`],
-      anim: "squat",
-      action: null,
-    });
-  }
-  if (part !== "morning" && f.waterMl < f.waterGoalMl) {
-    out.push({
-      weight: 1,
-      lines: [`Je zit op ${liters(f.waterMl)} liter water vandaag. Nog ${liters(f.waterGoalMl - f.waterMl)} te gaan.`, "Al genoeg gedronken vandaag? Pak er even een glas water bij."],
-      anim: "stand",
-      action: { label: "Water bijhouden", href: "/water" },
-    });
-  }
-  if (f.streak >= 3) {
-    out.push({
-      weight: 1,
-      lines: [`${f.streak} dagen op rij ingecheckt.`, `Je streak staat op ${f.streak} dagen.`],
-      anim: "happy",
-      action: null,
-    });
-  }
-  if (f.finaleIn >= 0 && f.finaleIn <= 7) {
-    out.push({
-      weight: 3,
-      lines: [f.finaleIn === 0 ? "Vandaag is de finale van de Winter Arc!" : `Nog ${f.finaleIn} ${f.finaleIn === 1 ? "dag" : "dagen"} tot de finale.`],
-      anim: "cheer",
-      action: null,
-    });
+  if (f.superBadi && f.weekday === 0) out.push({ kind: "news", icon: "👑", text: "Jij bent de Super Badi van vorige week!", href: null });
+  if (f.canSpin && f.weekday === 0) out.push({ kind: "news", icon: "🎡", text: "Er staat een nieuwe draai voor je klaar bij het Weekrad.", href: "/wheel" });
+  if (f.finaleIn >= 0 && f.finaleIn <= 7) out.push({ kind: "news", icon: "🏁", text: f.finaleIn === 0 ? "Vandaag is de finale!" : `Nog ${f.finaleIn} ${f.finaleIn === 1 ? "dag" : "dagen"} tot de finale.`, href: null });
+  if (f.squadNew) {
+    out.push({ kind: "news", icon: f.squadNew.kind === "recipe" ? "🥗" : "📸", text: f.squadNew.kind === "recipe" ? `${f.squadNew.name} deelde een nieuw recept.` : `${f.squadNew.name} zette een foto op de Wall.`, href: f.squadNew.href });
   }
   return out;
 }
 
-export function welcomeMessage(f: WelcomeFacts): WelcomeMessage {
-  const part = daypart(f.hour);
-  const greeting = pick(GREETINGS[part], f, "greeting")(f.name);
-  const all = candidates(f);
-  if (all.length === 0) {
-    return { greeting, line: "Fijn dat je er bent. Kijk even wat er vandaag op je wacht.", anim: part === "night" ? "sit" : "wave", action: null };
+function win(f: BuddyFacts): BriefItem | null {
+  if (f.streak >= 7 && f.streak % 7 === 0) return { kind: "win", icon: "🔥", text: `${f.streak} dagen op rij ingecheckt!`, href: null };
+  const options: BriefItem[] = [];
+  if (f.yesterdayComplete) options.push({ kind: "win", icon: "✅", text: "Gisteren had je alles afgevinkt.", href: null });
+  if (f.weekSteps >= f.stepsGoal) options.push({ kind: "win", icon: "👟", text: `Je weekdoel van ${nl(f.stepsGoal)} stappen is binnen.`, href: null });
+  if (f.lastWorkoutDate === addDays(f.date, -1)) options.push({ kind: "win", icon: "💪", text: "Je training van gisteren staat erop.", href: null });
+  if (f.streak >= 3) options.push({ kind: "win", icon: "🔥", text: `${f.streak} dagen op rij ingecheckt.`, href: null });
+  return options.length ? pick(options, f, "win") : null;
+}
+
+function squad(f: BuddyFacts): BriefItem | null {
+  const options: BriefItem[] = [];
+  if (f.squadCompleteYesterday.length > 0) {
+    const names = f.squadCompleteYesterday;
+    options.push({ kind: "squad", icon: "👀", text: `${joinNl(names)} ${names.length === 1 ? "had" : "hadden"} gisteren alles afgevinkt.`, href: "/squad" });
   }
-  // The most important things first; among the top two levels the day rotates, so the line changes daily.
-  const top = Math.max(...all.map((c) => c.weight));
-  const pool = all.filter((c) => c.weight >= top - 1).sort((a, b) => b.weight - a.weight);
-  const urgent = all.filter((c) => c.weight === 5);
-  const chosen = urgent.length > 0 ? urgent[0] : pick(pool, f, "line");
-  const line = pick(chosen.lines, f, `line:${chosen.lines[0]}`);
-  return { greeting, line, anim: part === "night" ? "sit" : chosen.anim, action: chosen.action };
+  if (f.squadWeekSteps >= 10_000) options.push({ kind: "squad", icon: "👣", text: `Samen al ${nl(f.squadWeekSteps)} stappen deze week.`, href: "/squad" });
+  return options.length ? pick(options, f, "squad") : null;
+}
+
+export function buddyBrief(f: BuddyFacts): BuddyBrief {
+  const items: BriefItem[] = [];
+  items.push(...news(f).slice(0, 2));
+  const w = win(f);
+  if (w && items.length < 3) items.push(w);
+  const s = squad(f);
+  if (s && items.length < 3) items.push(s);
+
+  const night = f.hour < 6;
+  const anim: SpriteAnim = night
+    ? "sit"
+    : items.some((i) => i.icon === "👑")
+      ? "cheer"
+      : items[0]?.kind === "news"
+        ? "wave"
+        : items.some((i) => i.kind === "win")
+          ? "happy"
+          : "wave";
+  return { items, anim };
 }

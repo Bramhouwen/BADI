@@ -17,6 +17,8 @@ import { SharingSettings } from "./sharing-settings";
 import { BaddyMemory } from "./baddy-memory";
 import { AnnouncementControls } from "./announcement-controls";
 import { SpriteReleaseControls, type SpriteRow } from "./sprite-release-controls";
+import { BuddySettings } from "./buddy-settings";
+import { memberSprite } from "@/lib/sprites-server";
 import { SPRITE_SHEETS, spriteKey, unreleasedKeys } from "@/lib/sprites";
 import { announcementSent } from "@/lib/announcement-server";
 import { PushSettings } from "./push-settings";
@@ -53,6 +55,7 @@ async function Content() {
   const exceptions = (exceptionRows ?? []) as AlcoholException[];
   const wrapped = wrappedStatus(ctx.challenge);
   const isAdmin = ctx.membership.role === "admin";
+  const hasSprite = Boolean(await memberSprite(ctx.challenge.id, ctx.profile.display_name));
   const announced = isAdmin ? await announcementSent(supabase, ctx.challenge.id) : false;
   let spriteRows: SpriteRow[] = [];
   if (isAdmin && unreleasedKeys().length > 0) {
@@ -100,6 +103,13 @@ async function Content() {
         <section aria-label="Poppetjes vrijgeven">
           <SectionTitle>Poppetjes vrijgeven</SectionTitle>
           <SpriteReleaseControls rows={spriteRows} />
+        </section>
+      ) : null}
+
+      {hasSprite ? (
+        <section aria-label="Poppetje">
+          <SectionTitle>Poppetje</SectionTitle>
+          <BuddySettings />
         </section>
       ) : null}
 

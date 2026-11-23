@@ -44,15 +44,11 @@ function markSeen(item: SplashItem) {
   }
 }
 
-/** Event that opens today's welcome again, e.g. from your character on Home. */
-export const SPLASH_OPEN_EVENT = "badi:splash-open";
-
 /**
  * A character walks in, the first time you open Home, and says something.
  * `items` are tried in order (an announcement before the daily welcome); only
  * the first one not seen yet is shown, the next waits for another visit.
- * Tapping your character on Home opens the daily welcome again. Tap anywhere
- * to continue.
+ * Tap anywhere to continue.
  */
 export function WelcomeSplash({ items }: { items: SplashItem[] }) {
   const [shown, setShown] = useState<SplashItem | null>(null);
@@ -74,23 +70,6 @@ export function WelcomeSplash({ items }: { items: SplashItem[] }) {
     // Only when the set of moments changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
-
-  // Reopen the daily welcome on request.
-  const itemsRef = useRef(items);
-  useEffect(() => {
-    itemsRef.current = items;
-  });
-  useEffect(() => {
-    const reopen = () => {
-      const list = itemsRef.current;
-      const welcome = list.find((i) => i.storageKey === "badi:welcome") ?? list[list.length - 1];
-      if (!welcome) return;
-      setShown(welcome);
-      setOpenId((n) => n + 1);
-    };
-    window.addEventListener(SPLASH_OPEN_EVENT, reopen);
-    return () => window.removeEventListener(SPLASH_OPEN_EVENT, reopen);
-  }, []);
 
   return (
     <AnimatePresence>

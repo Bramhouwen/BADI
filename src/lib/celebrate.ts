@@ -20,8 +20,20 @@ export interface Celebration {
 type Pending = { detail: Celebration; at: number };
 const holder = () => window as unknown as { __badiCelebration?: Pending };
 
+/** Each kind plays at most once a day on this device (a streak once per length). */
+function firstToday(kind: CelebrationKind, n?: number): boolean {
+  const key = `badi:celebrated:${kind}${kind === "streak" ? `:${n}` : ""}`;
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Amsterdam" });
+  try {
+    if (localStorage.getItem(key) === today) return false;
+    localStorage.setItem(key, today);
+  } catch {}
+  return true;
+}
+
 export function celebrate(kind: CelebrationKind, n?: number) {
   if (typeof window === "undefined") return;
+  if (!firstToday(kind, n)) return;
   // Kept for a moment, for an overlay that mounts just after (a full page load).
   holder().__badiCelebration = { detail: { kind, n }, at: Date.now() };
   window.dispatchEvent(new CustomEvent<Celebration>(CELEBRATE_EVENT, { detail: { kind, n } }));

@@ -7,10 +7,11 @@ import { createClient } from "@/lib/supabase/client";
 import { isDemo } from "@/lib/demo";
 import type { SpriteSheet } from "@/lib/sprites";
 import { Sprite } from "./sprite";
+import { useBuddyPrefs } from "@/lib/buddy-prefs";
 
 type Sender = { id: string; name: string; sheet: SpriteSheet };
 type Incoming = { key: string; sender: Sender; text: string; href: string };
-type Row = { id?: string; user_id?: string; recipient_id?: string | null; body?: string | null; is_coach?: boolean | null; attachment_type?: string | null };
+type Row = { id?: string; user_id?: string; recipient_id?: string | null; body?: string | null; is_coach?: boolean | null; attachment_type?: string | null; mentions?: string[] | null };
 
 /** Demo only: window.dispatchEvent(new CustomEvent("badi:demo-message", { detail: row })) plays an incoming message. */
 export const DEMO_MESSAGE_EVENT = "badi:demo-message";
@@ -26,8 +27,8 @@ function preview(row: Row): string {
 }
 
 /**
- * When a squad member with a character sends you a message (private or in
- * the group), their character walks in at the bottom of the screen with the
+ * When a squad member with a character sends you a private message or
+ * mentions you in the group, their character walks in at the bottom of the screen with the
  * message in a speech bubble. Tap it to open the chat. Not shown while that
  * chat is already open.
  */
@@ -39,10 +40,13 @@ export function MessageSprite({ me, challengeId, senders }: { me: string; challe
   const [arrived, setArrived] = useState(false);
   const pathRef = useRef(pathname);
   const sendersRef = useRef(senders);
+  const prefs = useBuddyPrefs();
+  const prefsRef = useRef(prefs);
 
   useEffect(() => {
     pathRef.current = pathname;
     sendersRef.current = senders;
+    prefsRef.current = prefs;
   });
 
   useEffect(() => {
@@ -50,6 +54,9 @@ export function MessageSprite({ me, challengeId, senders }: { me: string; challe
       if (!row?.id || !row.user_id || row.user_id === me || row.is_coach) return;
       const isPrivate = Boolean(row.recipient_id);
       if (isPrivate && row.recipient_id !== me) return;
+      // In the group only when you are mentioned; every group message would be too much.
+      if (!isPrivate && !(row.mentions ?? []).includes(me)) return;
+      if (!prefsRef.current.messages) return;
       const sender = sendersRef.current.find((s) => s.id === row.user_id);
       if (!sender) return;
       const href = isPrivate ? `/squad/chat/${sender.id}` : "/squad/chat";

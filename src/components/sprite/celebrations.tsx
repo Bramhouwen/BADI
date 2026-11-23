@@ -6,6 +6,7 @@ import { CELEBRATE_EVENT, celebrationText, clearPendingCelebration, takePendingC
 import type { SpriteSheet } from "@/lib/sprites";
 import { Confetti } from "@/components/wheel/confetti";
 import { Sprite } from "./sprite";
+import { useBuddyPrefs } from "@/lib/buddy-prefs";
 
 /**
  * Plays a celebration: your character jumps in at the bottom of the screen
@@ -14,6 +15,7 @@ import { Sprite } from "./sprite";
  */
 export function Celebrations({ sheet }: { sheet: SpriteSheet }) {
   const reduce = useReducedMotion() ?? false;
+  const prefs = useBuddyPrefs();
   const [current, setCurrent] = useState<(Celebration & { id: number }) | null>(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function Celebrations({ sheet }: { sheet: SpriteSheet }) {
     return () => clearTimeout(id);
   }, [current]);
 
-  const shown = current ? celebrationText(current) : null;
+  const shown = current && prefs.celebrate ? celebrationText(current) : null;
 
   return (
     <AnimatePresence>

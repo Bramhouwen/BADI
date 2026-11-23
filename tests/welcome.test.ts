@@ -1,78 +1,94 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/dates";
-import { daypart, welcomeMessage, type WelcomeFacts } from "@/lib/welcome";
+import { buddyBrief, joinNl, type BuddyFacts } from "@/lib/welcome";
 
-const base: WelcomeFacts = {
-  name: "Anne",
+const base: BuddyFacts = {
   userId: "u-anne",
   date: "2026-11-24",
-  hour: 8,
+  hour: 9,
   weekday: 1,
-  checkedInToday: false,
   yesterdayComplete: false,
   streak: 0,
   weekSteps: 20_000,
   stepsGoal: 70_000,
-  run: { done: 1, target: 3 },
-  strength: { done: 0, target: 3 },
-  waterMl: 0,
-  waterGoalMl: 2500,
+  lastWorkoutDate: null,
   superBadi: false,
   canSpin: false,
-  openChallenge: null,
   unreadFrom: [],
+  complimentsUnread: 0,
+  squadNew: null,
+  squadCompleteYesterday: [],
+  squadWeekSteps: 0,
   finaleIn: 30,
 };
 
-describe("welcome message", () => {
-  it("greets by name and time of day", () => {
-    expect(daypart(8)).toBe("morning");
-    expect(daypart(14)).toBe("afternoon");
-    expect(daypart(20)).toBe("evening");
-    expect(daypart(2)).toBe("night");
-    expect(welcomeMessage(base).greeting).toContain("Anne");
+const texts = (f: BuddyFacts) => buddyBrief(f).items.map((i) => i.text).join(" | ");
+
+describe("buddy brief", () => {
+  it("never reminds you of what you still have to do", () => {
+    const all = texts({ ...base, weekSteps: 10_000, canSpin: true, weekday: 3, hour: 21 });
+    expect(all).not.toMatch(/nog \d|te gaan|staat nog open|vergeet/i);
+    expect(buddyBrief({ ...base, canSpin: true, weekday: 3 }).items).toHaveLength(0);
   });
 
-  it("is the same all day and differs from yesterday", () => {
-    expect(welcomeMessage(base)).toEqual(welcomeMessage(base));
-    for (let i = 0; i < 20; i++) {
+  it("brings news first, with a link to it", () => {
+    const b = buddyBrief({ ...base, unreadFrom: [{ id: "u-bram", name: "Bram" }], complimentsUnread: 2, yesterdayComplete: true, squadWeekSteps: 90_000 });
+    expect(b.items.map((i) => i.kind)).toEqual(["news", "news", "win"]);
+    expect(b.items[0]).toMatchObject({ text: "Bram stuurde je een bericht.", href: "/squad/chat/u-bram" });
+    expect(b.items[1].text).toBe("Je hebt 2 nieuwe complimenten.");
+    expect(b.anim).toBe("wave");
+  });
+
+  it("shows at most three lines", () => {
+    const b = buddyBrief({
+      ...base,
+      unreadFrom: [{ id: "a", name: "Sam" }, { id: "b", name: "Noor" }],
+      complimentsUnread: 1,
+      superBadi: true,
+      weekday: 0,
+      yesterdayComplete: true,
+      squadCompleteYesterday: ["Daphne"],
+    });
+    expect(b.items.length).toBeLessThanOrEqual(3);
+    expect(b.items[0].text).toBe("Sam en Noor stuurden je een bericht.");
+  });
+
+  it("mentions Super Badi and a new spin only on Monday", () => {
+    expect(texts({ ...base, weekday: 0, superBadi: true, canSpin: true })).toContain("Super Badi");
+    expect(texts({ ...base, weekday: 0, superBadi: true, canSpin: true })).toContain("Weekrad");
+    expect(texts({ ...base, weekday: 2, superBadi: true, canSpin: true })).toBe("");
+    expect(buddyBrief({ ...base, weekday: 0, superBadi: true }).anim).toBe("cheer");
+  });
+
+  it("celebrates what you achieved", () => {
+    expect(texts({ ...base, streak: 14 })).toBe("14 dagen op rij ingecheckt!");
+    expect(texts({ ...base, weekSteps: 71_000 })).toContain("70.000 stappen is binnen");
+    expect(texts({ ...base, lastWorkoutDate: "2026-11-23" })).toContain("training van gisteren");
+    expect(buddyBrief({ ...base, yesterdayComplete: true }).anim).toBe("happy");
+  });
+
+  it("tells how the squad is doing", () => {
+    expect(texts({ ...base, squadCompleteYesterday: ["Daphne", "Irene"] })).toBe("Daphne en Irene hadden gisteren alles afgevinkt.");
+    expect(texts({ ...base, squadWeekSteps: 210_000 })).toBe("Samen al 210.000 stappen deze week.");
+  });
+
+  it("varies from day to day but not within a day", () => {
+    const f = { ...base, yesterdayComplete: true, weekSteps: 80_000, streak: 4 };
+    expect(buddyBrief(f)).toEqual(buddyBrief(f));
+    for (let i = 0; i < 10; i++) {
       const day = addDays("2026-11-24", i);
-      const next = addDays(day, 1);
-      const a = welcomeMessage({ ...base, date: day });
-      const b = welcomeMessage({ ...base, date: next });
-      expect(a.greeting === b.greeting && a.line === b.line).toBe(false);
+      const a = texts({ ...f, date: day, streak: 4 });
+      const b = texts({ ...f, date: addDays(day, 1), streak: 4 });
+      expect(a).not.toBe(b);
     }
   });
 
-  it("puts unread messages first", () => {
-    const m = welcomeMessage({ ...base, unreadFrom: [{ id: "u-bram", name: "Bram" }], superBadi: true, canSpin: true });
-    expect(m.line).toContain("Bram");
-    expect(m.anim).toBe("wave");
-    expect(m.action?.href).toBe("/squad/chat/u-bram");
-  });
-
-  it("names two senders together", () => {
-    expect(welcomeMessage({ ...base, unreadFrom: [{ id: "u-bram", name: "Bram" }, { id: "u-irene", name: "Irene" }] }).line).toContain("Bram en Irene");
-  });
-
-  it("uses real numbers for steps", () => {
-    const only = { ...base, run: { done: 3, target: 3 }, strength: { done: 3, target: 3 } };
-    const m = welcomeMessage(only);
-    expect(m.line).toMatch(/50\.000|20\.000/);
-    expect(m.anim).toBe("walk");
-  });
-
-  it("reminds you of the check-in in the evening", () => {
-    const m = welcomeMessage({ ...base, hour: 20, run: { done: 3, target: 3 }, strength: { done: 3, target: 3 }, weekSteps: 80_000 });
-    expect(m.action?.href).toBe("/checkin");
-  });
-
   it("sits down at night", () => {
-    expect(welcomeMessage({ ...base, hour: 1 }).anim).toBe("sit");
+    expect(buddyBrief({ ...base, hour: 2, yesterdayComplete: true }).anim).toBe("sit");
   });
 
-  it("has a line when there is nothing to say", () => {
-    const m = welcomeMessage({ ...base, weekday: 0, weekSteps: 0, run: { done: 3, target: 3 }, strength: { done: 3, target: 3 } });
-    expect(m.line.length).toBeGreaterThan(10);
+  it("joins names in Dutch", () => {
+    expect(joinNl(["Sam"])).toBe("Sam");
+    expect(joinNl(["Sam", "Noor", "Alex"])).toBe("Sam, Noor en Alex");
   });
 });
