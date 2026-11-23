@@ -21,6 +21,18 @@ export type CoachEvent =
 
 const bodySchema = z.object({ message: z.string().trim().min(1, "Typ eerst een vraag.").max(4000, "Maximaal 4000 tekens.") });
 
+/** A readable reason, so a broken key or an empty balance is visible in the chat. */
+function coachErrorMessage(err: unknown): string {
+  if (!(err instanceof Anthropic.APIError)) return "Er ging iets mis. Probeer het opnieuw.";
+  const text = (err.message ?? "").replace(/\s+/g, " ").trim();
+  if (/credit balance/i.test(text)) return "Baddy kan nu niet antwoorden: het API-tegoed bij Anthropic is op. Vraag de beheerder het tegoed aan te vullen.";
+  if (err instanceof Anthropic.AuthenticationError) return "Baddy kan nu niet antwoorden: de API-sleutel klopt niet of is ingetrokken.";
+  if (err instanceof Anthropic.PermissionDeniedError) return "Baddy kan nu niet antwoorden: de API-sleutel heeft geen toegang tot dit model.";
+  if (err instanceof Anthropic.RateLimitError) return "Baddy is even druk. Probeer het over een minuut opnieuw.";
+  if (err.status === 529 || /overloaded/i.test(text)) return "Baddy is even overbelast. Probeer het zo nog eens.";
+  return `Baddy kon je vraag nu niet afmaken (${err.status ?? "fout"}: ${text.slice(0, 160)}).`;
+}
+
 function json(status: number, message: string) {
   return Response.json({ error: message }, { status });
 }
@@ -98,14 +110,8 @@ export async function POST(request: Request) {
           if (aiImagesAvailable()) after(() => generateRecipePhotoFor(supabase, ctx, ref.id));
         }
       } catch (err) {
-        const message =
-          err instanceof Anthropic.RateLimitError
-            ? "Baddy is even druk. Probeer het over een minuut opnieuw."
-            : err instanceof Anthropic.AuthenticationError
-              ? "De koppeling met Baddy werkt niet: de API-sleutel klopt niet."
-              : err instanceof Anthropic.APIError
-                ? "Baddy kon je vraag nu niet afmaken. Probeer het opnieuw."
-                : "Er ging iets mis. Probeer het opnieuw.";
+        console.error("[coach] failed", err);
+        const message = coachErrorMessage(err);
         send({ type: "error", message });
       } finally {
         controller.close();

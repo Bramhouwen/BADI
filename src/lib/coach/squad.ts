@@ -90,7 +90,8 @@ export async function replyAsBaddyInSquad(supabase: SupabaseClient, ctx: AppCont
     await sendPush(supabase, "chat", { title: "Baddy in de squad", body: body.slice(0, 160), url: "/squad/chat", tag: "squad-chat" });
     if (recipe) await sendPush(supabase, "recipes", { title: "Nieuw recept van Baddy", body: `${recipe.name} staat in de Kitchen.`, url: `/kitchen/${recipe.id}`, tag: "recipe" });
     if (recipe && aiImagesAvailable()) await generateRecipePhotoFor(supabase, ctx, recipe.id);
-  } catch {
+  } catch (err) {
+    console.error("[coach squad] failed", err);
     await insert("Ik kon even niet antwoorden. Probeer het zo nog eens.");
   }
 }
