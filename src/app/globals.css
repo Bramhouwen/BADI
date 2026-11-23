@@ -90,12 +90,15 @@ body {
   border-color: var(--border);
 }
 
-input,
-textarea,
-select,
-button {
-  font: inherit;
-  color: inherit;
+/* In the base layer, so a text colour set on a button or field (text-white, text-muted) wins over this. */
+@layer base {
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 input,
