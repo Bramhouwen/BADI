@@ -38,14 +38,18 @@ import { InspirationPreview } from "@/components/home/inspiration-preview";
 import { RealtimeRefresher } from "@/components/app/realtime-refresher";
 import { WelcomeToast } from "@/components/home/welcome-toast";
 import { WelcomeSplash } from "@/components/sprite/welcome-splash";
-import { spriteFor } from "@/lib/sprites";
+import { SPRITE_SHEETS, spriteFor } from "@/lib/sprites";
+import { ANNOUNCEMENT, ANNOUNCEMENT_PREVIEW } from "@/lib/announcement";
+import { announcementSent } from "@/lib/announcement-server";
+import type { SplashItem } from "@/components/sprite/welcome-splash";
 import { welcomeMessage } from "@/lib/welcome";
 import { CHALLENGE_META } from "@/lib/wheel";
 import { WATER_GOAL_ML } from "@/lib/constants";
 import type { WaterEntry } from "@/lib/types";
 import type { DailyCheckin, Recipe, WallPost } from "@/lib/types";
 
-async function Content() {
+async function Content({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
   const ctx = await requireContext();
   const supabase = await createClient();
   const now = new Date();
@@ -124,6 +128,11 @@ async function Content() {
   const mySteps = Object.values(stepsByDay(weekStart, weekSteps.filter((s) => s.user_id === ctx.userId), mine.filter((c) => c.checkin_date >= weekStart))).reduce((a, b) => a + b, 0);
   const thisTrainingWeek = trainingWeeks(workouts, today, 1)[0];
 
+  // An announcement first (the admin can preview it with ?aankondiging=1), then your own character's daily hello.
+  const announceSheet = SPRITE_SHEETS[ANNOUNCEMENT.sprite];
+  const previewAnnouncement = ctx.membership.role === "admin" && sp[ANNOUNCEMENT_PREVIEW] === "1";
+  const showAnnouncement = Boolean(announceSheet) && (previewAnnouncement || (await announcementSent(supabase, ctx.challenge.id)));
+
   // Your own character says hello once a day, with a line about your day.
   const mySprite = spriteFor(ctx.profile.display_name);
   const welcome = mySprite && phase === "during" ? await loadWelcome() : null;
@@ -169,7 +178,20 @@ async function Content() {
   return (
     <Page className="space-y-4"><div className="h-1" />
       <WelcomeToast />
-      {welcome && mySprite ? <WelcomeSplash userId={ctx.userId} date={today} sheet={mySprite} message={welcome} /> : null}
+      {(() => {
+        const items: SplashItem[] = [];
+        if (showAnnouncement && announceSheet) {
+          items.push({
+            storageKey: "badi:announce",
+            value: ANNOUNCEMENT.id,
+            force: previewAnnouncement,
+            sheet: announceSheet,
+            message: { greeting: ANNOUNCEMENT.greeting, line: ANNOUNCEMENT.line, anim: "wave", action: null },
+          });
+        }
+        if (welcome && mySprite) items.push({ storageKey: "badi:welcome", value: `${ctx.userId}:${today}`, sheet: mySprite, message: welcome });
+        return items.length ? <WelcomeSplash items={items} /> : null;
+      })()}
       <RealtimeRefresher channel={`home:${ctx.challenge.id}`} tables={["daily_checkins", "wall_posts", "recipes"]} />
 
       <div className="flex items-end justify-between gap-3 px-1">
@@ -252,10 +274,10 @@ async function Content() {
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <Content />
+      <Content searchParams={searchParams} />
     </Suspense>
   );
 }

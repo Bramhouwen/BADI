@@ -1,25 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { WelcomeMessage } from "@/lib/welcome";
 import type { SpriteSheet } from "@/lib/sprites";
 import { Sprite } from "./sprite";
 
-const STORAGE_KEY = "badi:welcome";
+/** One character moment: shown once per `value` of `storageKey`, or always when `force` is set. */
+export interface SplashItem {
+  storageKey: string;
+  value: string;
+  force?: boolean;
+  sheet: SpriteSheet;
+  message: WelcomeMessage;
+}
 
-function seenToday(key: string): boolean {
+function seen(item: SplashItem): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === key;
+    return localStorage.getItem(item.storageKey) === item.value;
   } catch {
     return false;
   }
 }
 
-function markSeen(key: string) {
+function markSeen(item: SplashItem) {
   try {
-    localStorage.setItem(STORAGE_KEY, key);
+    localStorage.setItem(item.storageKey, item.value);
   } catch {
     // Private mode: the splash may show again, which is harmless.
   }
@@ -38,22 +45,33 @@ function useTyped(text: string, start: boolean, instant: boolean): string {
 }
 
 /**
- * Your own character walks in once a day, the first time you open Home, and
- * says hello with a line about your day. Tap anywhere to continue.
+ * A character walks in, the first time you open Home, and says something.
+ * `items` are tried in order (an announcement before the daily welcome); only
+ * the first one not seen yet is shown, the next waits for another visit.
+ * Tap anywhere to continue.
  */
-export function WelcomeSplash({ userId, date, sheet, message }: { userId: string; date: string; sheet: SpriteSheet; message: WelcomeMessage }) {
+export function WelcomeSplash({ items }: { items: SplashItem[] }) {
   const reduce = useReducedMotion() ?? false;
-  const key = `${userId}:${date}`;
+  const [shown, setShown] = useState<SplashItem | null>(null);
   const [open, setOpen] = useState(false);
   const [talking, setTalking] = useState(false);
+  const signature = items.map((i) => `${i.storageKey}=${i.value}:${i.force ? 1 : 0}`).join("|");
 
+  // Decide once per mount: a second run (React's dev double effects) must not skip to the next item.
+  const decided = useRef<string | null>(null);
   useEffect(() => {
-    if (seenToday(key)) return;
-    markSeen(key);
+    if (decided.current === signature) return;
+    decided.current = signature;
+    const next = items.find((i) => i.force || !seen(i));
+    if (!next) return;
+    if (!next.force) markSeen(next);
     // Opening from an effect: the splash depends on this browser's storage.
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShown(next);
     setOpen(true);
-  }, [key]);
+    // Only when the set of moments changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
 
   // Start talking once the character has walked in.
   useEffect(() => {
@@ -62,6 +80,7 @@ export function WelcomeSplash({ userId, date, sheet, message }: { userId: string
     return () => clearTimeout(id);
   }, [open, reduce]);
 
+  const message = shown?.message ?? { greeting: "", line: "", anim: "wave" as const, action: null };
   const greeting = useTyped(message.greeting, talking, reduce);
   const lineStart = talking && greeting.length === message.greeting.length;
   const line = useTyped(message.line, lineStart, reduce);
@@ -73,7 +92,7 @@ export function WelcomeSplash({ userId, date, sheet, message }: { userId: string
 
   return (
     <AnimatePresence>
-      {open ? (
+      {open && shown ? (
         <motion.div
           className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-[#f6ede6]/85 px-4 backdrop-blur-md"
           role="dialog"
@@ -113,7 +132,7 @@ export function WelcomeSplash({ userId, date, sheet, message }: { userId: string
               animate={{ x: 0 }}
               transition={{ duration: 1.4, ease: [0.22, 0.8, 0.3, 1] }}
             >
-              <Sprite sheet={sheet} anim={talking ? message.anim : "walk"} height={220} />
+              <Sprite sheet={shown.sheet} anim={talking ? message.anim : "walk"} height={220} />
               <span className="absolute bottom-1 left-1/2 -z-10 h-4 w-28 -translate-x-1/2 rounded-[50%] bg-ink/15 blur-[3px]" aria-hidden />
             </motion.div>
 

@@ -15,6 +15,8 @@ import { ProfileForm } from "./profile-form";
 
 import { SharingSettings } from "./sharing-settings";
 import { BaddyMemory } from "./baddy-memory";
+import { AnnouncementControls } from "./announcement-controls";
+import { announcementSent } from "@/lib/announcement-server";
 import { PushSettings } from "./push-settings";
 import { settingsFromRow } from "@/lib/notification-kinds";
 import type { AlcoholException } from "@/lib/types";
@@ -48,6 +50,8 @@ async function Content() {
   ]);
   const exceptions = (exceptionRows ?? []) as AlcoholException[];
   const wrapped = wrappedStatus(ctx.challenge);
+  const isAdmin = ctx.membership.role === "admin";
+  const announced = isAdmin ? await announcementSent(supabase, ctx.challenge.id) : false;
 
   return (
     <Page className="space-y-6">
@@ -69,6 +73,13 @@ async function Content() {
           />
         </div>
       </section>
+
+      {isAdmin ? (
+        <section aria-label="Aankondiging">
+          <SectionTitle>Aankondiging</SectionTitle>
+          <AnnouncementControls sent={announced} />
+        </section>
+      ) : null}
 
       <section id="meldingen">
         <SectionTitle>Meldingen</SectionTitle>
