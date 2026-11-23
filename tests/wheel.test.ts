@@ -157,11 +157,13 @@ describe("duplicates by brand", () => {
   it("counts the same prize or the same brand as a duplicate", async () => {
     const { isDuplicateWin, swapOptions } = await import("@/lib/wheel");
     const mine = [
-      { id: "s1", prize_id: "mat", prize_brand: "Flowee" },
-      { id: "s2", prize_id: "pillow", prize_brand: "flowee" },
-      { id: "s3", prize_id: "bar", prize_brand: "Upfront" },
+      { id: "s1", prize_id: "mat", prize_brand: "Flowee", created_at: "2026-11-09T10:00:00Z" },
+      { id: "s2", prize_id: "pillow", prize_brand: "flowee", created_at: "2026-11-16T10:00:00Z" },
+      { id: "s3", prize_id: "bar", prize_brand: "Upfront", created_at: "2026-11-02T10:00:00Z" },
     ];
+    // Only the later of two wins of the same brand is a duplicate.
     expect(isDuplicateWin(mine[1], mine)).toBe(true);
+    expect(isDuplicateWin(mine[0], mine)).toBe(false);
     expect(isDuplicateWin(mine[2], mine)).toBe(false);
     const prizes = [
       { id: "pillow", brand: "Flowee", category: "large" },

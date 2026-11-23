@@ -46,7 +46,7 @@ function revalidateWheel() {
   revalidatePath("/");
 }
 
-type SpinRecord = { id: string; category: WheelCategory; prize_id: string | null; prize_brand: string | null; prize_name: string | null; challenge_key: WheelChallengeKey | null };
+type SpinRecord = { id: string; category: WheelCategory; prize_id: string | null; prize_brand: string | null; prize_name: string | null; challenge_key: WheelChallengeKey | null; created_at: string };
 type Ctx = Awaited<ReturnType<typeof requireContext>>;
 type Supa = Awaited<ReturnType<typeof createClient>>;
 
@@ -102,7 +102,7 @@ async function outcomeFor(ctx: Ctx, supabase: Supa, spin: SpinRecord): Promise<S
   if (spin.prize_id) {
     const [{ data: prize }, { data: mineRows }] = await Promise.all([
       supabase.from("prizes").select("description, value_cents, url, image_path, variant_label, variants").eq("id", spin.prize_id).maybeSingle(),
-      supabase.from("wheel_spins").select("id, prize_id, prize_brand").eq("user_id", ctx.userId).not("prize_id", "is", null),
+      supabase.from("wheel_spins").select("id, prize_id, prize_brand, created_at").eq("user_id", ctx.userId).not("prize_id", "is", null),
     ]);
     const mine = (mineRows ?? []) as OwnedSpin[];
     description = (prize?.description as string | null) ?? null;

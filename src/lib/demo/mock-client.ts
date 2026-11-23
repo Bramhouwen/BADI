@@ -356,7 +356,7 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       return Promise.resolve(ok(spin));
     }
     case "wheel_available_ids":
-      return Promise.resolve(ok(demoAvailable(s).map((p) => p.id)));
+      return Promise.resolve(ok(demoAvailableForMe(s).map((p) => p.id)));
     case "wheel_budget_status":
       return Promise.resolve(ok(demoBudgetLeft(s)));
     case "spin_wheel":
@@ -401,11 +401,17 @@ function demoAvailable(s: ReturnType<typeof store>) {
   return availablePrizes(s.prizes as unknown as (PrizeLike & Row)[], wins, demoBudgetLeft(s));
 }
 
+/** Twin of wheel_available_for: available prizes minus what the demo member already won. */
+function demoAvailableForMe(s: ReturnType<typeof store>) {
+  const owned = new Set(s.wheel_spins.filter((x) => x.user_id === DEMO_USER_ID && x.prize_id).map((x) => String(x.prize_id)));
+  return demoAvailable(s).filter((p) => !owned.has(p.id));
+}
+
 /** Twin of the SQL function spin_wheel: a level by its chance, then a prize by product weight. */
 function spinWheelTwin(s: ReturnType<typeof store>): Result {
   const week = weekStartOf(todayKey());
   // Demo: unlimited spins, to walk through every outcome. The real function allows one per week.
-  const available = demoAvailable(s);
+  const available = demoAvailableForMe(s);
   const weights = Object.fromEntries(s.wheel_categories.map((c) => [c.key, c.weight])) as Record<WheelCategory, number>;
   const odds = wheelOdds(weights, available);
   let pick = Math.random();
