@@ -1,8 +1,9 @@
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getSquad, requireContext } from "@/lib/data";
 import { ensureWorldProfile, loadWorldProfiles } from "@/lib/world/server";
-import { WORLD_SPRITES, worldSpriteFor } from "@/lib/world/types";
+import { WORLD_SPRITES, canSeeWorld, worldSpriteFor } from "@/lib/world/types";
 import { WOONKAMER } from "@/lib/world/scenes/woonkamer";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
@@ -25,6 +26,8 @@ const SCENE_NAMES: Record<string, string> = {
  */
 async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[] }> }) {
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
+  // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
+  if (!canSeeWorld(ctx.membership.role)) notFound();
   const [{ profile, missingTable }, squad, all] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id)]);
   const name = firstName(ctx.profile.display_name);
   // Debug only: ?debug=2&als=anne plays as another character to test poses.

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { canSeeWorld } from "@/lib/world/types";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -16,6 +17,7 @@ export async function saveWorldPosition(input: { scene: string; x: number; y: nu
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Onbekende plek." };
   const ctx = await requireContext();
+  if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
   const supabase = await createClient();
   const { error } = await supabase
     .from("world_profiles")

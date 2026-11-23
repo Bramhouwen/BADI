@@ -188,3 +188,9 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 - Bram kan nog niet zitten: zijn zitpose zit in zijn eigen leunstoel. Hij loopt naar de zitplek en blijft staan, met een melding.
 - De deur leidt nog nergens heen: buiten, kantoor en sportschool zijn stap 1b.
 - Snelheid op een echte telefoon nog meten (doel 60 fps).
+
+### Tussendoor: wereld alleen voor de beheerder (23-11-2026)
+
+- Zolang `WORLD_OPEN` in `src/lib/world/types.ts` op `false` staat, ziet alleen de beheerder het kaart-icoon en `/wereld`. Voor de anderen geeft `/wereld` een 404 en wordt hun plek niet opgeslagen.
+- Openzetten voor de squad: `WORLD_OPEN = true`, pushen.
+- Lokaal bekijken zonder te pushen: `npm run dev` en dan http://localhost:3000/wereld (demo met `NEXT_PUBLIC_WINTER_ARC_DEMO=1`).

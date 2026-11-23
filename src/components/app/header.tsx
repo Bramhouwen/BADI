@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { canSeeWorld } from "@/lib/world/types";
 import Image from "next/image";
 import { Suspense } from "react";
 import { Activity, Bell, Map as MapIcon } from "lucide-react";
@@ -46,9 +47,11 @@ async function HeaderStatus() {
           ) : null}
         </Link>
       ) : null}
-      <Link href="/wereld" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="BADI Wereld">
-        <MapIcon className="h-[18px] w-[18px]" strokeWidth={1.7} />
-      </Link>
+      {canSeeWorld(ctx.membership.role) ? (
+        <Link href="/wereld" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="BADI Wereld">
+          <MapIcon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+        </Link>
+      ) : null}
       <Link href="/dashboard" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="Mijn performance">
         <Activity className="h-[18px] w-[18px]" strokeWidth={1.7} />
       </Link>

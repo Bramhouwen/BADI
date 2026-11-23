@@ -41,3 +41,13 @@ describe("world assets", () => {
     });
   }
 });
+
+describe("who sees the world", () => {
+  it("is only for the admin while the world is closed", async () => {
+    const { WORLD_OPEN, canSeeWorld } = await import("@/lib/world/types");
+    expect(WORLD_OPEN).toBe(false);
+    expect(canSeeWorld("admin")).toBe(true);
+    expect(canSeeWorld("member")).toBe(false);
+    expect(canSeeWorld(null)).toBe(false);
+  });
+});

@@ -1,5 +1,17 @@
 /** BADI Wereld: shared types and small pure helpers. See docs/wereld/WERELD.md. */
 
+/**
+ * While false, only the admin sees BADI Wereld (the map icon and /wereld), so
+ * the world can be built and tested in the live app. Set to true to open it
+ * for the whole squad.
+ */
+export const WORLD_OPEN = false;
+
+/** Whether this member may see the world yet. */
+export function canSeeWorld(role: string | null | undefined): boolean {
+  return WORLD_OPEN || role === "admin";
+}
+
 /** Scenes with a drawn background in public/wereld/scenes. */
 export const WORLD_SCENES = ["buiten", "woonkamer", "kantoor", "sportschool"] as const;
 export type WorldScene = (typeof WORLD_SCENES)[number];
