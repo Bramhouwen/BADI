@@ -1,7 +1,7 @@
 /**
  * Turns a 6x4 pose sheet on a white background into a BADI sprite sheet.
  *
- *   npm run sprite -- <sheet.png|webp> <name> [--face=row,col]
+ *   npm run sprite -- <sheet.png|webp> <name> [--face=row,col] [--fit-rows]
  *
  * Writes public/sprites/<name>.webp: the white background removed, every pose
  * redrawn in a uniform 320x272 cell, anchored on the head in rows 1 to 3 (so
@@ -14,6 +14,11 @@
  * Also writes public/sprites/<name>-face.png, the head on a cream square for
  * push notifications, cut from the standing pose (row 4, column 1 by default;
  * pass --face=row,col counted from 1 for another layout).
+ *
+ * Every pose keeps its height in its source cell, moved down 16 pixels. With
+ * --fit-rows each row is moved by its own amount instead, so the poses of
+ * that row are centred in the cell height and nothing is cut off: for a sheet
+ * where the poses sit low or are taller (an outfit sheet with a crown).
  */
 import sharp from "sharp";
 
@@ -29,6 +34,7 @@ const COLS = 6;
 const ROWS = 4;
 const CW = 320;
 const CH = 272;
+const FIT_ROWS = flags.includes("--fit-rows");
 const PAD_TOP = 16;
 
 const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -111,6 +117,29 @@ if (poses.length < COLS || poses.length > COLS * ROWS) {
 }
 if (poses.length !== COLS * ROWS) console.log(`Let op: ${poses.length} poses in plaats van ${COLS * ROWS}. Stel de animaties voor deze persoon apart in.`);
 
+// Per row, with --fit-rows: how far to move its poses so the row is centred in the cell height.
+const rowShift = new Array(ROWS).fill(PAD_TOP);
+if (FIT_ROWS) {
+  const top = new Array(ROWS).fill(Infinity), bottom = new Array(ROWS).fill(-Infinity);
+  for (const px of poses) {
+    let sy = 0, y0 = Infinity, y1 = -1;
+    for (const q of px) {
+      const y = (q / W) | 0;
+      sy += y;
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+    const row = Math.floor(sy / px.length / ch);
+    top[row] = Math.min(top[row], y0 - row * ch);
+    bottom[row] = Math.max(bottom[row], y1 - row * ch);
+  }
+  for (let r = 0; r < ROWS; r++) {
+    if (!Number.isFinite(top[r])) continue;
+    if (bottom[r] - top[r] > CH - 2) console.log(`Let op: rij ${r + 1} is hoger dan een vak; de bovenkant valt weg.`);
+    rowShift[r] = Math.round((CH - 1 - bottom[r] - top[r]) / 2);
+  }
+}
+
 // 3. Redraw every pose in its own uniform cell. The sheet is saved near-lossless:
 // the art is small, and extra compression on top of the source shows.
 const out = Buffer.alloc(CW * COLS * CH * ROWS * 4);
@@ -145,7 +174,7 @@ for (const px of poses) {
     anchorX = hx / hn;
   }
   const offX = Math.round(CW * col + CW / 2 - anchorX);
-  const offY = Math.round(CH * row + PAD_TOP - row * ch);
+  const offY = Math.round(CH * row + rowShift[row] - row * ch);
   const all = new Set(px);
   for (const q of px) {
     for (const r of [q - 1, q + 1, q - W, q + W]) {

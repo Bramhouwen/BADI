@@ -45,7 +45,16 @@ export const ITEMS: ItemDef[] = [
   { id: "vloerlamp", name: "Vloerlamp", price: 30, category: "licht", w: 120, h: 351, foot: [1, 1] },
 ];
 
-export const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
+/**
+ * The clothing rack every room has from the start: not for sale, not stored
+ * in the database. It stands against the back wall at RACK_AT, or on the
+ * first free place when the owner put something there. Tap it in your own
+ * room to change clothes.
+ */
+export const RACK: ItemDef = { id: "kledingrek", name: "Kledingrek", price: 0, category: "kasten", w: 246, h: 330, foot: [1, 2] };
+export const RACK_AT = { u: 0, v: 3 };
+
+export const ITEM_BY_ID = new Map([...ITEMS, RACK].map((i) => [i.id, i]));
 
 export const CATEGORY_NAMES: Record<ItemDef["category"], string> = {
   zitten: "Zitten",

@@ -12,7 +12,7 @@ import { ACTIONS, STATUSES, type StatusKey } from "@/lib/world/engine/presence";
 import type { Spot } from "@/lib/world/engine/scene";
 import type { WorldGame } from "@/lib/world/missions-server";
 
-export type HudPanel = "acties" | "status" | "kaart" | "missies" | "gesprek";
+export type HudPanel = "acties" | "status" | "kaart" | "missies" | "gesprek" | "kledingrek";
 
 const round = "pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/95 text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur";
 export const sheet = "absolute inset-x-3 mx-auto max-w-md overflow-hidden rounded-[22px] bg-white/97 shadow-xl ring-1 ring-ink/[0.06] backdrop-blur";

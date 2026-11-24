@@ -10,6 +10,10 @@ import { Page } from "@/components/ui/page";
 import { HOME_SCENE, hasNoPlace, seatNewcomers } from "@/lib/world/newcomers";
 import { WorldView } from "@/components/world/world-view";
 import type { WorldMember } from "@/components/world/world-canvas";
+import { currentSuperBadi } from "@/lib/super-badi-server";
+import { todayKey } from "@/lib/dates";
+import { weekStartOf } from "@/lib/checkin-plan";
+import { defaultOutfit, spriteKey } from "@/lib/world/outfits";
 
 export const metadata = { title: "World of Badi" };
 
@@ -26,7 +30,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
-  const [{ profile, missingTable }, squad, all] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id)]);
+  const [{ profile, missingTable }, squad, all, superBadi] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id), currentSuperBadi(ctx)]);
+  // The Super Badi of this week wears the gold tracksuit with the crown, also while offline.
+  const week = weekStartOf(todayKey(new Date(), ctx.challenge.timezone));
   // The others, with where they were last: shown in a rest pose while they are offline.
   const byUser = new Map(all.map((p) => [p.user_id, p]));
   // Whoever has not been in yet sits asleep on the sofa in the living room, on a seat nobody uses.
@@ -39,7 +45,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
         const p = byUser.get(m.user_id);
         const character = p?.sprite ?? worldSpriteFor(m.profile.display_name);
         if (!character) return [];
-        return [{ id: m.user_id, name: firstName(m.profile.display_name), character, scene: p?.scene ?? null, x: p?.x ?? null, y: p?.y ?? null, activity: p?.activity ?? null, updatedAt: p && !hasNoPlace(p) ? p.updated_at : "" }];
+        return [{ id: m.user_id, name: firstName(m.profile.display_name), character, look: spriteKey(character, defaultOutfit(superBadi.has(m.user_id))), scene: p?.scene ?? null, x: p?.x ?? null, y: p?.y ?? null, activity: p?.activity ?? null, updatedAt: p && !hasNoPlace(p) ? p.updated_at : "" }];
       }),
     takenAtHome,
   ).map((m) => ({ ...m, scene: m.scene ?? HOME_SCENE }));
@@ -67,6 +73,8 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
       edit={sp.bewerken !== undefined}
       tour={sp.rondleiding !== undefined}
       notice={missingTable ? "Je plek wordt nog niet bewaard (migratie 0030)" : null}
+      superBadi={[...superBadi]}
+      week={week}
     />
   ) : (
     <Page>

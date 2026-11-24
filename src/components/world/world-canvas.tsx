@@ -16,7 +16,7 @@ import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
 import type { WorldLink } from "./world-link";
 import { lockBalloonOver, totalUnread, type WorldDm } from "@/lib/world/dm";
 import { basePoint, depthOf, fits, footprintPolygon, freeSpot, seatHip, type Placement } from "@/lib/world/engine/furniture";
-import { ITEM_BY_ID, itemImage } from "@/lib/world/items";
+import { ITEM_BY_ID, RACK, RACK_AT, itemImage } from "@/lib/world/items";
 import type { Prop } from "@/lib/world/engine/renderer";
 import type { RoomPiece } from "@/app/actions/world";
 import { liveLines, pushLine, type ChatLine } from "@/lib/world/engine/chat-strip";
@@ -56,6 +56,8 @@ export interface WorldMember {
   /** Seat or spot they were on. */
   activity: string | null;
   updatedAt: string;
+  /** The frames to draw them with while offline, when that is an outfit (public/wereld/poppetjes/<look>); else `character`. */
+  look?: string;
 }
 
 /** What the screen around the world can ask of the canvas. */
@@ -89,6 +91,8 @@ export interface WorldCanvasApi {
   selectPiece(id: string | null): void;
   /** Where the conversation strip starts: just under the top bar (CSS pixels). */
   setChatTop(px: number): void;
+  /** Change clothes: draw your character with these frames (public/wereld/poppetjes/<key>) and tell the others. */
+  setLook(key: string): void;
 }
 
 /** Who you tapped. */
@@ -135,9 +139,11 @@ export function WorldCanvas({
   onFollow,
   onPieceMoved,
   onPieceSelected,
+  onRack,
 }: {
   scene: SceneDef;
-  me: { id: string; name: string; character: string | null };
+  /** `look`: the frames you are drawn with when that is an outfit; read when the scene starts, later changes go through setLook. */
+  me: { id: string; name: string; character: string | null; look?: string | null };
   startX?: number | null;
   startY?: number | null;
   debug?: boolean;
@@ -171,6 +177,8 @@ export function WorldCanvas({
   onPieceMoved?: (piece: RoomPiece) => void;
   /** Furnishing: the piece you tapped, or null. */
   onPieceSelected?: (id: string | null) => void;
+  /** You walked up to the clothing rack of this room. */
+  onRack?: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
@@ -185,7 +193,11 @@ export function WorldCanvas({
   const mineRef = useRef(mine);
   const onPieceMovedRef = useRef(onPieceMoved);
   const onPieceSelectedRef = useRef(onPieceSelected);
+  const onRackRef = useRef(onRack);
+  const lookRef = useRef(me.look);
   useEffect(() => {
+    onRackRef.current = onRack;
+    lookRef.current = me.look;
     onPieceMovedRef.current = onPieceMoved;
     onPieceSelectedRef.current = onPieceSelected;
     onDoorRef.current = onDoor;
@@ -284,7 +296,7 @@ export function WorldCanvas({
 
     (async () => {
       try {
-        const [background, character] = await Promise.all([loadImage(scene.background), loadCharacter(me.character!)]);
+        const [background, character] = await Promise.all([loadImage(scene.background), loadCharacter(lookRef.current ?? me.character!)]);
         if (!alive) return;
         const characters = new Map<string, LoadedCharacter>([[character.key, character]]);
         // Around the picture (zoomed out on a tall screen): the colour of the picture's own edge, so it runs on seamlessly.
@@ -312,7 +324,7 @@ export function WorldCanvas({
           canSit: Boolean(c.manifest.animations.zitten) && !c.manifest.animations.zitten.withChair,
           has: (pose) => Boolean(c.manifest.animations[pose]),
         });
-        const mine = abilities(character);
+        let mine = abilities(character);
         const intentOf = (activity: string | null): Intent | null => {
           if (!activity) return null;
           if (scene.seats.some((s) => s.id === activity)) return { kind: "seat", id: activity };
@@ -356,7 +368,7 @@ export function WorldCanvas({
         let lastMove: { intent: Intent; from: Pt; at: number } | null = null;
         const send = () => {
           if (edit || !link || !lastMove) return;
-          link.publish({ v: 1, name: me.name, character: character.key, scene: scene.id, from: lastMove.from, intent: lastMove.intent, at: lastMove.at, status: (me0.status as StatusKey | null) ?? null, trained: me0.trained });
+          link.publish({ v: 1, name: me.name, character: me0.character, scene: scene.id, from: lastMove.from, intent: lastMove.intent, at: lastMove.at, status: (me0.status as StatusKey | null) ?? null, trained: me0.trained });
         };
         const publish = (intent: Intent, from: Pt) => {
           lastMove = { intent, from, at: Date.now() };
@@ -453,10 +465,10 @@ export function WorldCanvas({
         const showOffline = () => {
           for (const m of membersRef.current) {
             if (m.id === me.id || m.scene !== scene.id || m.x === null || m.y === null || others.get(m.id)?.live) continue;
-            const o = ensure(m.id, m.name, m.character, [m.x, m.y]);
+            const o = ensure(m.id, m.name, m.look ?? m.character, [m.x, m.y]);
             o.av.offline = true;
             o.lastSeen = m.updatedAt;
-            withCharacter(m.character, (c) => {
+            withCharacter(m.look ?? m.character, (c) => {
               if (o.live) return;
               placeAtEnd(o.av, scene, restPose(intentOf(m.activity), [m.x!, m.y!]), performance.now(), abilities(c));
             });
@@ -475,7 +487,14 @@ export function WorldCanvas({
           o.lastSeen = null;
           o.av.status = p.status ?? null;
           o.av.trained = Boolean(p.trained);
-          if (o.at === p.at) return;
+          // Changed clothes without moving: only the frames change.
+          if (o.at === p.at) {
+            if (o.av.character !== p.character)
+              withCharacter(p.character, (c) => {
+                if (o.live) o.av.character = c.key;
+              });
+            return;
+          }
           o.at = p.at;
           o.intent = p.intent;
           withCharacter(p.character, (c) => {
@@ -590,11 +609,13 @@ export function WorldCanvas({
           });
         const seatDepth = () => new Map(pieces.map((p) => [p.id, depthOf(baseGrid, p)]));
         // The piece under a finger: the front-most picture that covers that point.
-        const pieceAt = (sx: number, sy: number): Placement | null => {
+        // The rack stays where it is: it is left out while furnishing.
+        const pieceAt = (sx: number, sy: number, withRack = false): Placement | null => {
           const [x, y] = screenToScene(sx, sy, cam, view);
           let best: Placement | null = null;
           let bestDepth = -Infinity;
           for (const p of pieces) {
+            if (p.id === RACK.id && !withRack) continue;
             const [bx, by] = basePoint(baseGrid, p);
             if (x < bx - p.item.w / 2 || x > bx + p.item.w / 2 || y < by - p.item.h || y > by + 8) continue;
             const d = depthOf(baseGrid, p) + (p.item.flat ? -10000 : 0);
@@ -606,6 +627,17 @@ export function WorldCanvas({
           return best;
         };
         let movingPiece: { id: string; from: { u: number; v: number }; grab: [number, number] } | null = null;
+        const goToRack = (rack: Placement) => {
+          stopFollowing();
+          const [a, b] = rack.flip ? [rack.item.foot[1], rack.item.foot[0]] : rack.item.foot;
+          const t = grid.nearestWalkable(baseGrid.tileToPx(rack.u + a + 0.5, rack.v + b / 2));
+          if (!t) return onRackRef.current?.();
+          const [bx] = basePoint(baseGrid, rack);
+          move({ kind: "stand", to: grid.tileToPx(t[0] + 0.5, t[1] + 0.5) }, () => {
+            me0.facing = bx < me0.feet[0] ? "left" : "right";
+            onRackRef.current?.();
+          });
+        };
 
         if (apiRef)
           apiRef.current = {
@@ -630,6 +662,13 @@ export function WorldCanvas({
             },
             setChatTop(px) {
               chatTop = px;
+            },
+            setLook(key) {
+              withCharacter(key, (c) => {
+                me0.character = c.key;
+                mine = abilities(c);
+                send();
+              });
             },
             act(kind) {
               if (!link) return;
@@ -679,6 +718,12 @@ export function WorldCanvas({
             },
             setPieces(next) {
               pieces = next.flatMap((r) => toPlacement(r) ?? []);
+              // Every room has a clothing rack: at its own place, or the first free one.
+              if (scene.owner) {
+                const rack: Placement = { id: RACK.id, item: RACK, ...RACK_AT, flip: false };
+                const at = fits(baseGrid, rack, pieces) ? RACK_AT : freeSpot(baseGrid, rack, pieces);
+                if (at) pieces.push({ ...rack, ...at });
+              }
               if (selectedPiece && !pieces.some((p) => p.id === selectedPiece)) selectedPiece = null;
               refreshPieces();
             },
@@ -748,6 +793,9 @@ export function WorldCanvas({
               // Tapping someone shows who it is instead of walking.
               if (pick(x, y)) return;
               follow = true;
+              // The clothing rack: walk up to it, then choose what to wear.
+              const rack = pieceAt(x, y, true);
+              if (rack?.id === RACK.id) return goToRack(rack);
               tapScene(screenToScene(x, y, cam, view));
               return;
             }

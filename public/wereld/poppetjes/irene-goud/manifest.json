@@ -1,0 +1,117 @@
+{
+  "name": "Irene",
+  "frameWidth": 320,
+  "frameHeight": 272,
+  "mirrorForLeft": true,
+  "zitAnker": {
+    "x": 138,
+    "y": 179
+  },
+  "animations": {
+    "staan": {
+      "frames": [
+        "staan-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 173,
+        "y": 269
+      }
+    },
+    "lopen": {
+      "frames": [
+        "lopen-01.png",
+        "lopen-02.png",
+        "lopen-03.png",
+        "lopen-04.png",
+        "lopen-05.png",
+        "lopen-06.png"
+      ],
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 159,
+        "y": 269
+      }
+    },
+    "zitten": {
+      "frames": [
+        "zitten-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 249
+      }
+    },
+    "slapen": {
+      "frames": [
+        "slapen-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 226,
+        "y": 266
+      }
+    },
+    "zwaaien": {
+      "frames": [
+        "zwaaien-01.png",
+        "zwaaien-02.png"
+      ],
+      "fps": 2.5,
+      "loop": true,
+      "anchor": {
+        "x": 168,
+        "y": 269
+      }
+    },
+    "juichen": {
+      "frames": [
+        "juichen-01.png",
+        "juichen-02.png"
+      ],
+      "fps": 3,
+      "loop": true,
+      "anchor": {
+        "x": 170,
+        "y": 269
+      }
+    },
+    "blij": {
+      "frames": [
+        "blij-01.png",
+        "blij-02.png",
+        "blij-03.png",
+        "blij-04.png",
+        "blij-05.png",
+        "blij-06.png"
+      ],
+      "fps": 7,
+      "loop": true,
+      "anchor": {
+        "x": 140,
+        "y": 259
+      }
+    },
+    "sprongsquat": {
+      "frames": [
+        "sprongsquat-01.png",
+        "sprongsquat-02.png",
+        "sprongsquat-03.png",
+        "sprongsquat-04.png",
+        "sprongsquat-05.png",
+        "sprongsquat-06.png"
+      ],
+      "fps": 7,
+      "loop": true,
+      "anchor": {
+        "x": 142,
+        "y": 261
+      }
+    }
+  }
+}

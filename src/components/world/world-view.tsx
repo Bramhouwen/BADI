@@ -29,6 +29,8 @@ import { buyWorldItem, leaveRoomNote, loadRoom, loadRoomNotes, markRoomNotesRead
 import { roomId } from "@/lib/world/scenes/kamers";
 import type { ItemDef } from "@/lib/world/items";
 import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
+import { currentOutfit, readOutfitChoice, saveOutfitChoice, spriteKey, type OutfitChoice, type OutfitId } from "@/lib/world/outfits";
+import { WardrobeSheet } from "./world-wardrobe";
 
 const FADE_MS = 220;
 
@@ -52,6 +54,8 @@ export function WorldView({
   edit = false,
   notice = null,
   tour = false,
+  superBadi = [],
+  week = "",
 }: {
   me: { id: string; name: string; character: string | null };
   challengeId: string;
@@ -69,6 +73,10 @@ export function WorldView({
   notice?: string | null;
   /** Start the tour (/wereld?rondleiding=1); it also starts by itself the first time. */
   tour?: boolean;
+  /** The Super Badi of this week: they wear the gold tracksuit with the crown. */
+  superBadi?: string[];
+  /** Monday of this week (YYYY-MM-DD): a choice at the clothing rack lasts for the week. */
+  week?: string;
 }) {
   const [here, setHere] = useState(() => ({ scene: SCENES[startScene] ? startScene : FIRST_SCENE, arrive: null as string | null, n: 0 }));
   const [dim, setDim] = useState(false);
@@ -91,6 +99,20 @@ export function WorldView({
   const chatTop = useRef(70);
   const lastSaid = useRef(0);
   const canvasApi = useRef<WorldCanvasApi | null>(null);
+  // Your clothes: chosen at the rack in your own room, gold for the Super Badi.
+  // Like the chat log, read from the device right away; it only reaches the canvas, not the first render.
+  const [outfitChoice, setOutfitChoice] = useState<OutfitChoice | null>(() => (typeof window === "undefined" ? null : readOutfitChoice(me.id)));
+  const isSuperBadi = superBadi.includes(me.id);
+  const outfit = currentOutfit(outfitChoice, week, isSuperBadi);
+  const look = me.character ? spriteKey(me.character, outfit) : null;
+  useEffect(() => {
+    if (look) canvasApi.current?.setLook(look);
+  }, [look]);
+  const wear = (next: OutfitId) => {
+    const c = { outfit: next, week };
+    setOutfitChoice(c);
+    saveOutfitChoice(me.id, c);
+  };
   // The game: which panel is open, missions and coins, your status, notes and walking along.
   const [hud, setHud] = useState<HudPanel | null>(null);
   const [game, setGame] = useState<WorldGame | null>(null);
@@ -447,7 +469,7 @@ export function WorldView({
           <WorldCanvas
             key={here.n}
             scene={scene}
-            me={me}
+            me={{ ...me, look }}
             startX={first ? startX : null}
             startY={first ? startY : null}
             restore={first ? restore : null}
@@ -483,6 +505,10 @@ export function WorldView({
               savePiece(p);
             }}
             onPieceSelected={setSelectedPiece}
+            onRack={() => {
+              if (isMine) openHud("kledingrek");
+              else say2(`Dit is het kledingrek van ${ownerName}. Omkleden doe je in je eigen kamer.`);
+            }}
           />
         ) : null}
       </div>
@@ -579,6 +605,7 @@ export function WorldView({
         />
       ) : null}
       {!edit && !post && hud === "gesprek" ? <ChatLogSheet lines={roomLog(chatLog, here.scene)} me={me.id} room={scene.name} bottom={above} onClose={() => setHud(null)} /> : null}
+      {!edit && !post && hud === "kledingrek" && me.character ? <WardrobeSheet character={me.character} wearing={outfit} isSuperBadi={isSuperBadi} bottom={above} onWear={wear} onClose={() => setHud(null)} /> : null}
       {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
       {!edit && !post && choice ? (
         <SpotChoice

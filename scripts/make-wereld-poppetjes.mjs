@@ -10,6 +10,11 @@
  * world reads only the manifest; frame counts and speeds are never hardcoded
  * in the app. Add a new character to PEOPLE below with the layout of its
  * sheet, then run this again.
+ *
+ * Outfits: a sheet public/sprites/<naam>-<outfit>.webp with the same poses in
+ * other clothes (made with `npm run sprite -- <sheet> <naam>-<outfit>
+ * --fit-rows`) becomes public/wereld/poppetjes/<naam>-<outfit>/, with the
+ * same animations. Its zitAnker follows from the one of the character itself.
  */
 import { createRequire } from "node:module";
 import fs from "node:fs";
@@ -24,7 +29,8 @@ const CH = 272;
 const STANDARD = {
   staan: { cells: [[3, 0]], fps: 1 },
   lopen: { cells: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]], fps: 8 },
-  zitten: { cells: [[3, 2], [3, 3]], fps: 1 },
+  // One sitting frame: the second one (on the floor) made everyone flicker between two poses.
+  zitten: { cells: [[3, 2]], fps: 1 },
   slapen: { cells: [[3, 4]], fps: 1 },
   zwaaien: { cells: [[3, 0], [3, 1]], fps: 2.5 },
   juichen: { cells: [[3, 5], [2, 3]], fps: 3 },
@@ -62,11 +68,22 @@ const PEOPLE = [
 ];
 
 /**
+ * Outfits per character. Bram's separate sitting drawing has its own version
+ * in the outfit; it is sized to the same width as his normal one (the crown
+ * makes it taller).
+ */
+const OUTFITS = {
+  goud: {
+    bram: { zitten: { files: ["docs/wereld/bron/bram-zitten-goud.png"], sameWidthAs: "docs/wereld/bron/bram-zitten.png", figureHeight: 204, fps: 1 } },
+  },
+};
+
+/**
  * One frame from a separate drawing on a white background: the background is
  * removed, the figure is scaled to `figureHeight` and placed centred with its
  * feet where the other frames have them.
  */
-async function frameFromDrawing(file, figureHeight) {
+async function figureOf(file) {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height;
   const bg = (i) => data[i] > 232 && data[i + 1] > 232 && data[i + 2] > 232;
@@ -91,11 +108,24 @@ async function frameFromDrawing(file, figureHeight) {
     const x = p % W, y = (p / W) | 0;
     x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
   }
-  const figure = await sharp(data, { raw: { width: W, height: H, channels: 4 } })
+  return sharp(data, { raw: { width: W, height: H, channels: 4 } })
     .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
-    .resize({ height: figureHeight })
     .png()
     .toBuffer({ resolveWithObject: true });
+}
+
+/**
+ * One frame from a separate drawing (see figureOf), scaled to `figureHeight`,
+ * or, with `sameWidthAs`, to the width that drawing gets at that height.
+ */
+async function frameFromDrawing(file, figureHeight, sameWidthAs) {
+  const own = await figureOf(file);
+  let resize = { height: figureHeight };
+  if (sameWidthAs) {
+    const base = await figureOf(sameWidthAs);
+    resize = { width: Math.round((base.info.width * figureHeight) / base.info.height) };
+  }
+  const figure = await sharp(own.data).resize(resize).png().toBuffer({ resolveWithObject: true });
   const left = Math.round(CW / 2 - figure.info.width / 2);
   const top = 266 - figure.info.height;
   const out = await sharp({ create: { width: CW, height: CH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
@@ -124,11 +154,12 @@ function anchorOf(frames) {
   return { x: n ? Math.round(sx / n) : CW / 2, y: bottom + 1 };
 }
 
-for (const person of PEOPLE) {
+/** Frames and manifest for one sheet; returns the manifest. */
+async function build(person) {
   const dir = path.join("public/wereld/poppetjes", person.key);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const sheet = await sharp(`public/sprites/${person.key}.webp`).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const sheet = await sharp(`public/sprites/${person.sheet ?? person.key}.webp`).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const animations = {};
   for (const [anim, def] of Object.entries(person.layout)) {
     const frames = [];
@@ -136,7 +167,7 @@ for (const person of PEOPLE) {
     const sources = def.files ? def.files.map((f) => ({ file: f })) : def.cells.map((cell) => ({ cell }));
     for (const [i, source] of sources.entries()) {
       let data;
-      if (source.file) data = await frameFromDrawing(source.file, def.figureHeight);
+      if (source.file) data = await frameFromDrawing(source.file, def.figureHeight, def.sameWidthAs);
       else {
         const [r, c] = source.cell;
         data = Buffer.alloc(CW * CH * 4);
@@ -152,7 +183,21 @@ for (const person of PEOPLE) {
     }
     animations[anim] = { frames: files, fps: def.fps, loop: true, anchor: anchorOf(frames), ...(def.withChair ? { withChair: true } : {}) };
   }
-  const manifest = { name: person.name, frameWidth: CW, frameHeight: CH, mirrorForLeft: true, zitAnker: person.zitAnker, animations };
+  // An outfit sits like the character itself: the hips keep their place relative to the sitting anchor.
+  const zitAnker = person.base
+    ? { x: person.base.zitAnker.x - person.base.animations.zitten.anchor.x + animations.zitten.anchor.x, y: person.base.zitAnker.y - person.base.animations.zitten.anchor.y + animations.zitten.anchor.y }
+    : person.zitAnker;
+  const manifest = { name: person.name, frameWidth: CW, frameHeight: CH, mirrorForLeft: true, zitAnker, animations };
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-  console.log(`${person.name}: ${Object.values(animations).reduce((n, a) => n + a.frames.length, 0)} frames`);
+  console.log(`${person.key}: ${Object.values(animations).reduce((n, a) => n + a.frames.length, 0)} frames`);
+  return manifest;
+}
+
+for (const person of PEOPLE) {
+  const base = await build(person);
+  for (const [outfit, own] of Object.entries(OUTFITS)) {
+    const key = `${person.key}-${outfit}`;
+    if (!fs.existsSync(`public/sprites/${key}.webp`)) continue;
+    await build({ key, name: person.name, layout: { ...person.layout, ...(own[person.key] ?? {}) }, base });
+  }
 }

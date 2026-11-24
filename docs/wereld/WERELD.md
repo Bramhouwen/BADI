@@ -434,3 +434,12 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Knopje links in het typveld: "Gesprek in <ruimte>", de laatste 30 regels van die ruimte met naam en tijd.
 - Spraak wordt niet op de server bewaard (alleen live via broadcast). Het terugkijken toont dus wat binnenkwam terwijl je de wereld open had; het blijft op het toestel voor de rest van de sessie (sessionStorage `wereld-gesprek:<userId>`, max 100 regels).
 - Code: `src/lib/world/engine/chat-strip.ts` (strook), `drawChatStrip` in de renderer, `src/lib/world/chat-log.ts` en `src/components/world/world-chat.tsx` (terugkijken).
+
+## Kledingrek en Super Badi-outfit (24-11-2026)
+
+- Elke kamer heeft vanaf het begin een kledingrek (`RACK` in `src/lib/world/items.ts`). Het staat niet in de winkel en niet in de database. Het staat tegen de achterwand links (`RACK_AT`), of op de eerste vrije plek als de bewoner daar iets heeft neergezet. Bij inrichten kun je het niet verslepen.
+- Tik op het rek in je eigen kamer: je loopt ernaartoe en kiest je kleding (`src/components/world/world-wardrobe.tsx`). Bij het rek van een ander zegt de wereld dat omkleden in je eigen kamer kan.
+- Outfits (`src/lib/world/outfits.ts`): gewone kleding en het gouden sportpak met kroon. Het gouden pak is alleen voor de Super Badi van deze week, die het vanaf maandag vanzelf draagt, ook offline. Uittrekken kan bij het rek. Die keuze geldt die week en staat op het toestel (localStorage `wereld-outfit:<userId>`). Een nieuwe week begint weer bij de standaard.
+- Wat je draagt gaat live mee naar de anderen (het veld `character` van je presence is de map met frames, zoals `bram-goud`). Offline ziet iedereen de standaard: goud voor de Super Badi. Een Super Badi die het pak uittrok en offline gaat, staat offline dus weer in goud.
+- Frames: per outfit een sheet `public/sprites/<naam>-<outfit>.webp`, gemaakt door de gewone sheet met het beeldmodel te laten omkleden (gpt_image_2_6, zelfde raster, zelfde poses) en dan `npm run sprite -- <sheet> <naam>-goud --fit-rows`. `--fit-rows` zet elke rij midden in het vak, zodat kroon en voeten niet wegvallen. `npm run wereld:poppetjes` maakt er `public/wereld/poppetjes/<naam>-goud/` van, met een zitanker afgeleid van het gewone poppetje. Bram heeft een eigen zit-tekening in goud (`docs/wereld/bron/bram-zitten-goud.png`).
+- Het script zet de zit-animatie nu ook zelf op één frame (eerst handmatig in de manifests).

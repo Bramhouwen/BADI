@@ -1,0 +1,119 @@
+{
+  "name": "Bram",
+  "frameWidth": 320,
+  "frameHeight": 272,
+  "mirrorForLeft": true,
+  "zitAnker": {
+    "x": 148,
+    "y": 203
+  },
+  "animations": {
+    "staan": {
+      "frames": [
+        "staan-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 168,
+        "y": 270
+      }
+    },
+    "lopen": {
+      "frames": [
+        "lopen-01.png",
+        "lopen-02.png",
+        "lopen-03.png",
+        "lopen-04.png",
+        "lopen-05.png",
+        "lopen-06.png"
+      ],
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 164,
+        "y": 271
+      }
+    },
+    "zitten": {
+      "frames": [
+        "zitten-01.png"
+      ],
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 168,
+        "y": 266
+      }
+    },
+    "slapen": {
+      "frames": [
+        "slapen-01.png",
+        "slapen-02.png"
+      ],
+      "fps": 0.7,
+      "loop": true,
+      "anchor": {
+        "x": 170,
+        "y": 267
+      },
+      "withChair": true
+    },
+    "zwaaien": {
+      "frames": [
+        "zwaaien-01.png",
+        "zwaaien-02.png",
+        "zwaaien-03.png",
+        "zwaaien-04.png"
+      ],
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 172,
+        "y": 270
+      }
+    },
+    "juichen": {
+      "frames": [
+        "juichen-01.png",
+        "juichen-02.png"
+      ],
+      "fps": 3,
+      "loop": true,
+      "anchor": {
+        "x": 156,
+        "y": 249
+      }
+    },
+    "blij": {
+      "frames": [
+        "blij-01.png",
+        "blij-02.png",
+        "blij-03.png",
+        "blij-04.png"
+      ],
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 136,
+        "y": 253
+      }
+    },
+    "sprongsquat": {
+      "frames": [
+        "sprongsquat-01.png",
+        "sprongsquat-02.png",
+        "sprongsquat-03.png",
+        "sprongsquat-04.png",
+        "sprongsquat-05.png",
+        "sprongsquat-06.png"
+      ],
+      "fps": 7,
+      "loop": true,
+      "anchor": {
+        "x": 147,
+        "y": 269
+      }
+    }
+  }
+}
