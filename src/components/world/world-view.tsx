@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Footprints, Hand, Lock, Mail, SendHorizontal, X } from "lucide-react";
+import { ChevronLeft, Footprints, Hand, Mail, MessageCircle, SendHorizontal, X } from "lucide-react";
 import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
 import type { Door } from "@/lib/world/engine/scene";
 import { SPEECH_MAX, type WorldPresence } from "@/lib/world/engine/presence";
@@ -604,7 +604,7 @@ export function WorldView({
                   </>
                 ) : null}
                 <button type="button" onClick={() => openThread({ id: picked.id, name: picked.name })} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text">
-                  <Lock className="h-4 w-4" aria-hidden /> Privé
+                  <MessageCircle className="h-4 w-4" aria-hidden /> Bericht
                 </button>
                 {members.find((m) => m.id === picked.id)?.character ? (
                   <button

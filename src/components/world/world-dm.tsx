@@ -8,7 +8,7 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ChevronLeft, ExternalLink, Lock, SendHorizontal, X } from "lucide-react";
+import { ChevronLeft, ExternalLink, SendHorizontal, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isDemo } from "@/lib/demo";
 import { relativeTimeNl } from "@/lib/dates";
@@ -83,9 +83,6 @@ export function WorldPostBox({
     <section aria-label="Postvak" className={panel} style={{ bottom }}>
       <header className="flex items-center gap-2 border-b border-ink/[0.06] px-4 py-3">
         <h2 className="text-[15px] font-semibold text-text">Postvak</h2>
-        <span className="flex items-center gap-1 text-[12px] text-muted">
-          <Lock className="h-3 w-3" aria-hidden /> privé
-        </span>
         <button type="button" onClick={onClose} aria-label="Sluiten" className="ml-auto grid h-9 w-9 place-items-center rounded-full text-muted">
           <X className="h-4 w-4" aria-hidden />
         </button>
@@ -189,17 +186,14 @@ export function WorldThread({
   }
 
   return (
-    <section aria-label={`Privégesprek met ${peer.name}`} className={panel} style={{ bottom }}>
+    <section aria-label={`Gesprek met ${peer.name}`} className={panel} style={{ bottom }}>
       <header className="flex items-center gap-1 border-b border-ink/[0.06] px-2 py-2">
         <button type="button" onClick={onBack} aria-label="Naar het postvak" className="grid h-9 w-9 place-items-center rounded-full text-muted">
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </button>
         <div className="min-w-0">
           <h2 className="truncate text-[15px] font-semibold leading-tight text-text">{peer.name}</h2>
-          <p className="flex items-center gap-1 text-[11.5px] leading-tight text-muted">
-            <Lock className="h-3 w-3" aria-hidden />
-            {typing ? "typt…" : "Alleen jullie twee"}
-          </p>
+          {typing ? <p className="text-[11.5px] leading-tight text-muted">typt…</p> : null}
         </div>
         <Link href={`/squad/chat/${peer.id}`} className="ml-auto flex h-9 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium text-ink">
           Open in chat <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -234,7 +228,7 @@ export function WorldThread({
           maxLength={2000}
           enterKeyHint="send"
           placeholder={`Bericht aan ${peer.name}…`}
-          aria-label={`Privébericht aan ${peer.name}`}
+          aria-label={`Bericht aan ${peer.name}`}
           className="min-w-0 flex-1 bg-transparent text-[16px] text-text outline-none placeholder:text-muted"
         />
         <button type="submit" disabled={!text.trim() || busy} aria-label="Versturen" className="espresso grid h-10 w-10 shrink-0 place-items-center rounded-full disabled:opacity-40">

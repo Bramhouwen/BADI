@@ -59,12 +59,12 @@ export const TOUR_STEPS: TourStep[] = [
   {
     icon: "🙌",
     title: "Iemand aantikken",
-    body: "Tik op iemand om te zwaaien, een high five te geven, mee te lopen of privé te praten.",
+    body: "Tik op iemand om te zwaaien, een high five te geven, mee te lopen of een bericht te sturen.",
   },
   {
     icon: "✉️",
     title: "Postvak",
-    body: "Je privéberichten. Het zijn dezelfde chats als in de rest van de app: alleen jullie twee zien ze.",
+    body: "Je berichten. Het zijn dezelfde chats als in de rest van de app.",
     target: "postvak",
   },
   {
