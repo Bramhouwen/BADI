@@ -416,3 +416,7 @@ Code: `src/components/world/world-of-badi-card.tsx`, `loadWorldCard` in `src/app
 ## Open voor iedereen (24-11-2026)
 
 `WORLD_OPEN` staat aan: het kaarticoon, de kaart op Squad en `/wereld` zijn er voor de hele squad. De aankondiging met rondleiding verstuurt de beheerder zelf via het profiel.
+
+## Iedereen staat er vanaf het begin (24-11-2026)
+
+Wie nog nooit in de wereld was, slaapt op een vrije plek op de bank in de woonkamer (offline, met het maantje; aantikken toont "Nog niet in de wereld geweest"). Op de kaart op Squad staat die bij Huis. Zodra iemand zelf binnenkomt, geldt de eigen plek. Code: `src/lib/world/newcomers.ts`.

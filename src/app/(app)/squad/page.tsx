@@ -22,6 +22,7 @@ import { canSeeWorld } from "@/lib/world/types";
 import { loadWorldProfiles } from "@/lib/world/server";
 import { loadWorldGame } from "@/lib/world/missions-server";
 import { ITEMS } from "@/lib/world/items";
+import { HOME_SCENE, hasNoPlace } from "@/lib/world/newcomers";
 import { WorldOfBadiCard, type WorldCardGame } from "@/components/world/world-of-badi-card";
 
 export const metadata = { title: "Squad" };
@@ -137,7 +138,7 @@ async function Content() {
         <WorldOfBadiCard
           me={ctx.userId}
           challengeId={ctx.challenge.id}
-          people={members.map((m) => ({ id: m.id, name: firstName(m.name), avatar: m.avatar, scene: world.where.get(m.id)?.scene ?? null, updatedAt: world.where.get(m.id)?.updatedAt ?? null }))}
+          people={members.map((m) => ({ id: m.id, name: firstName(m.name), avatar: m.avatar, scene: world.where.get(m.id)?.scene ?? HOME_SCENE, updatedAt: world.where.get(m.id)?.updatedAt ?? null }))}
           game={world.game}
           notes={world.notes}
         />
@@ -160,7 +161,8 @@ async function loadWorldCard(ctx: Awaited<ReturnType<typeof requireContext>>, su
     loadWorldGame(ctx).catch(() => null),
     supabase.from("world_notes").select("id", { count: "exact", head: true }).eq("room_owner", ctx.userId).is("read_at", null),
   ]);
-  const where = new Map(profiles.map((p) => [p.user_id, { scene: p.scene, updatedAt: p.updated_at }]));
+  // Only real places; whoever has not been in yet is shown at home (asleep on the sofa in the world).
+  const where = new Map(profiles.filter((p) => !hasNoPlace(p)).map((p) => [p.user_id, { scene: p.scene, updatedAt: p.updated_at }]));
   let card: WorldCardGame | null = null;
   if (game) {
     const done = game.missions.filter((m) => m.done).length;

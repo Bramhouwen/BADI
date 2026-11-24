@@ -7,6 +7,7 @@ import { FIRST_SCENE, SCENES } from "@/lib/world/scenes";
 import { roomId } from "@/lib/world/scenes/kamers";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
+import { HOME_SCENE, hasNoPlace, seatNewcomers } from "@/lib/world/newcomers";
 import { WorldView } from "@/components/world/world-view";
 import type { WorldMember } from "@/components/world/world-canvas";
 
@@ -28,14 +29,20 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   const [{ profile, missingTable }, squad, all] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id)]);
   // The others, with where they were last: shown in a rest pose while they are offline.
   const byUser = new Map(all.map((p) => [p.user_id, p]));
-  const members: WorldMember[] = squad
-    .filter((m) => m.user_id !== ctx.userId)
-    .flatMap((m) => {
-      const p = byUser.get(m.user_id);
-      const character = p?.sprite ?? worldSpriteFor(m.profile.display_name);
-      if (!character) return [];
-      return [{ id: m.user_id, name: firstName(m.profile.display_name), character, scene: p?.scene ?? "", x: p?.x ?? null, y: p?.y ?? null, activity: p?.activity ?? null, updatedAt: p?.updated_at ?? "" }];
-    });
+  // Whoever has not been in yet sits asleep on the sofa in the living room, on a seat nobody uses.
+  const takenAtHome = all.filter((p) => p.scene === HOME_SCENE && p.activity).map((p) => p.activity!);
+  if (profile?.scene === HOME_SCENE && profile.activity) takenAtHome.push(profile.activity);
+  const members: WorldMember[] = seatNewcomers(
+    squad
+      .filter((m) => m.user_id !== ctx.userId)
+      .flatMap((m) => {
+        const p = byUser.get(m.user_id);
+        const character = p?.sprite ?? worldSpriteFor(m.profile.display_name);
+        if (!character) return [];
+        return [{ id: m.user_id, name: firstName(m.profile.display_name), character, scene: p?.scene ?? null, x: p?.x ?? null, y: p?.y ?? null, activity: p?.activity ?? null, updatedAt: p && !hasNoPlace(p) ? p.updated_at : "" }];
+      }),
+    takenAtHome,
+  ).map((m) => ({ ...m, scene: m.scene ?? HOME_SCENE }));
   const name = firstName(ctx.profile.display_name);
   // Debug only: ?debug=2&als=anne plays as another character to test poses.
   const debugAs = sp.debug && typeof sp.als === "string" && (WORLD_SPRITES as readonly string[]).includes(sp.als) ? sp.als : null;

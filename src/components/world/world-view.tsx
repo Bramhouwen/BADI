@@ -578,7 +578,7 @@ export function WorldView({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold text-text">{picked.name}</p>
                   <p className="truncate text-[12.5px] text-muted">
-                    {picked.online ? (picked.status ? `${STATUSES[picked.status].icon} ${STATUSES[picked.status].label}` : "Online") : picked.lastSeen ? `Offline · ${relativeTimeNl(picked.lastSeen)}` : "Offline"}
+                    {picked.online ? (picked.status ? `${STATUSES[picked.status].icon} ${STATUSES[picked.status].label}` : "Online") : picked.lastSeen ? `Offline · ${relativeTimeNl(picked.lastSeen)}` : "Nog niet in de wereld geweest"}
                     {picked.online && picked.trained ? " · heeft vandaag getraind" : ""}
                   </p>
                 </div>
