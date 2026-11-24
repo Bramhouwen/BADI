@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The live link between everyone in BADI Wereld: a private Supabase Realtime
+ * The live link between everyone in World of Badi: a private Supabase Realtime
  * channel per group ('wereld:<challenge id>', members only, migration 0031).
  * Presence carries where you are and what you are doing (an intent, never a
  * route); broadcast carries speech balloons. Nothing of it is stored.

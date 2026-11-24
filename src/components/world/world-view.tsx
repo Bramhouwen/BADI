@@ -27,7 +27,7 @@ import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
 const FADE_MS = 220;
 
 /**
- * BADI Wereld, over the whole screen like a game: the scene you are in, a
+ * World of Badi, over the whole screen like a game: the scene you are in, a
  * back button and the name of the room on top, who is online, and a line to
  * say something to everyone in the room. A door fades the picture out, the
  * next scene starts at the door you come out of and fades in once it is
@@ -419,6 +419,7 @@ export function WorldView({
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </Link>
         <div className="min-w-0 rounded-full bg-white/90 px-4 py-2 shadow-md ring-1 ring-ink/[0.06] backdrop-blur">
+          <p className="truncate text-[10px] font-semibold uppercase leading-tight tracking-[0.14em] text-muted">World of Badi</p>
           <p className="truncate text-[14px] font-semibold leading-tight text-text">{scene.name}</p>
           {edit || notice ? <p className="truncate text-[11.5px] leading-tight text-muted">{edit ? "Zitplekken plaatsen" : notice}</p> : null}
         </div>

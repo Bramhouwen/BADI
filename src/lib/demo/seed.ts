@@ -324,7 +324,7 @@ export function buildSeed(): Store {
     wheel_codes: [],
     super_badi_awards: [],
     sprite_releases: [],
-    // BADI Wereld: Sam and Alex walk around live in demo mode (src/components/world/world-link.ts); Noor is offline on the sofa.
+    // World of Badi: Sam and Alex walk around live in demo mode (src/components/world/world-link.ts); Noor is offline on the sofa.
     world_profiles: [
       { user_id: SAM, challenge_id: DEMO_CHALLENGE_ID, sprite: "anne", scene: "woonkamer", x: 1300, y: 900, activity: null, updated_at: iso(start) },
       { user_id: ALEX, challenge_id: DEMO_CHALLENGE_ID, sprite: "daphne", scene: "buiten", x: 900, y: 520, activity: null, updated_at: iso(start) },

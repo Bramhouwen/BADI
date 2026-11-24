@@ -1,5 +1,5 @@
 /**
- * The shop of BADI Wereld: furniture for your own room, bought with coins.
+ * The shop of World of Badi: furniture for your own room, bought with coins.
  * Pictures in public/wereld/meubels/<id>.webp (made with an image model in
  * the style of the living room; sources in docs/wereld/bron/kamers). The
  * prices are also in the database (migration 0032), which checks them when

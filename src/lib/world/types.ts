@@ -1,7 +1,7 @@
-/** BADI Wereld: shared types and small pure helpers. See docs/wereld/WERELD.md. */
+/** World of Badi: shared types and small pure helpers. See docs/wereld/WERELD.md. */
 
 /**
- * While false, only the admin sees BADI Wereld (the map icon and /wereld), so
+ * While false, only the admin sees World of Badi (the map icon and /wereld), so
  * the world can be built and tested in the live app. Set to true to open it
  * for the whole squad.
  */

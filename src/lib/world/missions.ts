@@ -1,5 +1,5 @@
 /**
- * Missions and coins in BADI Wereld, from what you really do in BADI:
+ * Missions and coins in World of Badi, from what you really do in BADI:
  * checked in, trained, drank enough water, walked your steps. Coins are
  * worked out on the server from the database, so they cannot be earned by
  * hand; spending them comes with your own room.

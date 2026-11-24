@@ -7,7 +7,7 @@ export function isChatPath(path: string | null): boolean {
   return Boolean(path && (path === "/squad/chat" || path.startsWith("/squad/chat/") || path === "/coach"));
 }
 
-/** BADI Wereld fills the whole screen, like a game, with its own back button. */
+/** World of Badi fills the whole screen, like a game, with its own back button. */
 export function isFullscreenPath(path: string | null): boolean {
   return path === "/wereld";
 }

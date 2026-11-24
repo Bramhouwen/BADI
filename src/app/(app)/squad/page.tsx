@@ -18,6 +18,11 @@ import { PushPrompt } from "@/components/app/push-prompt";
 import { loadChatList, loadPeople } from "@/lib/chat-data";
 import { ChatList } from "./chat-list";
 import { cn } from "@/lib/utils";
+import { canSeeWorld } from "@/lib/world/types";
+import { loadWorldProfiles } from "@/lib/world/server";
+import { loadWorldGame } from "@/lib/world/missions-server";
+import { ITEMS } from "@/lib/world/items";
+import { WorldOfBadiCard, type WorldCardGame } from "@/components/world/world-of-badi-card";
 
 export const metadata = { title: "Squad" };
 
@@ -66,6 +71,9 @@ async function Content() {
 
   // Super Badi: the winner of last week, all week long.
   const crowned = await currentSuperBadi(ctx);
+
+  // World of Badi: where everyone is, today's missions and coins, and what waits in your room.
+  const world = canSeeWorld(ctx.membership.role) ? await loadWorldCard(ctx, supabase) : null;
 
   return (
     <Page className="space-y-5">
@@ -125,6 +133,16 @@ async function Content() {
         </ul>
       </section>
 
+      {world ? (
+        <WorldOfBadiCard
+          me={ctx.userId}
+          challengeId={ctx.challenge.id}
+          people={members.map((m) => ({ id: m.id, name: firstName(m.name), avatar: m.avatar, scene: world.where.get(m.id)?.scene ?? null, updatedAt: world.where.get(m.id)?.updatedAt ?? null }))}
+          game={world.game}
+          notes={world.notes}
+        />
+      ) : null}
+
       <PushPrompt publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
 
       <section aria-label="Chats">
@@ -133,6 +151,23 @@ async function Content() {
       </section>
     </Page>
   );
+}
+
+/** What the World of Badi card on this page needs; every part is best effort, so the page never breaks on it. */
+async function loadWorldCard(ctx: Awaited<ReturnType<typeof requireContext>>, supabase: Awaited<ReturnType<typeof createClient>>) {
+  const [profiles, game, notes] = await Promise.all([
+    loadWorldProfiles(ctx.challenge.id).catch(() => []),
+    loadWorldGame(ctx).catch(() => null),
+    supabase.from("world_notes").select("id", { count: "exact", head: true }).eq("room_owner", ctx.userId).is("read_at", null),
+  ]);
+  const where = new Map(profiles.map((p) => [p.user_id, { scene: p.scene, updatedAt: p.updated_at }]));
+  let card: WorldCardGame | null = null;
+  if (game) {
+    const done = game.missions.filter((m) => m.done).length;
+    const next = ITEMS.filter((i) => i.price > game.coins).sort((a, b) => a.price - b.price)[0] ?? null;
+    card = { done, total: game.missions.length, toEarn: game.missions.filter((m) => !m.done).reduce((n, m) => n + m.coins, 0), coins: game.coins, next: next ? { name: next.name, price: next.price } : null };
+  }
+  return { where, game: card, notes: notes.error ? 0 : (notes.count ?? 0) };
 }
 
 export default function SquadPage() {

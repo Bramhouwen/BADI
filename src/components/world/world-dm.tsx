@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Private messages in BADI Wereld: the post box, a conversation panel and the
+ * Private messages in World of Badi: the post box, a conversation panel and the
  * live feed of new private messages. It is the app's own private chat, so
  * everything here is also in Squad > Chat, and the database only lets the two
  * people in a conversation read it.

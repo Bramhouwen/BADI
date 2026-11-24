@@ -102,7 +102,7 @@ export interface PickedMember {
 }
 
 /**
- * One scene of BADI Wereld on a canvas: your character walks where you tap,
+ * One scene of World of Badi on a canvas: your character walks where you tap,
  * around furniture and behind it, sits on seats and walks to the door. Drag
  * to look around, pinch or scroll to zoom. `overlay` shows the walking grid.
  *

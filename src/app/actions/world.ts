@@ -5,6 +5,9 @@ import { canSeeWorld } from "@/lib/world/types";
 import { requireContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
+import { after } from "next/server";
+import { sendPush } from "@/lib/push";
+import { firstName } from "@/lib/utils";
 import { attachmentLabel } from "@/lib/chat";
 import { loadChatList, loadPeople, loadThread } from "@/lib/chat-data";
 import type { WorldDm } from "@/lib/world/dm";
@@ -200,7 +203,27 @@ export async function leaveRoomNote(input: { ownerId: string; kind: "briefje" | 
     kind: parsed.data.kind,
     body: parsed.data.kind === "briefje" ? parsed.data.body : null,
   });
-  return error ? { ok: false, error: notYet(error) ? NOT_YET : "Achterlaten is niet gelukt." } : { ok: true };
+  if (error) return { ok: false, error: notYet(error) ? NOT_YET : "Achterlaten is niet gelukt." };
+  // A push for the one whose room it is; tapping it opens their room.
+  const visitor = firstName(ctx.profile.display_name);
+  const kind = parsed.data.kind;
+  const body = parsed.data.body;
+  const ownerId = parsed.data.ownerId;
+  after(() =>
+    sendPush(
+      supabase,
+      "direct",
+      {
+        title: `${visitor} was op bezoek in je kamer`,
+        body: kind === "highfive" ? `${visitor} liet een high five achter.` : (body ?? ""),
+        // Without a room yet, the page ignores the alias and opens the world as usual.
+        url: "/wereld?scene=jouw-kamer",
+        tag: `wereld-kamer-${ctx.userId}`,
+      },
+      { only: ownerId },
+    ),
+  );
+  return { ok: true };
 }
 
 /** The notes and high fives left in your room, newest first. */

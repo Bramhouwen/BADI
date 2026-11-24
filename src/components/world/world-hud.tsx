@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The game controls of BADI Wereld: the action bar at the bottom and the
+ * The game controls of World of Badi: the action bar at the bottom and the
  * panels it opens (do something, status, map, missions), plus the choice at
  * a treadmill. Plain buttons over the world; the world itself stays drawn.
  */

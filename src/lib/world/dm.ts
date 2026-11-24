@@ -1,5 +1,5 @@
 /**
- * Private messages in BADI Wereld. They are the app's own private chat
+ * Private messages in World of Badi. They are the app's own private chat
  * (squad_messages with a recipient), so a message sent in the world is in
  * Squad > Chat as well. The database only lets the two people in a
  * conversation read it; these helpers decide what to show of it in the world.

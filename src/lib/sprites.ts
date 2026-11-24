@@ -65,7 +65,7 @@ export function spriteKey(displayName: string | null | undefined): string {
  * celebrations, characters with messages, faces in push notifications, the
  * announcement). Off: nobody sees them, nothing is deleted, and the admin
  * cannot release or announce them; set to true to bring everything back.
- * BADI Wereld has its own characters and is not affected.
+ * World of Badi has its own characters and is not affected.
  */
 export const SPRITES_LIVE = false;
 

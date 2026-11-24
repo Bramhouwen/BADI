@@ -1,4 +1,4 @@
-# BADI Wereld
+# World of Badi
 
 Een wereld binnen de Badi-app waarin wij met z'n vieren (Bram, Anne, Daphne, Irene) rondlopen, elkaar privé berichten sturen en samen iets opbouwen. Doel: het gebruik van Badi stimuleren. Echte acties in de app (trainen, inchecken, Winter Arc, Weekrad) zijn de motor van de wereld.
 
@@ -14,7 +14,7 @@ Een wereld binnen de Badi-app waarin wij met z'n vieren (Bram, Anne, Daphne, Ire
 
 ## Basis en referentie
 
-- **De basis is de BADI Wereld die al in de app staat**: het bestaande concept met onze eigen getekende poppetjes. Daarop bouwen we verder. Gooi die niet weg en vervang de stijl niet.
+- **De basis is de World of Badi die al in de app staat**: het bestaande concept met onze eigen getekende poppetjes. Daarop bouwen we verder. Gooi die niet weg en vervang de stijl niet.
 - **Het uiterlijk komt van onze poppetjes** (zie hieronder) en getekende achtergronden in dezelfde stijl. Nooit platte vormen, blokjes of in code getekende poppetjes.
 - `docs/wereld/prototype.html` is **alleen een referentie voor de werking**: lopen via tegels, deuren naar binnen en buiten, zitten, diepte (achter dingen langs lopen) en wie waar is. Neem niets over van het uiterlijk van het prototype: niet de kleuren, niet de gebouwen en zeker niet de poppetjes. De aanwezigheid en chat daarin zijn ook niet privé.
 
@@ -78,7 +78,7 @@ Wat er technisch bij hoort:
 ### Fase 0: Fundament
 Model: Opus 5.5
 
-- Lees de hele codebase, inclusief de bestaande BADI Wereld, en beschrijf: framework, backend, auth, datamodel, hoe inchecken en trainingen nu worden opgeslagen, Winter Arc en Weekrad.
+- Lees de hele codebase, inclusief de bestaande World of Badi, en beschrijf: framework, backend, auth, datamodel, hoe inchecken en trainingen nu worden opgeslagen, Winter Arc en Weekrad.
 - Gebruik de bestaande plek van de wereld in de app; maak alleen een nieuwe route als die er nog niet is.
 - Database: tabel voor wereldprofielen (user_id, uiterlijk van het poppetje, laatste ruimte en positie) met leesregels: iedereen in de groep leest, alleen jij schrijft je eigen rij.
 - Klaar als: je opent de wereld vanuit de app, bent ingelogd als jezelf en ziet je naam.
@@ -160,7 +160,7 @@ Elke fase in een nieuwe sessie, met het model dat bij de fase staat. Loopt een f
 - Tests: wereldprofiel, en per poppetje dat alle acht animaties, alle frames en geldige ankerpunten er zijn.
 
 **Anders gegaan**
-- De BADI Wereld stond nog niet in de app: alleen als losse conceptpagina. Daarom is `/wereld` nieuw. Het concept is in code getekend (platte vormen); het telt alleen als basis voor de opzet (plekken, statussen, wie bij wie), niet voor het uiterlijk.
+- De World of Badi stond nog niet in de app: alleen als losse conceptpagina. Daarom is `/wereld` nieuw. Het concept is in code getekend (platte vormen); het telt alleen als basis voor de opzet (plekken, statussen, wie bij wie), niet voor het uiterlijk.
 - "Uiterlijk van het poppetje" in het wereldprofiel is het veld `sprite` (welk getekend poppetje), omdat er geen editor komt.
 - De atlas per poppetje wordt in fase 1 bij het laden gemaakt.
 
@@ -389,3 +389,19 @@ Zitten op de bank was gokwerk: de zitplekken stonden met de hand in de code. Fas
 - Een melding (push) als iemand iets in je kamer achterliet.
 - Praten met de deur dicht (gesprek van het type 'room').
 - Meer meubels, en muurdingen zoals posters: die vragen een plek op de muur in plaats van op de vloer.
+
+## Op Squad: de kaart van World of Badi (24-11-2026)
+
+De wereld heeft een vaste plek in de app gekregen: een kaart op de Squad-pagina, onder de leden.
+
+- Een plattegrondje van het dorp (`buiten.webp`) met vier plekken: Huis, Dorp, Traffic Today en Sportschool. Iedereen staat bij de plek waar die is: live met een groene rand als die nu in de wereld is, vaag op de laatste plek als die er niet is. De eigen kamers horen bij Huis.
+- Een regel eronder: wie waar is ("Sam is thuis, Alex is in het dorp"), of wie er het laatst was.
+- Missies vandaag en munten, met het volgende meubel om voor te sparen.
+- Een melding als er iets in je kamer ligt (briefje of high five), die je kamer opent.
+- Een knop "Naar de wereld"; op een plek tikken opent de wereld daar (`/wereld?scene=…`, `jouw-kamer` opent je eigen kamer).
+- De kaart kijkt alleen mee via het realtime kanaal: wie naar Squad kijkt, staat niet in de wereld.
+- Wie iets achterlaat in een kamer, stuurt de eigenaar een pushmelding die de kamer opent.
+- Overal heet het nu World of Badi; het kaarticoon in de kop blijft.
+- Zolang `WORLD_OPEN` uit staat, ziet alleen de beheerder de kaart.
+
+Code: `src/components/world/world-of-badi-card.tsx`, `loadWorldCard` in `src/app/(app)/squad/page.tsx`, push in `leaveRoomNote` (`src/app/actions/world.ts`).

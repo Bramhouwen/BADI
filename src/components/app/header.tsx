@@ -48,7 +48,7 @@ async function HeaderStatus() {
         </Link>
       ) : null}
       {canSeeWorld(ctx.membership.role) ? (
-        <Link href="/wereld" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="BADI Wereld">
+        <Link href="/wereld" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-ink shadow-sm hover:bg-blush" aria-label="World of Badi">
           <MapIcon className="h-[18px] w-[18px]" strokeWidth={1.7} />
         </Link>
       ) : null}

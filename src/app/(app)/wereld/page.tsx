@@ -4,15 +4,16 @@ import { getSquad, requireContext } from "@/lib/data";
 import { ensureWorldProfile, loadWorldProfiles } from "@/lib/world/server";
 import { WORLD_SPRITES, canSeeWorld, worldSpriteFor } from "@/lib/world/types";
 import { FIRST_SCENE, SCENES } from "@/lib/world/scenes";
+import { roomId } from "@/lib/world/scenes/kamers";
 import { firstName } from "@/lib/utils";
 import { Page } from "@/components/ui/page";
 import { WorldView } from "@/components/world/world-view";
 import type { WorldMember } from "@/components/world/world-canvas";
 
-export const metadata = { title: "Wereld" };
+export const metadata = { title: "World of Badi" };
 
 /**
- * BADI Wereld over the whole screen: the living room, outside, Traffic Today
+ * World of Badi over the whole screen: the living room, outside, Traffic Today
  * and the gym, linked by doors. You start where you were last, and see the
  * others live (or where they were last, while offline). /wereld?debug=1 shows the walking
  * grid and frames per second; ?debug=2 only enables the test hook
@@ -39,8 +40,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   // Debug only: ?debug=2&als=anne plays as another character to test poses.
   const debugAs = sp.debug && typeof sp.als === "string" && (WORLD_SPRITES as readonly string[]).includes(sp.als) ? sp.als : null;
   const sprite = debugAs ?? profile?.sprite ?? worldSpriteFor(ctx.profile.display_name);
-  const testing = sp.debug !== undefined || sp.bewerken !== undefined;
-  const jump = testing && typeof sp.scene === "string" && SCENES[sp.scene] ? sp.scene : null;
+  // ?scene=kantoor starts in a place (the map on Squad links here); ?scene=jouw-kamer is your own room.
+  const asked = typeof sp.scene === "string" ? (sp.scene === "jouw-kamer" && sprite ? roomId(sprite) : sp.scene) : null;
+  const jump = asked && SCENES[asked] ? asked : null;
   const startScene = jump ?? (profile?.scene && SCENES[profile.scene] ? profile.scene : FIRST_SCENE);
   const atSaved = !jump && profile?.scene === startScene && profile.x !== null && profile.y !== null;
 

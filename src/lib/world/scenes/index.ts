@@ -1,4 +1,4 @@
-/** Every scene of BADI Wereld by id. */
+/** Every scene of World of Badi by id. */
 import type { SceneDef } from "../engine/scene";
 import { BUITEN } from "./buiten";
 import { KANTOOR } from "./kantoor";

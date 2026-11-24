@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Own rooms in BADI Wereld: the shop, the furnishing bar, visiting someone's
+ * Own rooms in World of Badi: the shop, the furnishing bar, visiting someone's
  * room and the notes people leave. Coins and purchases are checked by the
  * database; these panels only ask for them.
  */
