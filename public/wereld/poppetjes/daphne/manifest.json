@@ -37,8 +37,7 @@
     },
     "zitten": {
       "frames": [
-        "zitten-01.png",
-        "zitten-02.png"
+        "zitten-01.png"
       ],
       "fps": 1,
       "loop": true,
