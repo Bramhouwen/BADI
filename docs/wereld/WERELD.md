@@ -396,6 +396,7 @@ De wereld heeft een vaste plek in de app gekregen: een kaart op de Squad-pagina,
 
 - Een plattegrondje van het dorp (`buiten.webp`) met vier plekken: Huis, Dorp, Traffic Today en Sportschool. Iedereen staat bij de plek waar die is: live met een groene rand als die nu in de wereld is, vaag op de laatste plek als die er niet is. De eigen kamers horen bij Huis.
 - Een regel eronder: wie waar is ("Sam is thuis, Alex is in het dorp"), of wie er het laatst was.
+- "Wat ben je aan het doen?": je status (trainen, werken, chillen, koken, even weg) kies je al op de kaart, voor je naar binnen gaat. Het is dezelfde status als in de wereld, bewaard op je telefoon (`src/lib/world/status-store.ts`). Wie live in de wereld is, heeft het icoontje van de status op de kaart.
 - Missies vandaag en munten, met het volgende meubel om voor te sparen.
 - Een melding als er iets in je kamer ligt (briefje of high five), die je kamer opent.
 - Een knop "Naar de wereld"; op een plek tikken opent de wereld daar (`/wereld?scene=…`, `jouw-kamer` opent je eigen kamer).

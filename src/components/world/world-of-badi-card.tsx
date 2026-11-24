@@ -11,6 +11,8 @@ import Link from "next/link";
 import { ArrowRight, Coins, Mail, Target } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { relativeTimeNl } from "@/lib/dates";
+import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
+import { readSavedStatus, saveStatus } from "@/lib/world/status-store";
 import { createWorldLink } from "./world-link";
 
 /** The four places on the map, in percent of the village picture, and the scene you enter there. */
@@ -31,6 +33,9 @@ export function placeOf(scene: string | null | undefined): PlaceKey | null {
   if (scene === "sportschool") return "sport";
   return null;
 }
+
+/** Short words for the status buttons on the card. */
+const STATUS_SHORT: Record<StatusKey, string> = { trainen: "Trainen", werken: "Werken", chillen: "Chillen", koken: "Koken", weg: "Even weg" };
 
 const PLACE_IN: Record<PlaceKey, string> = { huis: "thuis", dorp: "in het dorp", kantoor: "bij Traffic Today", sport: "in de sportschool" };
 
@@ -59,11 +64,11 @@ function joinNames(names: string[]): string {
 
 export function WorldOfBadiCard({ me, challengeId, people, game, notes }: { me: string; challengeId: string; people: WorldCardPerson[]; game: WorldCardGame | null; notes: number }) {
   // Who is in the world right now, and where: watched live, without joining in.
-  const [live, setLive] = useState<Map<string, string>>(new Map());
+  const [live, setLive] = useState<Map<string, { scene: string; status: StatusKey | null }>>(new Map());
   useEffect(() => {
     const link = createWorldLink(me, challengeId);
     const off = link.subscribe((e) => {
-      if (e.type === "peers") setLive(new Map([...link.peers()].map(([id, p]) => [id, p.scene])));
+      if (e.type === "peers") setLive(new Map([...link.peers()].map(([id, p]) => [id, { scene: p.scene, status: p.status ?? null }])));
     });
     return () => {
       off();
@@ -71,10 +76,22 @@ export function WorldOfBadiCard({ me, challengeId, people, game, notes }: { me: 
     };
   }, [me, challengeId]);
 
+  // What you are doing: picked here before you go in, and kept when you do.
+  const [status, setStatus] = useState<StatusKey | null>(null);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setStatus(readSavedStatus(me)));
+    return () => cancelAnimationFrame(frame);
+  }, [me]);
+  const pickStatus = (s: StatusKey) => {
+    const next = s === status ? null : s;
+    setStatus(next);
+    saveStatus(me, next);
+  };
+
   const placed = people
     .map((p) => {
-      const online = live.has(p.id);
-      return { ...p, online, place: placeOf(online ? live.get(p.id) : p.scene) };
+      const now = live.get(p.id);
+      return { ...p, online: !!now, status: now?.status ?? null, place: placeOf(now ? now.scene : p.scene) };
     })
     .filter((p) => p.place);
   const onlineNow = placed.filter((p) => p.online && p.id !== me);
@@ -113,8 +130,13 @@ export function WorldOfBadiCard({ me, challengeId, people, game, notes }: { me: 
             >
               <span className="flex -space-x-2">
                 {here.slice(0, 4).map((p) => (
-                  <span key={p.id} className={`rounded-full ${p.online ? "ring-2 ring-[#5aa46a]" : "opacity-60 ring-2 ring-white"}`}>
+                  <span key={p.id} className={`relative rounded-full ${p.online ? "ring-2 ring-[#5aa46a]" : "opacity-60 ring-2 ring-white"}`}>
                     <Avatar name={p.name} src={p.avatar} size="xs" className="h-7 w-7" />
+                    {p.online && p.status ? (
+                      <span className="absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full bg-white text-[9px] leading-none shadow-sm" aria-label={STATUSES[p.status].label}>
+                        {STATUSES[p.status].icon}
+                      </span>
+                    ) : null}
                   </span>
                 ))}
               </span>
@@ -125,6 +147,30 @@ export function WorldOfBadiCard({ me, challengeId, people, game, notes }: { me: 
       </div>
 
       <p className="px-4 pt-2.5 text-[13px] leading-snug text-text">{line}</p>
+
+      <div className="px-3 pt-3">
+        <p className="px-1 pb-1.5 text-[12px] font-semibold text-muted">Wat ben je aan het doen?</p>
+        <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Wat ben je aan het doen?">
+          {(Object.keys(STATUSES) as StatusKey[]).map((k) => {
+            const on = status === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => pickStatus(k)}
+                aria-pressed={on}
+                aria-label={STATUSES[k].label}
+                className={`flex flex-col items-center gap-0.5 rounded-[14px] px-1 py-2 text-[11px] font-semibold transition-colors ${on ? "espresso" : "bg-[#f6ece4] text-text"}`}
+              >
+                <span className="text-[18px] leading-none" aria-hidden>
+                  {STATUSES[k].icon}
+                </span>
+                <span className="truncate">{STATUS_SHORT[k]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 px-3 pt-3">
         {game ? (

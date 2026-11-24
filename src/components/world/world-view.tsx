@@ -16,6 +16,7 @@ import { useTypingAll } from "@/lib/presence";
 import { ActionBar, ActionsSheet, CoinChip, MapSheet, MissionsSheet, SpotChoice, StatusSheet, type HudPanel } from "./world-hud";
 import { loadWorldGameState } from "@/app/actions/world";
 import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
+import { readSavedStatus, saveStatus } from "@/lib/world/status-store";
 import type { Spot } from "@/lib/world/engine/scene";
 import type { WorldGame } from "@/lib/world/missions-server";
 import { FurnishBar, NotesSheet, ShopSheet, VisitCard } from "./world-room";
@@ -149,21 +150,15 @@ export function WorldView({
 
   // Your status is remembered on this device.
   useEffect(() => {
-    let saved: StatusKey | null = null;
-    try {
-      const v = localStorage.getItem(`wereld-status:${me.id}`);
-      if (v && Object.hasOwn(STATUSES, v)) saved = v as StatusKey;
-    } catch {}
+    const saved = readSavedStatus(me.id);
     const frame = requestAnimationFrame(() => setStatusState(saved));
     return () => cancelAnimationFrame(frame);
   }, [me.id]);
   const setStatus = (next: StatusKey | null, auto = false) => {
     autoStatus.current = auto;
     setStatusState(next);
-    try {
-      if (next && !auto) localStorage.setItem(`wereld-status:${me.id}`, next);
-      else if (!next) localStorage.removeItem(`wereld-status:${me.id}`);
-    } catch {}
+    if (next && !auto) saveStatus(me.id, next);
+    else if (!next) saveStatus(me.id, null);
   };
   useEffect(() => {
     canvasApi.current?.setMine({ status, trained });
