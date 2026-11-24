@@ -27,8 +27,9 @@ function Header({ title, onClose, children }: { title: string; onClose: () => vo
 }
 
 /** The shop: every piece with its price; buy with your coins. */
-export function ShopSheet({ bottom, coins, busy, onBuy, onClose }: { bottom: number | string; coins: number | null; busy: string | null; onBuy: (item: ItemDef) => void; onClose: () => void }) {
-  const categories = [...new Set(ITEMS.map((i) => i.category))];
+export function ShopSheet({ bottom, coins, busy, first = null, onBuy, onClose }: { bottom: number | string; coins: number | null; busy: string | null; /** The category to show on top: the things for the space you are in. */ first?: ItemDef["category"] | null; onBuy: (item: ItemDef) => void; onClose: () => void }) {
+  const all = [...new Set(ITEMS.map((i) => i.category))];
+  const categories = first && all.includes(first) ? [first, ...all.filter((c) => c !== first)] : all;
   return (
     <section aria-label="Winkel" className={`${sheet} flex max-h-[min(60%,600px)] flex-col`} style={{ bottom }}>
       <Header title="Winkel" onClose={onClose}>
@@ -63,7 +64,7 @@ export function ShopSheet({ bottom, coins, busy, onBuy, onClose }: { bottom: num
             </ul>
           </section>
         ))}
-        <p className="px-1 text-[12px] text-muted">Munten verdien je met inchecken, trainen, water en stappen in BADI.</p>
+        <p className="px-1 text-[12px] text-muted">Munten verdien je met inchecken, trainen, water en stappen in BADI, en 500 per week als Super Badi.</p>
       </div>
     </section>
   );

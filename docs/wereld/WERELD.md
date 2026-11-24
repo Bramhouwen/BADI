@@ -452,3 +452,9 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Een ruimte begint leeg en richt je in met hetzelfde magazijn als je kamer. `world_room_items.space` zegt waar een meubel staat (`kamer` of de ruimte). De database laat alleen neerzetten in je kamer of in een ruimte die je hebt; een ruimte zelf is geen meubel. Een ruimte kun je maar één keer kopen. `world_spaces_of(owner)` vertelt bezoekers welke ruimtes er zijn.
 - Het kledingrek staat alleen in de kamer zelf, niet in de ruimtes.
 - Getest in PGlite (munten met en zonder Super Badi, dubbel kopen, neerzetten in een ruimte die je niet hebt, iets van een ander verschuiven) en in de demo.
+
+## Spullen voor de ruimtes en de hond van Daphne (24-11-2026)
+
+- 24 nieuwe spullen in de winkel, zes per ruimte (categorieën Badkamer, Tuin, Zolder, Gym in `items.ts`, prijzen 15 tot 130, migratie 0034). Ze mogen overal staan; de winkel opent wel op de categorie van de ruimte waar je bent. Zitten kan op de loungebank, de zitkussens en de sportbank.
+- Gemaakt met het beeldmodel (gpt_image_2_6) met de kledingkast als stijlvoorbeeld, op wit, daarna uitgeknipt. Bronnen in `docs/wereld/bron/kamers/meubel-*.png`. Bij open frames (squat rack, tuinset, handdoekenrek, loopband, sportbank) zijn ook de ingesloten witte vlakken weggehaald.
+- Daphne heeft een golden retriever die in haar kamer woont (`src/lib/world/engine/pet.ts`, `PETS`). Hij loopt naar een vrije plek tussen de meubels, blijft daar staan, zitten, liggen of slapen, en loopt weer verder. Elke telefoon laat de hond zelf lopen, dus hij staat niet bij iedereen op dezelfde plek. Frames in `public/wereld/dieren/hond/` (vier looppasjes, staan, zitten, liggen, slapen), bron `docs/wereld/bron/hond.png`. Niet in de extra ruimtes.

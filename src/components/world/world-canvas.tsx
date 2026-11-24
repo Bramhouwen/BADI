@@ -20,6 +20,8 @@ import { ITEM_BY_ID, RACK, RACK_AT, itemImage } from "@/lib/world/items";
 import type { Prop } from "@/lib/world/engine/renderer";
 import type { RoomPiece } from "@/app/actions/world";
 import { liveLines, pushLine, type ChatLine } from "@/lib/world/engine/chat-strip";
+import { PETS, newPet, petFrame, stepPet, type Pet, type PetPose } from "@/lib/world/engine/pet";
+import { findPath, smoothPath } from "@/lib/world/engine/pathfinding";
 
 const PAGE = "#f6ece4";
 
@@ -607,6 +609,52 @@ export function WorldCanvas({
             const selected = furnishing && p.id === selectedPiece;
             return [{ img, x, y, w: p.item.w, h: p.item.h, flip: p.flip, depth: depthOf(baseGrid, p), flat: Boolean(p.item.flat), outline: selected ? { poly: footprintPolygon(baseGrid, p), ok: movingOk } : null, alpha: selected && !movingOk ? 0.7 : undefined }];
           });
+        // A pet in this room (Daphne's dog): wanders between the furniture. Every phone runs its own.
+        const petDef = scene.owner && !scene.space ? PETS[scene.owner] : undefined;
+        const petImages = new Map<string, HTMLImageElement>();
+        if (petDef)
+          for (const [pose, n] of Object.entries(petDef.frames) as [PetPose, number][])
+            for (let i = 1; i <= n; i++) {
+              const img = new Image();
+              img.decoding = "async";
+              img.src = `/wereld/dieren/${petDef.key}/${pose}-${String(i).padStart(2, "0")}.png`;
+              petImages.set(`${pose}-${i}`, img);
+            }
+        const freeTiles = () => {
+          const out: [number, number][] = [];
+          for (let u = 0; u < grid.nu; u++) for (let v = 0; v < grid.nv; v++) if (grid.isWalkable(u, v)) out.push([u, v]);
+          return out;
+        };
+        let pet: Pet | null = null;
+        if (petDef) {
+          const tiles = freeTiles();
+          const t = tiles[Math.floor(Math.random() * tiles.length)];
+          if (t) pet = newPet(grid.tileToPx(t[0] + 0.5, t[1] + 0.5), performance.now());
+        }
+        // A new place a few tiles away, and the way there around the furniture.
+        const petRoute = (): Pt[] | null => {
+          if (!pet) return null;
+          // Furniture may have been put where it stands: start from the nearest free tile.
+          const at = grid.tileAt(pet.feet);
+          const from = at && grid.isWalkable(...at) ? at : grid.nearestWalkable(pet.feet);
+          const tiles = freeTiles();
+          if (!from || !tiles.length) return null;
+          for (let tries = 0; tries < 12; tries++) {
+            const to = tiles[Math.floor(Math.random() * tiles.length)];
+            if (Math.hypot(to[0] - from[0], to[1] - from[1]) < 2) continue;
+            const path = findPath(grid, from, to);
+            if (path) return smoothPath(grid, path).slice(1).map(([u, v]) => grid.tileToPx(u + 0.5, v + 0.5));
+          }
+          return null;
+        };
+        const petProp = (now: number): Prop[] => {
+          if (!pet || !petDef) return [];
+          const img = petImages.get(`${pet.pose}-${petFrame(petDef, pet, now)}`);
+          if (!img?.complete || !img.naturalWidth) return [];
+          const k = petDef.height / petDef.frameHeight;
+          const w = petDef.frameWidth * k, h = petDef.frameHeight * k;
+          return [{ img, x: pet.feet[0], y: pet.feet[1] + (petDef.frameHeight - petDef.feetY) * k, w, h, flip: (pet.facing === "left") === petDef.facesRight, depth: pet.feet[1], flat: false }];
+        };
         const seatDepth = () => new Map(pieces.map((p) => [p.id, depthOf(baseGrid, p)]));
         // The piece under a finger: the front-most picture that covers that point.
         // The rack stays where it is: it is left out while furnishing.
@@ -914,6 +962,7 @@ export function WorldCanvas({
             step(a, dt, now);
             endAction(a, now);
           }
+          if (pet && !furnishing) stepPet(pet, dt, now, petRoute);
           // Walking along: keep close to them, a step behind.
           if (following && now - followCheck > 400) {
             followCheck = now;
@@ -952,7 +1001,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: propsNow(), seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES, chat: { lines: (chatLines = liveLines(chatLines, now)), top: chatTop } } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: [...propsNow(), ...petProp(now)], seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES, chat: { lines: (chatLines = liveLines(chatLines, now)), top: chatTop } } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

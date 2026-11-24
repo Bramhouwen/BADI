@@ -18,8 +18,8 @@ describe("own rooms", () => {
   it("has a picture for every piece in the shop", () => {
     for (const i of ITEMS) expect(fs.existsSync(`public/wereld/meubels/${i.id}.webp`), i.id).toBe(true);
   });
-  it("asks the same prices as the database (migration 0032)", () => {
-    const sql = fs.readFileSync("supabase/migrations/0032_world_rooms.sql", "utf8");
+  it("asks the same prices as the database (migrations 0032 and 0034)", () => {
+    const sql = ["supabase/migrations/0032_world_rooms.sql", "supabase/migrations/0034_world_space_items.sql"].map((f) => fs.readFileSync(f, "utf8")).join("\n");
     const prices = Object.fromEntries([...sql.matchAll(/\('([a-z0-9-]+)', (\d+)\)/g)].map((m) => [m[1], Number(m[2])]));
     expect(Object.keys(prices).sort()).toEqual(ITEMS.map((i) => i.id).sort());
     for (const i of ITEMS) expect(prices[i.id], i.id).toBe(i.price);

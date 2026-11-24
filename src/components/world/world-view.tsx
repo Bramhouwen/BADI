@@ -651,7 +651,7 @@ export function WorldView({
           }}
         />
       ) : null}
-      {!edit && !post && roomPanel === "winkel" ? <ShopSheet bottom={furnishing ? bottom : above} coins={room?.coins ?? game?.coins ?? null} busy={buying} onBuy={(i) => void buy(i)} onClose={() => setRoomPanel(null)} /> : null}
+      {!edit && !post && roomPanel === "winkel" ? <ShopSheet bottom={furnishing ? bottom : above} coins={room?.coins ?? game?.coins ?? null} busy={buying} first={area === "kamer" ? null : area} onBuy={(i) => void buy(i)} onClose={() => setRoomPanel(null)} /> : null}
       {!edit && !post && roomPanel === "ruimtes" && ownerId ? (
         <SpacesSheet
           bottom={above}
