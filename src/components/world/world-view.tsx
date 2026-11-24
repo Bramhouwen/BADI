@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Footprints, Hand, Mail, MessageCircle, SendHorizontal, X } from "lucide-react";
 import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
@@ -16,6 +16,7 @@ import { useTypingAll } from "@/lib/presence";
 import { ActionBar, ActionsSheet, CoinChip, MapSheet, MissionsSheet, SpotChoice, StatusSheet, type HudPanel } from "./world-hud";
 import { loadWorldGameState } from "@/app/actions/world";
 import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
+import { lastPlaceOf, type LastPlace } from "@/lib/world/last-place";
 import { readSavedStatus, saveStatus } from "@/lib/world/status-store";
 import { TOUR_PARAM, tourSeenKey } from "@/lib/world/tour";
 import { WorldTour } from "./world-tour";
@@ -71,6 +72,9 @@ export function WorldView({
   const [dim, setDim] = useState(false);
   const [link, setLink] = useState<WorldLink | null>(null);
   const [peers, setPeers] = useState<[string, WorldPresence][]>([]);
+  const [lastKnown, setLastKnown] = useState<Map<string, LastPlace & { updatedAt: string }>>(new Map());
+  // The others where they were last: saved, or seen live during this visit (newer).
+  const placed = useMemo(() => members.map((m) => ({ ...m, ...(lastKnown.get(m.id) ?? {}) })), [members, lastKnown]);
   const [picked, setPicked] = useState<PickedMember | null>(null);
   const [text, setText] = useState("");
   const lastSaid = useRef(0);
@@ -141,7 +145,20 @@ export function WorldView({
     if (edit) return;
     const l = createWorldLink(me.id, challengeId);
     const off = l.subscribe((e) => {
-      if (e.type === "peers") setPeers([...l.peers()]);
+      if (e.type === "peers") {
+        const now = [...l.peers()];
+        setPeers(now);
+        // Remember where everyone is, so whoever leaves stays there (offline), also in other rooms.
+        setLastKnown((was) => {
+          const next = new Map(was);
+          const at = new Date().toISOString();
+          for (const [id, p] of now) {
+            const place = lastPlaceOf(p);
+            if (place) next.set(id, { ...place, updatedAt: at });
+          }
+          return next;
+        });
+      }
     });
     // Hand it to the canvas on the next frame, after this effect.
     const frame = requestAnimationFrame(() => setLink(l));
@@ -402,7 +419,7 @@ export function WorldView({
             restore={first ? restore : null}
             arriveAt={here.arrive}
             link={link}
-            members={members}
+            members={placed}
             debug={debug}
             overlay={overlay}
             edit={edit}

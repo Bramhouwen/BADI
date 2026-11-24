@@ -223,6 +223,9 @@ export function WorldCanvas({
     let raf = 0;
     let noteTimer: ReturnType<typeof setTimeout> | undefined;
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    // A position not saved yet: saved right away when you leave, so the others see you where you were.
+    let flushSave: (() => void) | null = null;
+    let offHide: (() => void) | null = null;
     let detach: (() => void) | null = null;
     let cleanupLink: (() => void) | null = null;
     let ro: ResizeObserver | null = null;
@@ -323,7 +326,22 @@ export function WorldCanvas({
         const remember = () => {
           if (edit) return;
           clearTimeout(saveTimer);
-          saveTimer = setTimeout(() => void saveWorldPosition({ scene: scene.id, x: me0.feet[0], y: me0.feet[1], activity: activityOf(me0) }), 1200);
+          flushSave = () => {
+            flushSave = null;
+            clearTimeout(saveTimer);
+            void saveWorldPosition({ scene: scene.id, x: me0.feet[0], y: me0.feet[1], activity: activityOf(me0) });
+          };
+          saveTimer = setTimeout(() => flushSave?.(), 1200);
+        };
+        // Leaving the app (another app, the screen off): save now, not in a moment.
+        const onHide = () => {
+          if (document.visibilityState === "hidden") flushSave?.();
+        };
+        document.addEventListener("visibilitychange", onHide);
+        window.addEventListener("pagehide", onHide);
+        offHide = () => {
+          document.removeEventListener("visibilitychange", onHide);
+          window.removeEventListener("pagehide", onHide);
         };
         // Tell the others: only where you start from and what you are going to do, plus your status.
         me0.status = mineRef.current.status;
@@ -438,8 +456,9 @@ export function WorldCanvas({
           }
         };
         const applyPeer = (id: string, p: WorldPresence) => {
+          // Live somewhere else: not here, also not as where they were last.
           if (p.scene !== scene.id) {
-            if (others.get(id)?.live) drop(id);
+            if (others.has(id)) drop(id);
             return;
           }
           const first = !others.get(id)?.live;
@@ -473,8 +492,8 @@ export function WorldCanvas({
             o.av.offline = true;
             o.lastSeen = new Date().toISOString();
             const c = characters.get(o.av.character);
+            // Never gone: in a rest pose where they were, offline.
             if (o.intent && c) placeAtEnd(o.av, scene, restPose(o.intent, o.intent.kind === "stand" ? o.intent.to : o.av.feet), performance.now(), abilities(c));
-            else drop(id);
           }
         };
         showOffline();
@@ -506,8 +525,8 @@ export function WorldCanvas({
           publish(restored ?? { kind: "stand", to: me0.feet }, me0.feet);
         }
         cleanupLink = () => unsubscribe?.();
-        // Coming in through a door: that is your place in this scene now.
-        if (door) remember();
+        // Coming in: this is your place now, also before you take a step.
+        if (!edit) remember();
         let picked: string | null = null;
         let unread = new Map<string, number>();
         let typing = new Set<string>();
@@ -894,6 +913,8 @@ export function WorldCanvas({
       cancelAnimationFrame(raf);
       clearTimeout(noteTimer);
       clearTimeout(saveTimer);
+      flushSave?.();
+      offHide?.();
       detach?.();
       cleanupLink?.();
       if (apiRef) apiRef.current = null;

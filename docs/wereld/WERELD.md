@@ -420,3 +420,7 @@ Code: `src/components/world/world-of-badi-card.tsx`, `loadWorldCard` in `src/app
 ## Iedereen staat er vanaf het begin (24-11-2026)
 
 Wie nog nooit in de wereld was, slaapt op een vrije plek op de bank in de woonkamer (offline, met het maantje; aantikken toont "Nog niet in de wereld geweest"). Op de kaart op Squad staat die bij Huis. Zodra iemand zelf binnenkomt, geldt de eigen plek. Code: `src/lib/world/newcomers.ts`.
+
+## Niemand verdwijnt (24-11-2026)
+
+Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je daarna naar een andere ruimte gaat (de wereld onthoudt tijdens je bezoek waar iedereen was, `src/lib/world/last-place.ts`). Je eigen plek wordt meteen bewaard als je de app verlaat of naar een andere ruimte gaat, en ook als je binnenkomt zonder een stap te zetten. Wie ergens anders live is, staat niet meer als slapend op de oude plek.
