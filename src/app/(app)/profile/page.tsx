@@ -16,6 +16,9 @@ import { ProfileForm } from "./profile-form";
 import { SharingSettings } from "./sharing-settings";
 import { BaddyMemory } from "./baddy-memory";
 import { AnnouncementControls } from "./announcement-controls";
+import { WorldTourControls } from "./world-tour-controls";
+import { worldTourSent } from "@/lib/world/tour-server";
+import { WORLD_OPEN } from "@/lib/world/types";
 import { SpriteReleaseControls, type SpriteRow } from "./sprite-release-controls";
 import { BuddySettings } from "./buddy-settings";
 import { memberSprite } from "@/lib/sprites-server";
@@ -57,6 +60,7 @@ async function Content() {
   const isAdmin = ctx.membership.role === "admin";
   const hasSprite = Boolean(await memberSprite(ctx.challenge.id, ctx.profile.display_name));
   const announced = isAdmin ? await announcementSent(supabase, ctx.challenge.id) : false;
+  const worldAnnounced = isAdmin ? await worldTourSent(supabase, ctx.challenge.id) : false;
   let spriteRows: SpriteRow[] = [];
   if (isAdmin && unreleasedKeys().length > 0) {
     const [squad, { data: releaseRows }] = await Promise.all([getSquad(ctx.challenge.id), supabase.from("sprite_releases").select("sprite, released_at").eq("challenge_id", ctx.challenge.id)]);
@@ -91,6 +95,13 @@ async function Content() {
           />
         </div>
       </section>
+
+      {isAdmin ? (
+        <section aria-label="Aankondiging World of Badi">
+          <SectionTitle>Aankondiging</SectionTitle>
+          <WorldTourControls sent={worldAnnounced} open={WORLD_OPEN} />
+        </section>
+      ) : null}
 
       {isAdmin && SPRITES_LIVE ? (
         <section aria-label="Aankondiging">

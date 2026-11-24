@@ -20,7 +20,7 @@ export const sheet = "absolute inset-x-3 mx-auto max-w-md overflow-hidden rounde
 /** The row of round buttons above "Zeg iets". */
 export function ActionBar({ open, onOpen, status }: { open: HudPanel | null; onOpen: (p: HudPanel | null) => void; status: StatusKey | null }) {
   const button = (p: HudPanel, label: string, icon: React.ReactNode) => (
-    <button type="button" onClick={() => onOpen(open === p ? null : p)} aria-label={label} aria-expanded={open === p} className={`${round} ${open === p ? "ring-2 ring-[#2b1d18]" : ""}`}>
+    <button type="button" data-tour={p} onClick={() => onOpen(open === p ? null : p)} aria-label={label} aria-expanded={open === p} className={`${round} ${open === p ? "ring-2 ring-[#2b1d18]" : ""}`}>
       {icon}
     </button>
   );
@@ -235,7 +235,7 @@ export function SpotChoice({ spot, bottom, onDo, onClose }: { spot: Spot; bottom
 /** Your coins, top right. */
 export function CoinChip({ coins, onClick }: { coins: number | null; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} aria-label={coins === null ? "Munten" : `${coins} munten`} className="pointer-events-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3.5 text-[13.5px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur">
+    <button type="button" data-tour="munten" onClick={onClick} aria-label={coins === null ? "Munten" : `${coins} munten`} className="pointer-events-auto flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3.5 text-[13.5px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur">
       <Coins className="h-4 w-4 text-[#c28a2c]" aria-hidden />
       {coins ?? "–"}
     </button>

@@ -21,7 +21,7 @@ export const metadata = { title: "World of Badi" };
  * (admin only, saves to the scene's JSON on your own computer). See
  * docs/wereld/WERELD.md.
  */
-async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[]; bewerken?: string | string[]; scene?: string | string[] }> }) {
+async function Content({ searchParams }: { searchParams: Promise<{ debug?: string | string[]; als?: string | string[]; bewerken?: string | string[]; scene?: string | string[]; rondleiding?: string | string[] }> }) {
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
@@ -58,6 +58,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
       debug={sp.debug === "1" || sp.debug === "2"}
       overlay={sp.debug === "1"}
       edit={sp.bewerken !== undefined}
+      tour={sp.rondleiding !== undefined}
       notice={missingTable ? "Je plek wordt nog niet bewaard (migratie 0030)" : null}
     />
   ) : (

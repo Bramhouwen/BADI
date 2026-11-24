@@ -13,6 +13,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { relativeTimeNl } from "@/lib/dates";
 import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
 import { readSavedStatus, saveStatus } from "@/lib/world/status-store";
+import { TOUR_URL } from "@/lib/world/tour";
 import { createWorldLink } from "./world-link";
 
 /** The four places on the map, in percent of the village picture, and the scene you enter there. */
@@ -206,6 +207,9 @@ export function WorldOfBadiCard({ me, challengeId, people, game, notes }: { me: 
       <div className="p-3">
         <Link href="/wereld" className="espresso flex h-12 items-center justify-center gap-2 rounded-full text-[15px] font-semibold">
           Naar de wereld <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+        <Link href={TOUR_URL} className="mt-1 flex h-9 items-center justify-center text-[13px] font-medium text-muted">
+          Rondleiding bekijken
         </Link>
       </div>
     </section>

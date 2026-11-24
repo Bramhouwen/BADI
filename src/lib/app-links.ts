@@ -3,7 +3,7 @@
  * badi-mu.vercel.app address) becomes a tap-able chip under the bubble, and is
  * left out of the bubble text itself.
  */
-const APP_PATH = /(^|\s)(?:https:\/\/badi-mu\.vercel\.app)?(\/(?:wheel|kitchen|wall|squad|checkin|fitness|dashboard|profile|water|coach)(?:\/[A-Za-z0-9_-]+)*)(?=[\s.,!?)]|$)/g;
+const APP_PATH = /(^|\s)(?:https:\/\/badi-mu\.vercel\.app)?(\/(?:wheel|kitchen|wall|squad|checkin|fitness|dashboard|profile|water|coach|wereld)(?:\/[A-Za-z0-9_-]+)*)(?=[\s.,!?)]|$)/g;
 
 const LABELS: [RegExp, string][] = [
   [/^\/wheel\/prizes/, "Naar je prijzenkast"],
@@ -13,6 +13,7 @@ const LABELS: [RegExp, string][] = [
   [/^\/checkin/, "Naar je check-in"],
   [/^\/fitness/, "Naar Fitness"],
   [/^\/squad/, "Naar de squad"],
+  [/^\/wereld/, "Naar World of Badi"],
 ];
 
 export interface AppLink {

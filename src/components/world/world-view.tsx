@@ -17,6 +17,8 @@ import { ActionBar, ActionsSheet, CoinChip, MapSheet, MissionsSheet, SpotChoice,
 import { loadWorldGameState } from "@/app/actions/world";
 import { STATUSES, type StatusKey } from "@/lib/world/engine/presence";
 import { readSavedStatus, saveStatus } from "@/lib/world/status-store";
+import { TOUR_PARAM, tourSeenKey } from "@/lib/world/tour";
+import { WorldTour } from "./world-tour";
 import type { Spot } from "@/lib/world/engine/scene";
 import type { WorldGame } from "@/lib/world/missions-server";
 import { FurnishBar, NotesSheet, ShopSheet, VisitCard } from "./world-room";
@@ -46,6 +48,7 @@ export function WorldView({
   overlay = false,
   edit = false,
   notice = null,
+  tour = false,
 }: {
   me: { id: string; name: string; character: string | null };
   challengeId: string;
@@ -61,6 +64,8 @@ export function WorldView({
   edit?: boolean;
   /** A line shown under the room name, for example when positions are not saved. */
   notice?: string | null;
+  /** Start the tour (/wereld?rondleiding=1); it also starts by itself the first time. */
+  tour?: boolean;
 }) {
   const [here, setHere] = useState(() => ({ scene: SCENES[startScene] ? startScene : FIRST_SCENE, arrive: null as string | null, n: 0 }));
   const [dim, setDim] = useState(false);
@@ -147,6 +152,31 @@ export function WorldView({
       setLink(null);
     };
   }, [edit, me.id, challengeId]);
+
+  // The tour: asked for in the link, or the first time on this device.
+  const [touring, setTouring] = useState(false);
+  useEffect(() => {
+    if (edit) return;
+    let seen = false;
+    try {
+      seen = localStorage.getItem(tourSeenKey(me.id)) !== null;
+    } catch {}
+    if (!tour && seen) return;
+    const frame = requestAnimationFrame(() => setTouring(true));
+    return () => cancelAnimationFrame(frame);
+  }, [edit, tour, me.id]);
+  const endTour = () => {
+    setTouring(false);
+    try {
+      localStorage.setItem(tourSeenKey(me.id), new Date().toISOString());
+    } catch {}
+    // A reload should not start it again.
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(TOUR_PARAM)) {
+      url.searchParams.delete(TOUR_PARAM);
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  };
 
   // Your status is remembered on this device.
   useEffect(() => {
@@ -421,6 +451,7 @@ export function WorldView({
         {!edit ? (
           <button
             type="button"
+            data-tour="postvak"
             onClick={() => (post ? setPost(null) : openBox())}
             aria-label={totalUnread(unread) ? `Postvak, ${totalUnread(unread)} ongelezen` : "Postvak"}
             className="pointer-events-auto relative ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/90 text-ink shadow-md ring-1 ring-ink/[0.06] backdrop-blur"
@@ -619,6 +650,7 @@ export function WorldView({
           ) : null}
           {!visible?.keyboard ? <ActionBar open={hud} onOpen={openHud} status={status} /> : null}
           <form
+            data-tour="zeg"
             className="flex items-center gap-2 rounded-full bg-white/95 p-1.5 pl-4 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur"
             onSubmit={(e) => {
               e.preventDefault();
@@ -646,6 +678,8 @@ export function WorldView({
           </form>
         </div>
       ) : null}
+
+      {touring ? <WorldTour onDone={endTour} /> : null}
     </div>
   );
 }
