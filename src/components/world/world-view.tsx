@@ -32,9 +32,12 @@ import type { ItemDef } from "@/lib/world/items";
 import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
 import { currentOutfit, readOutfitChoice, saveOutfitChoice, spriteKey, type OutfitChoice, type OutfitId } from "@/lib/world/outfits";
 import { WardrobeSheet } from "./world-wardrobe";
-import { WheelBar, WheelShow, WheelTurn, useWheelPictures, type WheelData } from "./world-wheel";
+import { WheelBar, outcomeOf, useWheelPictures, type WheelData } from "./world-wheel";
+import { WheelReveal } from "@/components/wheel/wheel-reveal";
+import { respinWheel, spinWheel, type SpinOutcome } from "@/app/actions/wheel";
+import { AnimatePresence } from "motion/react";
 import { WHEEL_SCENE, WHEEL_SPIN_MS, isSquare, ringState } from "@/lib/world/wheel-ring";
-import { CATEGORY_META, type WheelCategory } from "@/lib/wheel";
+import { CATEGORY_META } from "@/lib/wheel";
 
 const FADE_MS = 220;
 
@@ -109,16 +112,16 @@ export function WorldView({
   // The Weekrad: who spun this week (live), where you stand yourself, and your turn open.
   const [spun, setSpun] = useState<Set<string>>(() => new Set(wheel?.spunBy ?? []));
   const [selfP, setSelfP] = useState<WorldPresence | null>(null);
-  const [wheelOpen, setWheelOpen] = useState(false);
-  // Someone else spinning, big on screen for everyone in the back garden.
-  const [show, setShow] = useState<{ key: number; name: string; category: WheelCategory; seed: number } | null>(null);
-  const showTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The wheel turning in the garden, and what came out once it stops (yours: with claiming).
+  const [wheelBusy, setWheelBusy] = useState(false);
+  const [reveal, setReveal] = useState<{ outcome: SpinOutcome; watcher?: string } | null>(null);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sceneNowRef = useRef<string>("");
   useEffect(() => {
     sceneNowRef.current = here.scene;
   }, [here.scene]);
   const wheelPics = useRef<Parameters<WorldCanvasApi["setWheel"]>[0] | null>(null);
-  const { hidden: wheelHidden, segments: wheelSegments } = useWheelPictures(wheel?.odds ?? [], (pics) => {
+  const { hidden: wheelHidden } = useWheelPictures(wheel?.odds ?? [], (pics) => {
     wheelPics.current = pics;
     canvasApi.current?.setWheel(pics);
   });
@@ -214,17 +217,24 @@ export function WorldView({
         setSpun((was) => new Set(was).add(e.from));
         // Everyone sees where it landed once the wheel stops; the one who spun sees it in the app's reveal.
         if (e.from !== me.id) {
-          setShow({ key: Date.now(), name: e.name, category: e.category, seed: e.seed });
-          clearTimeout(showTimer.current);
-          showTimer.current = setTimeout(() => setShow(null), WHEEL_SPIN_MS + 3500);
-          const text = `${e.name} draaide: ${CATEGORY_META[e.category].label}`;
-          // In the back garden the big wheel shows it; elsewhere a line at the top.
-          if (sceneNowRef.current !== WHEEL_SCENE)
+          // In the back garden: the wheel turns there, then what came out with confetti. Elsewhere a line at the top.
+          if (sceneNowRef.current === WHEEL_SCENE) {
+            setWheelBusy(true);
+            clearTimeout(revealTimer.current);
+            revealTimer.current = setTimeout(() => {
+              setWheelBusy(false);
+              setReveal({ outcome: outcomeOf(e), watcher: e.name });
+              // Someone else's prize closes by itself, before the next turn.
+              revealTimer.current = setTimeout(() => setReveal((r) => (r?.watcher ? null : r)), 6500);
+            }, WHEEL_SPIN_MS + 250);
+          } else {
+            const text = `${e.name} draaide: ${CATEGORY_META[e.category].label}`;
             setTimeout(() => {
               setToast(text);
               clearTimeout(toastTimer.current);
               toastTimer.current = setTimeout(() => setToast(null), 3500);
             }, WHEEL_SPIN_MS + 300);
+          }
         }
         return;
       }
@@ -516,6 +526,31 @@ export function WorldView({
     setText("");
   };
 
+  // Your turn: the database picks what comes out, the wheel in the garden turns for everyone, then the reveal with confetti.
+  // `respinOf`: a duplicate prize given back, spun again.
+  const spinHere = async (respinOf?: string) => {
+    if (wheelBusy || !link) return;
+    setReveal(null);
+    setWheelBusy(true);
+    const res = respinOf ? await respinWheel(respinOf) : await spinWheel();
+    if (!res.ok || !res.data) {
+      setWheelBusy(false);
+      return say2(res.ok ? "Draaien lukte niet." : res.error);
+    }
+    const out = res.data;
+    link.wheel({
+      name: me.name,
+      category: out.category,
+      seed: Math.random(),
+      ...(out.challenge ? { challenge: out.challenge.key } : { prize: { brand: out.brand, name: out.name, image: out.image } }),
+    });
+    clearTimeout(revealTimer.current);
+    revealTimer.current = setTimeout(() => {
+      setWheelBusy(false);
+      setReveal({ outcome: out });
+    }, WHEEL_SPIN_MS + 250);
+  };
+
   // The Weekrad in the back garden: everyone of the group in a square, then one after the other.
   const ringMembers = me.character ? [me.id, ...members.map((m) => m.id)] : members.map((m) => m.id);
   const standing = new Map<string, string>();
@@ -679,15 +714,9 @@ export function WorldView({
       ) : null}
       {!edit && !post && hud === "gesprek" ? <ChatLogSheet lines={roomLog(chatLog, here.scene)} me={me.id} room={scene.name} bottom={above} onClose={() => setHud(null)} /> : null}
       {wheel ? wheelHidden : null}
-      {wheel && show && here.scene === WHEEL_SCENE ? <WheelShow key={show.key} segments={wheelSegments} name={show.name} category={show.category} seed={show.seed} /> : null}
-      {/* Opened from the bar on your turn; stays open for the reveal while the turn moves on. */}
-      {wheel && wheelOpen ? (
-        <WheelTurn
-          data={wheel}
-          onSpun={(category) => link?.wheel({ name: me.name, category, seed: Math.random() })}
-          onClose={() => setWheelOpen(false)}
-        />
-      ) : null}
+      <AnimatePresence>
+        {reveal ? <WheelReveal key={reveal.outcome.spinId || reveal.watcher} outcome={reveal.outcome} watcher={reveal.watcher} onClose={() => setReveal(null)} onRespin={reveal.watcher ? undefined : () => void spinHere(reveal.outcome.spinId)} /> : null}
+      </AnimatePresence>
       {!edit && !post && hud === "kledingrek" && me.character ? <WardrobeSheet character={me.character} wearing={outfit} isSuperBadi={isSuperBadi} bottom={above} onWear={wear} onClose={() => setHud(null)} /> : null}
       {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
       {!edit && !post && choice ? (
@@ -796,7 +825,7 @@ export function WorldView({
             </div>
           ) : null}
           {wheel && !edit && here.scene === WHEEL_SCENE && !visible?.keyboard ? (
-            <WheelBar ring={ring} me={me.id} inSquare={mySquare !== null} total={ringMembers.length} nameOf={nameOf} spunMyself={spun.has(me.id)} onSpin={() => setWheelOpen(true)} />
+            <WheelBar ring={ring} me={me.id} inSquare={mySquare !== null} total={ringMembers.length} nameOf={nameOf} spunMyself={spun.has(me.id)} busy={wheelBusy} onSpin={() => void spinHere()} />
           ) : null}
           {following ? (
             <div className="flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-4 pr-1.5 text-[13px] text-text shadow-md ring-1 ring-ink/[0.06]">

@@ -487,3 +487,9 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Boven is kleiner getekend dan beneden, dus de poppetjes ook: `heightByY` op de scene geeft de hoogte per hoogte in de tekening (boven 170, beneden 300, op de trap ertussenin), en de loopsnelheid gaat mee. Een scene mag nu meerdere loopvlakken hebben (`walkable` als lijst: begane grond, trap, bovenverdieping).
 - Opgeslagen plekken in de oude hal, woonkamer of overloop bestaan niet meer; wie daar stond, begint in het huis (slapend op de bank als de plek ontbreekt).
 - `woonkamer.ts` staat niet meer in de wereld, maar blijft voor de engine-tests.
+
+### Weekrad: echt draaien in de tuin (24-11-2026, vervangt het losse venster)
+
+- De vakjes liggen nu naast het rad (twee links, twee rechts), zodat niemand ervoor staat. Het app-rad in de tuin is groter getekend dan het geschilderde rad.
+- Jouw beurt: knop in de balk, de database kiest de uitkomst, en het rad in de tuin draait voor iedereen. Iedereen in de tuin krijgt de camera op het rad (tot je zelf tikt of sleept).
+- Als het stilstaat: de onthulling van de app (`WheelReveal`, ook gebruikt door de Weekrad-pagina) met confetti. De winnaar krijgt de claim en de keuze bij een dubbele prijs (opnieuw draaien draait het rad opnieuw voor iedereen); de anderen zien "<naam> heeft gewonnen!" met de prijs, en dat sluit vanzelf. De broadcast `rad` neemt merk, naam en foto van de prijs mee, of welke challenge het werd.

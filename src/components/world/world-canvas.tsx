@@ -288,6 +288,8 @@ export function WorldCanvas({
     let cam: Camera = { x: scene.width / 2, y: scene.height / 2, zoom: 0.5 };
     // The camera follows you (looking ahead while you walk) until you look around yourself; the next tap brings it back.
     let follow = false;
+    // Looking at something other than yourself (the Weekrad while it turns), until you tap or drag.
+    let lookAt: Pt | null = null;
     // A zoom on its way after a double tap, eased per frame.
     let zoomTo: number | null = null;
     let lead: Pt = [0, 0];
@@ -554,6 +556,9 @@ export function WorldCanvas({
             if (e.type === "wheel") {
               if (scene.id !== WHEEL_SCENE || !wheel) return;
               wheelAnim = { from: wheelRot, to: landingRotation(wheel.segments, e.category, wheelRot, e.seed, 6), start: performance.now() };
+              // Everyone in the garden watches the wheel.
+              lookAt = [WHEEL_FACE.x, WHEEL_FACE.y + 90];
+              zoomTo = Math.max(cam.zoom, zoomLimits().close * 0.7);
               return;
             }
             if (e.scene !== scene.id) return;
@@ -887,6 +892,7 @@ export function WorldCanvas({
               // Tapping someone shows who it is instead of walking.
               if (pick(x, y)) return;
               follow = true;
+              lookAt = null;
               // The clothing rack: walk up to it, then choose what to wear.
               const rack = pieceAt(x, y, true);
               if (rack?.id === RACK.id) return goToRack(rack);
@@ -970,11 +976,13 @@ export function WorldCanvas({
           },
           pan(dx, dy) {
             follow = false;
+            lookAt = null;
             zoomTo = null;
             cam = clampCamera({ ...cam, x: cam.x - dx / cam.zoom, y: cam.y - dy / cam.zoom }, scene, view);
           },
           zoom(factor, x, y) {
             follow = false;
+            lookAt = null;
             zoomTo = null;
             const { min, max } = zoomLimits();
             const before = screenToScene(x, y, cam, view);
@@ -1040,7 +1048,10 @@ export function WorldCanvas({
             }
           }
           let { x, y } = cam;
-          if (follow && !edit) {
+          if (lookAt) {
+            x = ease(x, lookAt[0], 3, dt);
+            y = ease(y, lookAt[1], 3, dt);
+          } else if (follow && !edit) {
             const h = me0.state === "walk" ? heading(me0.feet, me0.path[0]) : ([0, 0] as Pt);
             lead = [ease(lead[0], h[0], 2.2, dt), ease(lead[1], h[1], 2.2, dt)];
             const [tx, ty] = followTarget(me0.feet, lead, scene, view, zoom);

@@ -17,7 +17,7 @@ import { buildGrid } from "@/lib/world/engine/grid";
 import type { Pt } from "@/lib/world/engine/geometry";
 import type { Intent } from "@/lib/world/engine/moves";
 import { cleanSpeech, readAction, readPresence, readSpeech, type ActionKind, type Speech, type WorldAction, type WorldPresence } from "@/lib/world/engine/presence";
-import { WHEEL_CATEGORIES, type WheelCategory } from "@/lib/wheel";
+import { WHEEL_CATEGORIES, WHEEL_CHALLENGES, type WheelCategory, type WheelChallengeKey } from "@/lib/wheel";
 import { WHEEL_SCENE, WHEEL_SQUARES, ringState } from "@/lib/world/wheel-ring";
 
 /** Someone spun the Weekrad in the back garden: where it lands, the same on every phone. */
@@ -27,7 +27,12 @@ export interface WheelSpinEvent {
   category: WheelCategory;
   /** 0 to 1: which slice of that level and where in it. */
   seed: number;
+  /** What came out, for everyone to see when the wheel stops: a prize, or the extra challenge. */
+  prize?: { brand: string | null; name: string | null; image: string | null } | null;
+  challenge?: WheelChallengeKey | null;
 }
+
+const text = (v: unknown, max: number) => (typeof v === "string" && v.length <= max ? v : null);
 
 function readWheelSpin(v: unknown): WheelSpinEvent | null {
   const r = v as Record<string, unknown> | null;
@@ -35,7 +40,10 @@ function readWheelSpin(v: unknown): WheelSpinEvent | null {
   if (typeof r.from !== "string" || r.from.length > 64 || typeof r.name !== "string" || r.name.length > 40) return null;
   if (typeof r.category !== "string" || !(WHEEL_CATEGORIES as readonly string[]).includes(r.category)) return null;
   if (typeof r.seed !== "number" || !(r.seed >= 0 && r.seed <= 1)) return null;
-  return { from: r.from, name: r.name, category: r.category as WheelCategory, seed: r.seed };
+  const p = r.prize as Record<string, unknown> | null | undefined;
+  const prize = p && typeof p === "object" ? { brand: text(p.brand, 120), name: text(p.name, 200), image: text(p.image, 2000) } : null;
+  const challenge = typeof r.challenge === "string" && (WHEEL_CHALLENGES as readonly string[]).includes(r.challenge) ? (r.challenge as WheelChallengeKey) : null;
+  return { from: r.from, name: r.name, category: r.category as WheelCategory, seed: r.seed, prize, challenge };
 }
 
 export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech) | ({ type: "action" } & WorldAction) | ({ type: "wheel" } & WheelSpinEvent);
@@ -257,9 +265,10 @@ function demoLink(userId: string): WorldLink {
     timers.push(
       setTimeout(() => {
         if (closed) return;
-        listeners.emit({ type: "wheel", from: bot.id, name: bot.name, category: pick(WHEEL_CATEGORIES), seed: Math.random() });
+        const category = pick(WHEEL_CATEGORIES);
+        listeners.emit({ type: "wheel", from: bot.id, name: bot.name, category, seed: Math.random(), ...(category === "challenge" ? { challenge: pick(WHEEL_CHALLENGES) } : { prize: { brand: "Demo", name: "Een prijs uit de demo", image: null } }) });
         // the next one after this spin has landed
-        timers.push(setTimeout(botTurn, 6500));
+        timers.push(setTimeout(botTurn, 11000));
       }, 2500),
     );
   };
@@ -275,7 +284,7 @@ function demoLink(userId: string): WorldLink {
     wheel(spin) {
       demoSpun.add(userId);
       listeners.emit({ type: "wheel", from: userId, ...spin });
-      timers.push(setTimeout(botTurn, 6500));
+      timers.push(setTimeout(botTurn, 11000));
     },
     say(scene, text) {
       const clean = cleanSpeech(text);

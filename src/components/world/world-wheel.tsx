@@ -2,16 +2,16 @@
 
 /**
  * The Weekrad in the back garden of World of Badi: the bar that says who is
- * still missing and whose turn it is, the app's own wheel when it is your
- * turn, and the pictures of the wheel for the canvas. See wheel-ring.ts.
+ * still missing and whose turn it is (and spins on your turn), the pictures
+ * of the app's wheel for the canvas, and what someone else won for the
+ * reveal. The wheel turns in the garden itself; see wheel-ring.ts.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
-import { CATEGORY_META, landingRotation, segments as toSegments, type Odds, type Segment } from "@/lib/wheel";
-import { WHEEL_SPIN_MS, type RingState } from "@/lib/world/wheel-ring";
+import { useEffect, useMemo, useRef } from "react";
+import { CHALLENGE_META, segments as toSegments, type Odds, type Segment } from "@/lib/wheel";
+import type { RingState } from "@/lib/world/wheel-ring";
 import { WheelGraphic } from "@/components/wheel/wheel-graphic";
-import { SpinWheel } from "@/components/wheel/spin-wheel";
 import type { SpinOutcome } from "@/app/actions/wheel";
+import type { WheelSpinEvent } from "./world-link";
 import { joinNames } from "@/lib/super-badi";
 
 export interface WheelData {
@@ -83,6 +83,7 @@ export function WheelBar({
   total,
   nameOf,
   spunMyself,
+  busy,
   onSpin,
 }: {
   ring: RingState;
@@ -91,11 +92,14 @@ export function WheelBar({
   total: number;
   nameOf: (id: string) => string;
   spunMyself: boolean;
+  /** The wheel is turning right now. */
+  busy: boolean;
   onSpin: () => void;
 }) {
   const standing = ring.order.length;
   let text: string;
-  if (ring.done) text = "Iedereen heeft deze week aan het Weekrad gedraaid.";
+  if (busy) text = "Het rad draait.";
+  else if (ring.done) text = "Iedereen heeft deze week aan het Weekrad gedraaid.";
   else if (!inSquare) text = `Weekrad: ga in een vakje voor het rad staan. ${standing} van ${total} staan er.`;
   else if (!ring.complete) text = `Wachten op ${joinNames(ring.missing.map(nameOf))}. ${standing} van ${total} staan er.`;
   else if (ring.turn === me) text = "";
@@ -106,59 +110,29 @@ export function WheelBar({
       {text ? (
         <p>{text}</p>
       ) : (
-        <button type="button" onClick={onSpin} className="espresso h-11 w-full rounded-full text-[14px] font-semibold">
-          Jij bent aan de beurt: draai het Weekrad
+        <button type="button" onClick={onSpin} disabled={busy} className="espresso h-11 w-full rounded-full text-[14px] font-semibold disabled:opacity-60">
+          {busy ? "Het rad draait" : "Jij bent aan de beurt: draai het Weekrad"}
         </button>
       )}
     </div>
   );
 }
 
-/** Your turn: the wheel of the Weekrad page, with its reveal, duplicate choice and claim form. */
-export function WheelTurn({ data, onSpun, onClose }: { data: WheelData; onSpun: (category: SpinOutcome["category"]) => void; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center" role="dialog" aria-modal="true" aria-label="Weekrad">
-      <div className="relative m-3 w-full max-w-md rounded-[28px] bg-[#fbf7f2] p-5 pb-[calc(20px+var(--sab))] shadow-2xl">
-        <button type="button" onClick={onClose} className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full text-muted" aria-label="Sluiten">
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-        <h2 className="mb-4 text-center font-display text-[28px] text-ink">Weekrad</h2>
-        <SpinWheel odds={data.odds} canSpin unlimited={data.demo} nextAt={data.nextAt} serverNow={data.serverNow} onSpun={onSpun} onDone={onClose} />
-      </div>
-    </div>
-  );
-}
-
-/**
- * Someone else spins: the wheel big on everyone's screen in the back garden,
- * turning to where it lands (the same as the wheel in the garden), with the
- * outcome once it stops. Mounted anew for every spin.
- */
-export function WheelShow({ segments, name, category, seed }: { segments: readonly Segment[]; name: string; category: SpinOutcome["category"]; seed: number }) {
-  const [rotation, setRotation] = useState(0);
-  const [landed, setLanded] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setRotation(landingRotation(segments, category, 0, seed, 6)));
-    const stop = setTimeout(() => setLanded(true), WHEEL_SPIN_MS + 150);
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(stop);
-    };
-  }, [segments, category, seed]);
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--sat)+76px)] z-30 flex flex-col items-center" role="status" aria-live="polite">
-      <div className="rounded-[24px] bg-white/92 px-4 pb-3 pt-2.5 shadow-xl ring-1 ring-ink/[0.06] backdrop-blur">
-        <p className="mb-2 text-center text-[13px] font-semibold text-text">{landed ? `${name}: ${CATEGORY_META[category].label}` : `${name} draait aan het Weekrad`}</p>
-        <div className="relative mx-auto h-[190px] w-[190px]">
-          <svg viewBox="0 0 40 48" className="absolute left-1/2 top-[-8px] z-10 h-8 w-7 -translate-x-1/2" aria-hidden>
-            <path d="M20 46 L6 18 Q4 14 7 11 L16 3 Q20 0 24 3 L33 11 Q36 14 34 18 Z" fill="#6e4034" stroke="#fbf3ec" strokeWidth="2" strokeLinejoin="round" />
-            <circle cx="20" cy="13" r="4.5" fill="#fbf3ec" />
-          </svg>
-          <div className="h-full w-full" style={{ transform: `rotate(${rotation}deg)`, transition: `transform ${WHEEL_SPIN_MS / 1000}s cubic-bezier(0.12, 0.8, 0.14, 1)` }}>
-            <WheelGraphic segments={segments} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+/** What someone else won, from their spin on the live link, to show in the reveal. */
+export function outcomeOf(e: WheelSpinEvent): SpinOutcome {
+  return {
+    spinId: "",
+    category: e.category,
+    brand: e.prize?.brand ?? null,
+    name: e.prize?.name ?? null,
+    description: null,
+    valueCents: null,
+    url: null,
+    image: e.prize?.image ?? null,
+    variantLabel: null,
+    variants: [],
+    duplicate: false,
+    alternatives: [],
+    challenge: e.challenge ? { key: e.challenge, ...CHALLENGE_META[e.challenge] } : null,
+  };
 }

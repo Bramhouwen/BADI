@@ -7,14 +7,14 @@
 import type { SceneDef } from "../engine/scene";
 
 /** The painted wheel in the back garden: its centre and outer radius, and its place in the drawing order (the deck's front edge). */
-export const WHEEL_FACE = { x: 998, y: 487, r: 153, depth: 740 };
+export const WHEEL_FACE = { x: 998, y: 485, r: 165, depth: 740 };
 
-/** The four squares in front of the wheel (vak-1 to vak-4, left to right): where you stand, and the stone you tap. */
+/** The four squares beside the wheel, two left and two right so the wheel stays in view (vak-1 to vak-4, left to right): where you stand, and the stone you tap. */
 const SQUARES: { at: [number, number]; tap: [number, number][] }[] = [
-  { at: [801, 770], tap: [[748, 740], [855, 740], [858, 800], [745, 800]] },
-  { at: [935, 770], tap: [[886, 740], [985, 740], [987, 800], [884, 800]] },
-  { at: [1073, 770], tap: [[1025, 740], [1122, 740], [1124, 800], [1023, 800]] },
-  { at: [1209, 770], tap: [[1156, 740], [1262, 740], [1265, 800], [1153, 800]] },
+  { at: [671, 810], tap: [[612, 785], [735, 785], [732, 835], [606, 835]] },
+  { at: [787, 810], tap: [[732, 785], [845, 785], [845, 835], [728, 835]] },
+  { at: [1244, 810], tap: [[1188, 785], [1298, 785], [1302, 835], [1192, 835]] },
+  { at: [1361, 810], tap: [[1302, 785], [1418, 785], [1424, 835], [1306, 835]] },
 ];
 
 export const ACHTERTUIN: SceneDef = {
@@ -60,7 +60,7 @@ export const ACHTERTUIN: SceneDef = {
     { id: "bank-rechts-2", hip: [1660, 1010], facing: "left", approach: [1560, 1130] },
   ],
   doors: [{ id: "achterdeur", label: "Naar binnen", tap: [[50, 505], [240, 445], [245, 880], [55, 960]], approach: [210, 1000], to: "huis", arrive: "achterdeur" }],
-  // Everyone in a square, facing the wheel: then the Weekrad opens (see wheel-ring.ts).
+  // Everyone in a square beside the wheel, facing it: then the Weekrad opens (see wheel-ring.ts).
   spots: SQUARES.map((q, i) => ({ id: `vak-${i + 1}`, label: `Vakje ${i + 1}`, tap: q.tap, approach: q.at, at: q.at, facing: i < 2 ? ("right" as const) : ("left" as const), pose: "staan" })),
   spawn: [300, 1010],
   characterHeight: 340,
