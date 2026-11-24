@@ -33,7 +33,7 @@ function room(character: string): SceneDef {
     blockers: [],
     occluders: [],
     seats: [],
-    doors: [{ id: "deur", label: "Naar de overloop", tap: [[60, 500], [212, 452], [216, 880], [70, 946]], approach: [228, 948], to: "huis", arrive: `deur-${character}` }],
+    doors: [{ id: "deur", label: "Naar de overloop", tap: [[60, 500], [212, 452], [216, 880], [70, 946]], approach: [228, 948], to: "overloop", arrive: `deur-${character}` }],
     spots: [],
     spawn: [300, 975],
     characterHeight: 340,

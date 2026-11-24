@@ -493,3 +493,9 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - De vakjes liggen nu naast het rad (twee links, twee rechts), zodat niemand ervoor staat. Het app-rad in de tuin is groter getekend dan het geschilderde rad.
 - Jouw beurt: knop in de balk, de database kiest de uitkomst, en het rad in de tuin draait voor iedereen. Iedereen in de tuin krijgt de camera op het rad (tot je zelf tikt of sleept).
 - Als het stilstaat: de onthulling van de app (`WheelReveal`, ook gebruikt door de Weekrad-pagina) met confetti. De winnaar krijgt de claim en de keuze bij een dubbele prijs (opnieuw draaien draait het rad opnieuw voor iedereen); de anderen zien "<naam> heeft gewonnen!" met de prijs, en dat sluit vanzelf. De broadcast `rad` neemt merk, naam en foto van de prijs mee, of welke challenge het werd.
+
+## Terug naar de losse ruimtes (24-11-2026)
+
+- Het poppenhuis is teruggedraaid: het huis is weer de hal, de woonkamer, de overloop met de vier slaapkamerdeuren en de achtertuin, zoals eerder op 24-11-2026. `poppenhuis.ts` en `huis.webp` zijn weg; de bron `docs/wereld/bron/huis.png` blijft bewaard.
+- Wat blijft van het poppenhuis: de engine kan nog meerdere loopvlakken per scene (`walkable` als lijst) en een hoogte per plek in de tekening (`heightByY`), maar geen scene gebruikt dat nu.
+- Wie in het poppenhuis stond (scene `huis`), begint weer in de woonkamer.

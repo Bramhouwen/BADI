@@ -1,10 +1,22 @@
 /**
- * The back garden of the BADI house: the Weekrad with its four squares and a
- * fire pit with two benches. The picture is an edit of an empty room
- * (docs/wereld/bron/achtertuin.png); every point here was measured on it at
- * 2000 x 1493. The house itself is the dollhouse (poppenhuis.ts).
+ * The rest of the BADI house: the hall downstairs (front door, living room,
+ * back garden and the stairs), the landing upstairs with the four bedroom
+ * doors, and the back garden with the Weekrad, its four squares and a fire pit. The pictures
+ * are edits of the empty room (docs/wereld/bron/hal.png, overloop.png,
+ * achtertuin.png); every point here was measured on them at 2000 x 1493.
  */
 import type { SceneDef } from "../engine/scene";
+import { roomId } from "./kamers";
+
+/** Which bedroom door on the landing is whose: left wall front and back, right wall back and front. */
+export const LANDING_DOORS: Record<string, { tap: [number, number][]; approach: [number, number] }> = {
+  anne: { tap: [[65, 515], [265, 440], [265, 850], [70, 930]], approach: [235, 975] },
+  bram: { tap: [[365, 385], [555, 310], [555, 735], [370, 805]], approach: [525, 870] },
+  daphne: { tap: [[1443, 310], [1632, 380], [1632, 870], [1443, 800]], approach: [1470, 880] },
+  irene: { tap: [[1733, 430], [1928, 500], [1928, 930], [1733, 868]], approach: [1770, 980] },
+};
+
+const NAMES: Record<string, string> = { anne: "Anne", bram: "Bram", daphne: "Daphne", irene: "Irene" };
 
 /** The painted wheel in the back garden: its centre and outer radius, and its place in the drawing order (the deck's front edge). */
 export const WHEEL_FACE = { x: 998, y: 485, r: 165, depth: 740 };
@@ -16,6 +28,62 @@ const SQUARES: { at: [number, number]; tap: [number, number][] }[] = [
   { at: [1244, 810], tap: [[1188, 785], [1298, 785], [1302, 835], [1192, 835]] },
   { at: [1361, 810], tap: [[1302, 785], [1418, 785], [1424, 835], [1306, 835]] },
 ];
+
+export const HAL: SceneDef = {
+  id: "hal",
+  name: "Hal",
+  background: "/wereld/scenes/hal.webp",
+  width: 2000,
+  height: 1493,
+  grid: { kind: "iso", floor: { top: [1086, 629], right: [1993, 986], bottom: [1000, 1486], left: [21, 955] }, tiles: 12 },
+  walkable: [[1086, 660], [1940, 990], [1000, 1455], [75, 958]],
+  blockers: [
+    // the stairs along the left wall, up to the back corner
+    [[590, 770], [770, 815], [1090, 690], [1090, 625]],
+    // shoe bench by the front door
+    [[240, 890], [560, 792], [600, 840], [270, 945]],
+    // side table with the lamp at the foot of the stairs
+    [[520, 800], [650, 770], [660, 830], [540, 850]],
+    // big plant by the living room door
+    [[1340, 760], [1470, 740], [1490, 790], [1360, 810]],
+  ],
+  occluders: [],
+  seats: [],
+  doors: [
+    { id: "voordeur", label: "Naar buiten", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [255, 975], to: "buiten", arrive: "huis" },
+    { id: "woonkamer", label: "Naar de woonkamer", tap: [[1130, 240], [1300, 300], [1300, 710], [1130, 646]], approach: [1200, 770], to: "woonkamer", arrive: "voordeur" },
+    { id: "achterdeur", label: "Naar de achtertuin", tap: [[1636, 380], [1857, 450], [1857, 933], [1636, 847]], approach: [1720, 975], to: "achtertuin", arrive: "achterdeur" },
+    { id: "trap", label: "Naar boven", tap: [[620, 560], [1000, 60], [1090, 180], [1090, 640], [760, 810], [620, 800]], approach: [740, 880], to: "overloop", arrive: "trap" },
+  ],
+  spots: [],
+  spawn: [1000, 1050],
+  characterHeight: 340,
+};
+
+export const OVERLOOP: SceneDef = {
+  id: "overloop",
+  name: "Overloop",
+  background: "/wereld/scenes/overloop.webp",
+  width: 2000,
+  height: 1493,
+  grid: { kind: "iso", floor: { top: [998, 600], right: [1988, 960], bottom: [998, 1485], left: [15, 960] }, tiles: 12 },
+  walkable: [[998, 630], [1935, 962], [998, 1455], [62, 962]],
+  blockers: [
+    // the stairwell with its banisters
+    [[660, 1340], [860, 1070], [1000, 1170], [1135, 1070], [1335, 1340], [998, 1485]],
+    // plant on its stool in the back corner
+    [[930, 640], [1070, 640], [1070, 700], [930, 700]],
+  ],
+  occluders: [],
+  seats: [],
+  doors: [
+    { id: "trap", label: "Naar beneden", tap: [[700, 1300], [880, 1080], [1000, 1150], [1120, 1080], [1300, 1300], [1000, 1480]], approach: [998, 1090], to: "hal", arrive: "trap" },
+    ...Object.entries(LANDING_DOORS).map(([c, d]) => ({ id: `deur-${c}`, label: `Kamer van ${NAMES[c]}`, tap: d.tap, approach: d.approach, to: roomId(c), arrive: "deur" })),
+  ],
+  spots: [],
+  spawn: [998, 1050],
+  characterHeight: 340,
+};
 
 export const ACHTERTUIN: SceneDef = {
   id: "achtertuin",
@@ -59,7 +127,7 @@ export const ACHTERTUIN: SceneDef = {
     { id: "bank-rechts-1", hip: [1560, 980], facing: "left", approach: [1560, 1130] },
     { id: "bank-rechts-2", hip: [1660, 1010], facing: "left", approach: [1560, 1130] },
   ],
-  doors: [{ id: "achterdeur", label: "Naar binnen", tap: [[50, 505], [240, 445], [245, 880], [55, 960]], approach: [210, 1000], to: "huis", arrive: "achterdeur" }],
+  doors: [{ id: "achterdeur", label: "Naar binnen", tap: [[50, 505], [240, 445], [245, 880], [55, 960]], approach: [210, 1000], to: "hal", arrive: "achterdeur" }],
   // Everyone in a square beside the wheel, facing it: then the Weekrad opens (see wheel-ring.ts).
   spots: SQUARES.map((q, i) => ({ id: `vak-${i + 1}`, label: `Vakje ${i + 1}`, tap: q.tap, approach: q.at, at: q.at, facing: i < 2 ? ("right" as const) : ("left" as const), pose: "staan" })),
   spawn: [300, 1010],

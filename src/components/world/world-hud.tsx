@@ -114,7 +114,7 @@ export function MapSheet({
   onGo: (scene: string) => void;
   onClose: () => void;
 }) {
-  const order = ["huis", "achtertuin", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
+  const order = ["woonkamer", "hal", "achtertuin", "overloop", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
   // Own rooms after the shared places, yours first.
   const rooms = Object.values(SCENES)
     // The extra spaces are reached from the room itself.

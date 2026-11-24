@@ -6,7 +6,7 @@
  */
 import { SCENES } from "./scenes";
 
-export const HOME_SCENE = "huis";
+export const HOME_SCENE = "woonkamer";
 
 interface Placed {
   scene: string | null;

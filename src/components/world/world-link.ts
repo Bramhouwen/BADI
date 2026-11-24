@@ -174,7 +174,7 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
 
 /** Demo: Sam (in the living room) and Alex (outside) as characters that walk, sit, run and talk on their own. */
 const DEMO_BOTS = [
-  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "huis", start: [1200, 1300] as Pt, status: "chillen" as const, trained: true },
+  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "woonkamer", start: [1300, 900] as Pt, status: "chillen" as const, trained: true },
   { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne", scene: "buiten", start: [900, 520] as Pt, status: "trainen" as const, trained: false },
 ];
 /** Demo: the housemates who come and stand at the Weekrad with you, and spin when it is their turn. */

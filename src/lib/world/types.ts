@@ -12,7 +12,7 @@ export function canSeeWorld(role: string | null | undefined): boolean {
 }
 
 /** Scenes with a drawn background in public/wereld/scenes. */
-export const WORLD_SCENES = ["buiten", "huis", "kantoor", "sportschool"] as const;
+export const WORLD_SCENES = ["buiten", "woonkamer", "kantoor", "sportschool"] as const;
 export type WorldScene = (typeof WORLD_SCENES)[number];
 
 /** Characters with frames and a manifest in public/wereld/poppetjes. */

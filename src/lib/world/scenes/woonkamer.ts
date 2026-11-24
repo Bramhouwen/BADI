@@ -1,8 +1,4 @@
 /**
- * No longer in the world since the dollhouse (poppenhuis.ts) replaced the
- * separate living room on 24-11-2026; kept as a well-measured scene for the
- * engine tests (occluders, seats).
- *
  * The shared living room in the BADI house. Measured on
  * public/wereld/scenes/woonkamer.webp (2000 x 1493): the floor diamond, the
  * floor taken by furniture, the outline and front edge of every piece you

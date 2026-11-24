@@ -18,7 +18,7 @@ import { createWorldLink } from "./world-link";
 
 /** The four places on the map, in percent of the village picture, and the scene you enter there. */
 const PLACES = [
-  { key: "huis", label: "Huis", x: 29, y: 31, enter: "huis" },
+  { key: "huis", label: "Huis", x: 29, y: 31, enter: "woonkamer" },
   { key: "dorp", label: "Dorp", x: 50, y: 56, enter: "buiten" },
   { key: "kantoor", label: "Traffic Today", x: 76, y: 31, enter: "kantoor" },
   { key: "sport", label: "Sportschool", x: 74, y: 80, enter: "sportschool" },
@@ -28,7 +28,7 @@ type PlaceKey = (typeof PLACES)[number]["key"];
 /** Which place on the map a scene belongs to: the living room and the own rooms are in the house. */
 export function placeOf(scene: string | null | undefined): PlaceKey | null {
   if (!scene) return null;
-  if (scene === "huis" || scene === "achtertuin" || scene.startsWith("kamer-")) return "huis";
+  if (scene === "woonkamer" || scene === "hal" || scene === "overloop" || scene === "achtertuin" || scene.startsWith("kamer-")) return "huis";
   if (scene === "buiten") return "dorp";
   if (scene === "kantoor") return "kantoor";
   if (scene === "sportschool") return "sport";
