@@ -424,3 +424,13 @@ Wie nog nooit in de wereld was, slaapt op een vrije plek op de bank in de woonka
 ## Niemand verdwijnt (24-11-2026)
 
 Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je daarna naar een andere ruimte gaat (de wereld onthoudt tijdens je bezoek waar iedereen was, `src/lib/world/last-place.ts`). Je eigen plek wordt meteen bewaard als je de app verlaat of naar een andere ruimte gaat, en ook als je binnenkomt zonder een stap te zetten. Wie ergens anders live is, staat niet meer als slapend op de oude plek.
+
+## Gespreksstrook en gesprek terugkijken (24-11-2026)
+
+- Wat iemand in de ruimte zegt, verschijnt bovenin beeld in een vaste strook (net onder de bovenbalk), als ballon met gezichtje en naam, horizontaal boven wie het zei. Altijd even groot, hoe ver je ook in- of uitzoomt.
+- De nieuwste regel staat onderaan de strook, oudere schuiven omhoog en vervagen onder de bovenbalk. Maximaal 5 regels, elke regel 15 seconden.
+- Staat de spreker buiten beeld, dan staat de ballon aan die kant van het scherm met een pijltje.
+- Boven het hoofd van wie net iets zei staat alleen een klein 💬. Een privébericht houdt de ballon boven de afzender.
+- Knopje links in het typveld: "Gesprek in <ruimte>", de laatste 30 regels van die ruimte met naam en tijd.
+- Spraak wordt niet op de server bewaard (alleen live via broadcast). Het terugkijken toont dus wat binnenkwam terwijl je de wereld open had; het blijft op het toestel voor de rest van de sessie (sessionStorage `wereld-gesprek:<userId>`, max 100 regels).
+- Code: `src/lib/world/engine/chat-strip.ts` (strook), `drawChatStrip` in de renderer, `src/lib/world/chat-log.ts` en `src/components/world/world-chat.tsx` (terugkijken).

@@ -35,7 +35,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     icon: "💬",
     title: "Zeg iets",
-    body: "Typ hier en iedereen in dezelfde ruimte ziet je tekstballon boven je hoofd.",
+    body: "Typ hier en iedereen in dezelfde ruimte ziet het bovenin beeld, boven wie het zei. Met het knopje links kijk je het gesprek in deze ruimte terug.",
     target: "zeg",
   },
   {

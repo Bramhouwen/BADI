@@ -19,6 +19,7 @@ import { basePoint, depthOf, fits, footprintPolygon, freeSpot, seatHip, type Pla
 import { ITEM_BY_ID, itemImage } from "@/lib/world/items";
 import type { Prop } from "@/lib/world/engine/renderer";
 import type { RoomPiece } from "@/app/actions/world";
+import { liveLines, pushLine, type ChatLine } from "@/lib/world/engine/chat-strip";
 
 const PAGE = "#f6ece4";
 
@@ -86,6 +87,8 @@ export interface WorldCanvasApi {
   canPlace(piece: RoomPiece): boolean;
   /** Highlight a piece while furnishing. */
   selectPiece(id: string | null): void;
+  /** Where the conversation strip starts: just under the top bar (CSS pixels). */
+  setChatTop(px: number): void;
 }
 
 /** Who you tapped. */
@@ -229,6 +232,10 @@ export function WorldCanvas({
     let detach: (() => void) | null = null;
     let cleanupLink: (() => void) | null = null;
     let ro: ResizeObserver | null = null;
+    // The conversation strip at the top: what is said in this room.
+    let chatLines: ChatLine[] = [];
+    let chatTop = 70;
+    let chatId = 0;
     const say = (text: string) => {
       setNote(text);
       clearTimeout(noteTimer);
@@ -507,7 +514,10 @@ export function WorldCanvas({
             const avatarOf = (id: string | null) => (!id ? null : id === me.id ? me0 : (others.get(id)?.av ?? null));
             const who = avatarOf(e.from);
             if (e.type === "speech") {
-              if (who) who.speech = { text: e.text, until: performance.now() + speechSeconds(e.text) * 1000 };
+              const t = performance.now();
+              if (who) who.speech = { text: e.text, until: t + speechSeconds(e.text) * 1000 };
+              const name = who?.name ?? link.peers().get(e.from)?.name ?? "Iemand";
+              chatLines = pushLine(liveLines(chatLines, t), { id: ++chatId, from: e.from, name, text: e.text, at: t, x: null, y: null });
               return;
             }
             // An action: played on whoever does it; a high five on both of you.
@@ -617,6 +627,9 @@ export function WorldCanvas({
             },
             setTyping(ids) {
               typing = new Set(ids);
+            },
+            setChatTop(px) {
+              chatTop = px;
             },
             act(kind) {
               if (!link) return;
@@ -891,7 +904,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: propsNow(), seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: propsNow(), seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES, chat: { lines: (chatLines = liveLines(chatLines, now)), top: chatTop } } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

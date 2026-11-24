@@ -11,6 +11,7 @@ import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
 import type { SceneDef, Seat } from "./scene";
 import { occluderUnder, seatForeground, seatOccluder } from "./seats";
+import { lineAlpha, placeBalloon, stackTops, type ChatLine } from "./chat-strip";
 
 export interface Camera {
   x: number;
@@ -103,6 +104,8 @@ export interface Labels {
   typing?: ReadonlySet<string>;
   /** Status icons by status key. */
   statusIcons?: Readonly<Record<string, { icon: string }>>;
+  /** The conversation strip: what is said in the room, and where the strip starts (CSS pixels from the top, under the top bar). */
+  chat?: { lines: ChatLine[]; top: number };
 }
 
 /** A loose picture standing in the scene (furniture in a room), sorted with the characters by depth. */
@@ -318,8 +321,15 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.fillText(a.name, hx, top - 14);
       top -= 30;
     }
-    // speech balloon
-    if (a.speech && a.speech.until > now) {
+    // just said something in the room: a small balloon icon (the words are in the strip at the top)
+    if (a.speech && a.speech.until > now && !a.speech.private) {
+      ctx.globalAlpha = Math.min(1, (a.speech.until - now) / 400);
+      drawBadge(ctx, hx, top - 14, "💬");
+      ctx.globalAlpha = 1;
+      top -= 30;
+    }
+    // a private message: the balloon over the sender
+    if (a.speech && a.speech.until > now && a.speech.private) {
       ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
       const lines = wrap(ctx, a.speech.text, 190);
       const lock = a.speech.private ? 18 : 0;
@@ -349,7 +359,112 @@ function drawLabels(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Ava
       ctx.globalAlpha = 1;
     }
   }
+  if (labels.chat?.lines.length) drawChatStrip(ctx, scene, avatars, characters, cam, view, now, labels.chat.lines, labels.chat.top);
   ctx.restore();
+}
+
+/** The face of a character in a circle, cut from its standing picture. */
+function drawFace(ctx: CanvasRenderingContext2D, c: LoadedCharacter, cx: number, cy: number, r: number) {
+  const cell = (c.cells.staan ?? Object.values(c.cells)[0])?.[0];
+  if (!cell) return;
+  const { frameHeight: fh } = c.manifest;
+  const anchor = c.manifest.animations.staan?.anchor ?? { x: c.manifest.frameWidth / 2, y: fh };
+  const fr = fh * 0.16;
+  const fx = anchor.x, fy = fh * 0.25;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = "#f6ece4";
+  ctx.fill();
+  ctx.clip();
+  ctx.drawImage(c.atlas, cell.sx + fx - fr, cell.sy + fy - fr, fr * 2, fr * 2, cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
+}
+
+/**
+ * The conversation strip: every line as a balloon with face and name, above
+ * the one who said it, newest at the bottom and the older ones pushed up.
+ * The same size at any zoom. Someone out of view gets an arrow to their side.
+ */
+function drawChatStrip(ctx: CanvasRenderingContext2D, scene: SceneDef, avatars: Avatar[], characters: Map<string, LoadedCharacter>, cam: Camera, view: View, now: number, lines: ChatLine[], top: number) {
+  // the newest line sits here; older ones go up and fade out under the top bar
+  const floor = top + Math.min(170, view.height * 0.3);
+  const maxText = Math.min(240, view.width - 90);
+  const face = 13;
+  const shapes = lines.map((l) => {
+    ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
+    const text = wrap(ctx, l.text, maxText);
+    ctx.font = "600 11.5px ui-sans-serif, system-ui, sans-serif";
+    const nameW = ctx.measureText(l.name).width;
+    ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
+    const textW = Math.max(nameW, ...text.map((t) => ctx.measureText(t).width));
+    const h = 30 + text.length * 18;
+    return { text, w: textW + face * 2 + 30, h };
+  });
+  const tops = stackTops(shapes.map((s) => s.h), floor);
+  lines.forEach((l, i) => {
+    const { text, w, h } = shapes[i];
+    // ease to its place in the stack, so the older lines slide up
+    l.y = l.y === null ? tops[i] + 8 : l.y + (tops[i] - l.y) * 0.22;
+    const y = l.y;
+    const a = avatars.find((x) => x.id === l.from);
+    const c = a ? characters.get(a.character) : undefined;
+    // where they are now; someone who walked out of the room: where they were
+    if (a && c) l.x = headOnScreen(c, a, scene, cam, view)[0];
+    const sx = l.x;
+    const { x, side } = placeBalloon(sx, w, view.width);
+    const fresh = Math.min(1, (now - l.at) / 180);
+    const under = Math.max(0, Math.min(1, 1 - (top - y) / 36));
+    if (under <= 0) return;
+    ctx.globalAlpha = lineAlpha(l, now) * fresh * under;
+    ctx.shadowColor = "rgba(43,29,24,0.18)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
+    roundRect(ctx, x, y, w, h, 16);
+    ctx.fillStyle = "rgba(255,255,255,0.97)";
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    // a small arrow to whoever said it, when they are out of view
+    if (side) {
+      const ay = y + h / 2;
+      ctx.beginPath();
+      if (side === "left") {
+        ctx.moveTo(x - 7, ay);
+        ctx.lineTo(x + 1, ay - 7);
+        ctx.lineTo(x + 1, ay + 7);
+      } else {
+        ctx.moveTo(x + w + 7, ay);
+        ctx.lineTo(x + w - 1, ay - 7);
+        ctx.lineTo(x + w - 1, ay + 7);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    const fx = x + 10 + face, fy = y + 8 + face;
+    if (c) drawFace(ctx, c, fx, fy, face);
+    else {
+      ctx.fillStyle = "#f6ece4";
+      ctx.beginPath();
+      ctx.arc(fx, fy, face, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2b1d18";
+      ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(l.name.slice(0, 1).toUpperCase(), fx, fy + 1);
+    }
+    ctx.textAlign = "left";
+    const tx = x + 10 + face * 2 + 8;
+    ctx.fillStyle = "#8a7468";
+    ctx.font = "600 11.5px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(l.name, tx, y + 15);
+    ctx.fillStyle = "#2b1d18";
+    ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
+    text.forEach((t, n) => ctx.fillText(t, tx, y + 33 + n * 18));
+    ctx.textAlign = "center";
+    ctx.globalAlpha = 1;
+  });
 }
 
 /** Trained today: a soft warm glow behind the character, gently breathing. */

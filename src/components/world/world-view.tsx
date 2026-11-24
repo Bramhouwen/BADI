@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Footprints, Hand, Mail, MessageCircle, SendHorizontal, X } from "lucide-react";
+import { ChevronLeft, Footprints, Hand, Mail, MessageCircle, MessagesSquare, SendHorizontal, X } from "lucide-react";
+import { appendLog, readLog, roomLog, saveLog, type LoggedLine } from "@/lib/world/chat-log";
+import { ChatLogSheet } from "./world-chat";
 import { SCENES, FIRST_SCENE } from "@/lib/world/scenes";
 import type { Door } from "@/lib/world/engine/scene";
 import { SPEECH_MAX, type WorldPresence } from "@/lib/world/engine/presence";
@@ -77,6 +79,16 @@ export function WorldView({
   const placed = useMemo(() => members.map((m) => ({ ...m, ...(lastKnown.get(m.id) ?? {}) })), [members, lastKnown]);
   const [picked, setPicked] = useState<PickedMember | null>(null);
   const [text, setText] = useState("");
+  // What was said in the rooms during this visit, to read back.
+  // Only shown once you open it, so reading it from the device right away does not change the first render.
+  const [chatLog, setChatLog] = useState<LoggedLine[]>(() => (typeof window === "undefined" ? [] : readLog(me.id)));
+  const namesRef = useRef(new Map<string, string>());
+  useEffect(() => {
+    namesRef.current = new Map([...members.map((m) => [m.id, m.name] as const), [me.id, me.name]]);
+  }, [members, me.id, me.name]);
+  // The conversation strip on the canvas starts just under the top bar.
+  const topBar = useRef<HTMLDivElement>(null);
+  const chatTop = useRef(70);
   const lastSaid = useRef(0);
   const canvasApi = useRef<WorldCanvasApi | null>(null);
   // The game: which panel is open, missions and coins, your status, notes and walking along.
@@ -145,6 +157,14 @@ export function WorldView({
     if (edit) return;
     const l = createWorldLink(me.id, challengeId);
     const off = l.subscribe((e) => {
+      if (e.type === "speech") {
+        const name = l.peers().get(e.from)?.name ?? namesRef.current.get(e.from) ?? "Iemand";
+        setChatLog((was) => {
+          const next = appendLog(was, { from: e.from, name, scene: e.scene, text: e.text, at: Date.now() });
+          saveLog(me.id, next);
+          return next;
+        });
+      }
       if (e.type === "peers") {
         const now = [...l.peers()];
         setPeers(now);
@@ -169,6 +189,20 @@ export function WorldView({
       setLink(null);
     };
   }, [edit, me.id, challengeId]);
+
+  // Measure where the top bar ends, for the conversation strip under it.
+  useEffect(() => {
+    const el = topBar.current;
+    if (!el) return;
+    const measure = () => {
+      chatTop.current = el.offsetTop + el.offsetHeight + 10;
+      canvasApi.current?.setChatTop(chatTop.current);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // The tour: asked for in the link, or the first time on this device.
   const [touring, setTouring] = useState(false);
@@ -427,6 +461,7 @@ export function WorldView({
             onReady={() => {
               setDim(false);
               syncCanvas();
+              canvasApi.current?.setChatTop(chatTop.current);
               canvasApi.current?.setPieces(pieces);
             }}
             onPick={(who) => {
@@ -452,7 +487,7 @@ export function WorldView({
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start gap-2 px-3" style={{ paddingTop: "calc(var(--sat) + 12px)" }}>
+      <div ref={topBar} className="pointer-events-none absolute inset-x-0 top-0 flex items-start gap-2 px-3" style={{ paddingTop: "calc(var(--sat) + 12px)" }}>
         <Link
           href="/"
           aria-label="Terug naar de app"
@@ -543,6 +578,7 @@ export function WorldView({
           myRoom={me.character ? roomId(me.character) : null}
         />
       ) : null}
+      {!edit && !post && hud === "gesprek" ? <ChatLogSheet lines={roomLog(chatLog, here.scene)} me={me.id} room={scene.name} bottom={above} onClose={() => setHud(null)} /> : null}
       {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
       {!edit && !post && choice ? (
         <SpotChoice
@@ -668,12 +704,22 @@ export function WorldView({
           {!visible?.keyboard ? <ActionBar open={hud} onOpen={openHud} status={status} /> : null}
           <form
             data-tour="zeg"
-            className="flex items-center gap-2 rounded-full bg-white/95 p-1.5 pl-4 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur"
+            className="flex items-center gap-2 rounded-full bg-white/95 p-1.5 shadow-lg ring-1 ring-ink/[0.06] backdrop-blur"
             onSubmit={(e) => {
               e.preventDefault();
               send();
             }}
           >
+            <button
+              type="button"
+              data-tour="gesprek"
+              onClick={() => openHud(hud === "gesprek" ? null : "gesprek")}
+              aria-label={`Gesprek in ${scene.name} terugkijken`}
+              aria-expanded={hud === "gesprek"}
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6ece4] text-ink ${hud === "gesprek" ? "ring-2 ring-[#2b1d18]" : ""}`}
+            >
+              <MessagesSquare className="h-4.5 w-4.5" aria-hidden />
+            </button>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
