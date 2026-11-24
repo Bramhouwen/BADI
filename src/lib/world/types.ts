@@ -1,11 +1,10 @@
 /** World of Badi: shared types and small pure helpers. See docs/wereld/WERELD.md. */
 
 /**
- * While false, only the admin sees World of Badi (the map icon and /wereld), so
- * the world can be built and tested in the live app. Set to true to open it
- * for the whole squad.
+ * Open for the whole squad since 24-11-2026. Set to false to show World of
+ * Badi (the map icon, the card on Squad and /wereld) to the admin only again.
  */
-export const WORLD_OPEN = false;
+export const WORLD_OPEN = true;
 
 /** Whether this member may see the world yet. */
 export function canSeeWorld(role: string | null | undefined): boolean {

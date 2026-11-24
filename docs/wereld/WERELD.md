@@ -412,3 +412,7 @@ Code: `src/components/world/world-of-badi-card.tsx`, `loadWorldCard` in `src/app
 - Een rondleiding van 11 stappen door World of Badi (`src/lib/world/tour.ts`, `src/components/world/world-tour.tsx`): per stap een kaartje, met de knop waar het over gaat uitgelicht en de rest gedimd.
 - Hij start vanzelf de eerste keer dat je de wereld op een toestel opent, en altijd met `/wereld?rondleiding=1` (ook via "Rondleiding bekijken" op de kaart op Squad).
 - Aankondiging op het profiel (alleen beheerder): "Test-melding naar mij" stuurt de melding alleen naar je eigen toestellen. "Verstuur naar iedereen" kan pas als `WORLD_OPEN` aan staat: Baddy zet het in de squadchat (met een knop naar de wereld) en iedereen krijgt een melding die de rondleiding opent. Dat kan één keer; of het verstuurd is, leest de app af aan dat chatbericht.
+
+## Open voor iedereen (24-11-2026)
+
+`WORLD_OPEN` staat aan: het kaarticoon, de kaart op Squad en `/wereld` zijn er voor de hele squad. De aankondiging met rondleiding verstuurt de beheerder zelf via het profiel.
