@@ -1,7 +1,7 @@
 /**
  * The rest of the BADI house: the hall downstairs (front door, living room,
  * back garden and the stairs), the landing upstairs with the four bedroom
- * doors, and the back garden with the Weekrad and a fire pit. The pictures
+ * doors, and the back garden with the Weekrad, its four squares and a fire pit. The pictures
  * are edits of the empty room (docs/wereld/bron/hal.png, overloop.png,
  * achtertuin.png); every point here was measured on them at 2000 x 1493.
  */
@@ -17,6 +17,17 @@ export const LANDING_DOORS: Record<string, { tap: [number, number][]; approach: 
 };
 
 const NAMES: Record<string, string> = { anne: "Anne", bram: "Bram", daphne: "Daphne", irene: "Irene" };
+
+/** The painted wheel in the back garden: its centre and outer radius, and its place in the drawing order (the deck's front edge). */
+export const WHEEL_FACE = { x: 998, y: 487, r: 153, depth: 740 };
+
+/** The four squares in front of the wheel (vak-1 to vak-4, left to right): where you stand, and the stone you tap. */
+const SQUARES: { at: [number, number]; tap: [number, number][] }[] = [
+  { at: [801, 770], tap: [[748, 740], [855, 740], [858, 800], [745, 800]] },
+  { at: [935, 770], tap: [[886, 740], [985, 740], [987, 800], [884, 800]] },
+  { at: [1073, 770], tap: [[1025, 740], [1122, 740], [1124, 800], [1023, 800]] },
+  { at: [1209, 770], tap: [[1156, 740], [1262, 740], [1265, 800], [1153, 800]] },
+];
 
 export const HAL: SceneDef = {
   id: "hal",
@@ -117,20 +128,8 @@ export const ACHTERTUIN: SceneDef = {
     { id: "bank-rechts-2", hip: [1660, 1010], facing: "left", approach: [1560, 1130] },
   ],
   doors: [{ id: "achterdeur", label: "Naar binnen", tap: [[50, 505], [240, 445], [245, 880], [55, 960]], approach: [210, 1000], to: "hal", arrive: "achterdeur" }],
-  spots: [
-    {
-      id: "weekrad",
-      label: "Weekrad",
-      tap: [[843, 350], [1150, 350], [1150, 710], [843, 710]],
-      approach: [1000, 800],
-      at: [1000, 800],
-      facing: "right",
-      pose: "staan",
-      link: { label: "Draai het Weekrad", href: "/wheel" },
-      walkFirst: true,
-      doLabel: null,
-    },
-  ],
+  // Everyone in a square, facing the wheel: then the Weekrad opens (see wheel-ring.ts).
+  spots: SQUARES.map((q, i) => ({ id: `vak-${i + 1}`, label: `Vakje ${i + 1}`, tap: q.tap, approach: q.at, at: q.at, facing: i < 2 ? ("right" as const) : ("left" as const), pose: "staan" })),
   spawn: [300, 1010],
   characterHeight: 340,
   seatStatus: "chillen",

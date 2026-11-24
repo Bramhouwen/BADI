@@ -17,8 +17,28 @@ import { buildGrid } from "@/lib/world/engine/grid";
 import type { Pt } from "@/lib/world/engine/geometry";
 import type { Intent } from "@/lib/world/engine/moves";
 import { cleanSpeech, readAction, readPresence, readSpeech, type ActionKind, type Speech, type WorldAction, type WorldPresence } from "@/lib/world/engine/presence";
+import { WHEEL_CATEGORIES, type WheelCategory } from "@/lib/wheel";
+import { WHEEL_SCENE, WHEEL_SQUARES, ringState } from "@/lib/world/wheel-ring";
 
-export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech) | ({ type: "action" } & WorldAction);
+/** Someone spun the Weekrad in the back garden: where it lands, the same on every phone. */
+export interface WheelSpinEvent {
+  from: string;
+  name: string;
+  category: WheelCategory;
+  /** 0 to 1: which slice of that level and where in it. */
+  seed: number;
+}
+
+function readWheelSpin(v: unknown): WheelSpinEvent | null {
+  const r = v as Record<string, unknown> | null;
+  if (!r || typeof r !== "object") return null;
+  if (typeof r.from !== "string" || r.from.length > 64 || typeof r.name !== "string" || r.name.length > 40) return null;
+  if (typeof r.category !== "string" || !(WHEEL_CATEGORIES as readonly string[]).includes(r.category)) return null;
+  if (typeof r.seed !== "number" || !(r.seed >= 0 && r.seed <= 1)) return null;
+  return { from: r.from, name: r.name, category: r.category as WheelCategory, seed: r.seed };
+}
+
+export type LinkEvent = { type: "peers" } | ({ type: "speech" } & Speech) | ({ type: "action" } & WorldAction) | ({ type: "wheel" } & WheelSpinEvent);
 
 export interface WorldLink {
   /** Shares where you are and what you are doing now. */
@@ -30,6 +50,10 @@ export interface WorldLink {
   subscribe(listener: (e: LinkEvent) => void): () => void;
   /** Everyone else in the world right now, by user id. */
   peers(): ReadonlyMap<string, WorldPresence>;
+  /** What you share yourself (null before your first move). */
+  self(): WorldPresence | null;
+  /** You spun the Weekrad: everyone sees the wheel land there. Also shown to yourself. */
+  wheel(spin: Omit<WheelSpinEvent, "from">): void;
   close(): void;
 }
 
@@ -93,6 +117,10 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
         const a = readAction(payload);
         if (a && a.from !== userId) listeners.emit({ type: "action", ...a });
       })
+      .on("broadcast", { event: "rad" }, ({ payload }) => {
+        const w = readWheelSpin(payload);
+        if (w && w.from !== userId) listeners.emit({ type: "wheel", ...w });
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           joined = true;
@@ -105,6 +133,13 @@ function realtimeLink(userId: string, challengeId: string): WorldLink {
     publish(p) {
       mine = p;
       track();
+      listeners.emit({ type: "peers" });
+    },
+    self: () => mine,
+    wheel(spin) {
+      const e = { from: userId, ...spin };
+      listeners.emit({ type: "wheel", ...e });
+      void channel?.send({ type: "broadcast", event: "rad", payload: e });
     },
     say(scene, text) {
       const clean = cleanSpeech(text);
@@ -134,6 +169,12 @@ const DEMO_BOTS = [
   { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne", scene: "woonkamer", start: [1300, 900] as Pt, status: "chillen" as const, trained: true },
   { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne", scene: "buiten", start: [900, 520] as Pt, status: "trainen" as const, trained: false },
 ];
+/** Demo: the housemates who come and stand at the Weekrad with you, and spin when it is their turn. */
+const DEMO_RING = [
+  { id: "00000000-0000-4000-8000-000000000002", name: "Sam", character: "anne" },
+  { id: "00000000-0000-4000-8000-000000000003", name: "Alex", character: "daphne" },
+  { id: "00000000-0000-4000-8000-000000000004", name: "Noor", character: "irene" },
+];
 const DEMO_LINES = ["Wie gaat er mee hardlopen?", "Ik heb net mijn stappen gehaald", "Koffie iemand?", "Zullen we vanavond samen trainen?", "Hoi!", "Nog 2 trainingen deze week"];
 
 function demoLink(userId: string): WorldLink {
@@ -141,6 +182,10 @@ function demoLink(userId: string): WorldLink {
   const peers = new Map<string, WorldPresence>();
   const timers: ReturnType<typeof setTimeout>[] = [];
   let closed = false;
+  let mine: WorldPresence | null = null;
+  // At the Weekrad: who came, and who of them spun already.
+  let gathered = false;
+  const demoSpun = new Set<string>();
   const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)];
 
   for (const bot of DEMO_BOTS) {
@@ -150,7 +195,7 @@ function demoLink(userId: string): WorldLink {
     const free: Pt[] = [];
     for (let u = 0; u < grid.nu; u++) for (let v = 0; v < grid.nv; v++) if (grid.walk[u][v]) free.push(grid.tileToPx(u + 0.5, v + 0.5));
     const move = () => {
-      if (closed) return;
+      if (closed || gathered) return;
       const r = Math.random();
       let intent: Intent;
       if (r < 0.3 && scene.seats.length) {
@@ -185,8 +230,53 @@ function demoLink(userId: string): WorldLink {
   };
   timers.push(setTimeout(talk, 4000));
 
+  // Demo: once you are in the back garden, the others come and stand in the free squares, and spin in turn.
+  const gather = () => {
+    if (closed || gathered || mine?.scene !== WHEEL_SCENE) return;
+    gathered = true;
+    const garden = SCENES[WHEEL_SCENE];
+    const taken = mine.intent.kind === "spot" ? mine.intent.id : null;
+    const free = WHEEL_SQUARES.filter((sq) => sq !== taken);
+    DEMO_RING.forEach((bot, i) => {
+      const square = free[i];
+      const spot = garden.spots.find((s) => s.id === square);
+      if (!spot) return;
+      peers.set(bot.id, { v: 1, name: bot.name, character: bot.character, scene: WHEEL_SCENE, from: garden.doors[0].approach, intent: { kind: "spot", id: square }, at: Date.now(), status: null, trained: false });
+    });
+    listeners.emit({ type: "peers" });
+  };
+  const botTurn = () => {
+    if (closed || !gathered || !mine) return;
+    const standing = new Map<string, string>();
+    for (const [id, p] of peers) if (p.scene === WHEEL_SCENE && p.intent.kind === "spot") standing.set(id, p.intent.id);
+    if (mine.scene === WHEEL_SCENE && mine.intent.kind === "spot") standing.set(userId, mine.intent.id);
+    const ring = ringState([userId, ...DEMO_RING.map((b) => b.id)], standing, demoSpun);
+    const bot = DEMO_RING.find((b) => b.id === ring.turn);
+    if (!bot) return;
+    demoSpun.add(bot.id);
+    timers.push(
+      setTimeout(() => {
+        if (closed) return;
+        listeners.emit({ type: "wheel", from: bot.id, name: bot.name, category: pick(WHEEL_CATEGORIES), seed: Math.random() });
+        // the next one after this spin has landed
+        timers.push(setTimeout(botTurn, 6500));
+      }, 2500),
+    );
+  };
+
   return {
-    publish() {},
+    publish(p) {
+      mine = p;
+      listeners.emit({ type: "peers" });
+      if (p.scene === WHEEL_SCENE) timers.push(setTimeout(gather, 1500));
+      timers.push(setTimeout(botTurn, 1800));
+    },
+    self: () => mine,
+    wheel(spin) {
+      demoSpun.add(userId);
+      listeners.emit({ type: "wheel", from: userId, ...spin });
+      timers.push(setTimeout(botTurn, 6500));
+    },
     say(scene, text) {
       const clean = cleanSpeech(text);
       if (clean) listeners.emit({ type: "speech", from: userId, scene, text: clean });

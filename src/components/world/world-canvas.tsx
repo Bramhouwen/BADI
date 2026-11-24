@@ -22,6 +22,9 @@ import type { RoomPiece } from "@/app/actions/world";
 import { liveLines, pushLine, type ChatLine } from "@/lib/world/engine/chat-strip";
 import { PETS, newPet, petFrame, stepPet, type Pet, type PetPose } from "@/lib/world/engine/pet";
 import { findPath, smoothPath } from "@/lib/world/engine/pathfinding";
+import { landingRotation, type Segment } from "@/lib/wheel";
+import { WHEEL_SCENE, WHEEL_SPIN_MS, isSquare, wheelEase } from "@/lib/world/wheel-ring";
+import { WHEEL_FACE } from "@/lib/world/scenes/huis";
 
 const PAGE = "#f6ece4";
 
@@ -95,6 +98,8 @@ export interface WorldCanvasApi {
   setChatTop(px: number): void;
   /** Change clothes: draw your character with these frames (public/wereld/poppetjes/<key>) and tell the others. */
   setLook(key: string): void;
+  /** The app's Weekrad face and pointer (same box, wheel turns, pointer not), drawn over the wheel in the back garden. */
+  setWheel(wheel: { face: CanvasImageSource; pointer: CanvasImageSource; segments: readonly Segment[] }): void;
 }
 
 /** Who you tapped. */
@@ -413,6 +418,11 @@ export function WorldCanvas({
           const spot = scene.spots.find((s) => pointInPolygon(p, s.tap));
           // A spot with a choice (the treadmill) asks first; the Weekrad asks once you are there.
           if (spot?.link && !spot.walkFirst && onSpotRef.current) return onSpotRef.current(spot);
+          // A square in front of the Weekrad holds one person.
+          if (spot && isSquare(spot.id)) {
+            const there = [...others.values()].find((o) => o.live && o.av.spot === spot.id && o.av.state === "act");
+            if (there) return say(`Hier staat ${there.av.name} al.`);
+          }
           if (spot)
             return move({ kind: "spot", id: spot.id }, () => {
               onArriveRef.current?.({ spot });
@@ -540,6 +550,12 @@ export function WorldCanvas({
           unsubscribe = link.subscribe((e) => {
             if (!alive) return;
             if (e.type === "peers") return syncPeers();
+            // Someone spun the Weekrad: turn the wheel in the back garden to where it lands.
+            if (e.type === "wheel") {
+              if (scene.id !== WHEEL_SCENE || !wheel) return;
+              wheelAnim = { from: wheelRot, to: landingRotation(wheel.segments, e.category, wheelRot, e.seed, 6), start: performance.now() };
+              return;
+            }
             if (e.scene !== scene.id) return;
             const avatarOf = (id: string | null) => (!id ? null : id === me.id ? me0 : (others.get(id)?.av ?? null));
             const who = avatarOf(e.from);
@@ -635,6 +651,23 @@ export function WorldCanvas({
           return out;
         };
         let pet: Pet | null = null;
+        // The Weekrad in the back garden: the app's face over the painted one, turning when someone spins.
+        let wheel: { face: CanvasImageSource; pointer: CanvasImageSource; segments: readonly Segment[] } | null = null;
+        let wheelRot = 0;
+        let wheelAnim: { from: number; to: number; start: number } | null = null;
+        const wheelProp = (now: number): Prop[] => {
+          if (!wheel || scene.id !== WHEEL_SCENE) return [];
+          if (wheelAnim) {
+            const t = (now - wheelAnim.start) / WHEEL_SPIN_MS;
+            wheelRot = wheelAnim.from + (wheelAnim.to - wheelAnim.from) * wheelEase(t);
+            if (t >= 1) {
+              wheelRot = wheelAnim.to;
+              wheelAnim = null;
+            }
+          }
+          const size = WHEEL_FACE.r * 2.2;
+          return [{ img: wheel.face, overlay: wheel.pointer, x: WHEEL_FACE.x, y: WHEEL_FACE.y + size / 2, w: size, h: size, rotate: wheelRot, flip: false, depth: WHEEL_FACE.depth, flat: false }];
+        };
         if (petDef) {
           const tiles = freeTiles();
           const t = tiles[Math.floor(Math.random() * tiles.length)];
@@ -719,6 +752,9 @@ export function WorldCanvas({
             },
             setChatTop(px) {
               chatTop = px;
+            },
+            setWheel(next) {
+              wheel = next;
             },
             setLook(key) {
               withCharacter(key, (c) => {
@@ -1011,7 +1047,7 @@ export function WorldCanvas({
           }
           if (zoom !== cam.zoom || x !== cam.x || y !== cam.y) cam = clampCamera({ x, y, zoom }, scene, view);
           const current = live();
-          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: [...propsNow(), ...petProp(now)], seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES, chat: { lines: (chatLines = liveLines(chatLines, now)), top: chatTop } } });
+          render({ ctx, scene: current, background, outlines, avatars, characters, cam, view, now, grid, debug: overlay || edit, page, props: [...propsNow(), ...petProp(now), ...wheelProp(now)], seatDepth: seatDepth(), labels: edit ? undefined : { me: me.id, selected: picked, unread, typing, statusIcons: STATUSES, chat: { lines: (chatLines = liveLines(chatLines, now)), top: chatTop } } });
           if (edit) {
             const sel = current.seats.find((s) => s.id === selectedRef.current);
             if (sel) drawSeatMarker(ctx, sel, true);

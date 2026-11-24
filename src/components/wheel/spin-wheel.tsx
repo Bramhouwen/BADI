@@ -21,8 +21,28 @@ type Phase = "idle" | "spinning" | "revealed";
 
 const GOLD_CONFETTI = ["#f3d488", "#e2b656", "#d9a63c", "#fbf3ec", "#b8832a"];
 
-/** `unlimited`: demo only, the wheel can be spun again after every reveal. */
-export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow }: { odds: Odds[]; canSpin: boolean; unlimited?: boolean; nextAt: string; serverNow: number }) {
+/**
+ * `unlimited`: demo only, the wheel can be spun again after every reveal.
+ * `onSpun`: the outcome is known (World of Badi shows it to everyone in the
+ * back garden). `onDone`: closing the reveal, instead of refreshing the page.
+ */
+export function SpinWheel({
+  odds,
+  canSpin,
+  unlimited = false,
+  nextAt,
+  serverNow,
+  onSpun,
+  onDone,
+}: {
+  odds: Odds[];
+  canSpin: boolean;
+  unlimited?: boolean;
+  nextAt: string;
+  serverNow: number;
+  onSpun?: (category: SpinOutcome["category"]) => void;
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const segs = useMemo(() => toSegments(odds), [odds]);
@@ -48,6 +68,7 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
     }
     setOutcome(res.data);
     setUsed(!unlimited);
+    onSpun?.(res.data.category);
     setRotation((r) => landingRotation(segs, res.data!.category, r, Math.random(), reduce ? 1 : 6));
     // transitionend does not fire in a background tab: reveal on a timer as well.
     setTimeout(landed, (reduce ? 600 : 5200) + 250);
@@ -61,7 +82,8 @@ export function SpinWheel({ odds, canSpin, unlimited = false, nextAt, serverNow 
 
   function close() {
     setPhase("idle");
-    router.refresh();
+    if (onDone) onDone();
+    else router.refresh();
   }
 
   const prize = outcome && outcome.category !== "challenge";

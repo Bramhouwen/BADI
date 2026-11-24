@@ -92,6 +92,8 @@ export interface WheelState {
   mySpin: SpinRow | null;
   /** Available prizes per level, for "Te winnen". */
   pool: Record<PrizeCategory, { brand: string; name: string }[]>;
+  /** Who spun this week (World of Badi: they only watch at the wheel). */
+  spunBy: string[];
 }
 
 export async function loadWheelState(ctx: AppContext): Promise<WheelState> {
@@ -110,7 +112,7 @@ export async function loadWheelState(ctx: AppContext): Promise<WheelState> {
   const available = prizes.filter((p) => ids.has(p.id));
   const pool = { small: [], medium: [], large: [], jackpot: [] } as WheelState["pool"];
   for (const p of available) pool[p.category].push({ brand: p.brand, name: p.name });
-  return { weekStart, today, now: Date.now(), odds: wheelOdds(weights, available), mySpin: spins.filter((s) => s.user_id === ctx.userId).at(-1) ?? null, pool };
+  return { weekStart, today, now: Date.now(), odds: wheelOdds(weights, available), mySpin: spins.filter((s) => s.user_id === ctx.userId).at(-1) ?? null, pool, spunBy: [...new Set(spins.map((s) => s.user_id))] };
 }
 
 /**

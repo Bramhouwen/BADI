@@ -32,6 +32,9 @@ import type { ItemDef } from "@/lib/world/items";
 import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
 import { currentOutfit, readOutfitChoice, saveOutfitChoice, spriteKey, type OutfitChoice, type OutfitId } from "@/lib/world/outfits";
 import { WardrobeSheet } from "./world-wardrobe";
+import { WheelBar, WheelShow, WheelTurn, useWheelPictures, type WheelData } from "./world-wheel";
+import { WHEEL_SCENE, WHEEL_SPIN_MS, isSquare, ringState } from "@/lib/world/wheel-ring";
+import { CATEGORY_META, type WheelCategory } from "@/lib/wheel";
 
 const FADE_MS = 220;
 
@@ -57,6 +60,7 @@ export function WorldView({
   tour = false,
   superBadi = [],
   week = "",
+  wheel = null,
 }: {
   me: { id: string; name: string; character: string | null };
   challengeId: string;
@@ -78,6 +82,8 @@ export function WorldView({
   superBadi?: string[];
   /** Monday of this week (YYYY-MM-DD): a choice at the clothing rack lasts for the week. */
   week?: string;
+  /** The Weekrad in the back garden: its odds and who spun this week. */
+  wheel?: WheelData | null;
 }) {
   const [here, setHere] = useState(() => ({ scene: SCENES[startScene] ? startScene : FIRST_SCENE, arrive: null as string | null, n: 0 }));
   const [dim, setDim] = useState(false);
@@ -100,6 +106,22 @@ export function WorldView({
   const chatTop = useRef(70);
   const lastSaid = useRef(0);
   const canvasApi = useRef<WorldCanvasApi | null>(null);
+  // The Weekrad: who spun this week (live), where you stand yourself, and your turn open.
+  const [spun, setSpun] = useState<Set<string>>(() => new Set(wheel?.spunBy ?? []));
+  const [selfP, setSelfP] = useState<WorldPresence | null>(null);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  // Someone else spinning, big on screen for everyone in the back garden.
+  const [show, setShow] = useState<{ key: number; name: string; category: WheelCategory; seed: number } | null>(null);
+  const showTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const sceneNowRef = useRef<string>("");
+  useEffect(() => {
+    sceneNowRef.current = here.scene;
+  }, [here.scene]);
+  const wheelPics = useRef<Parameters<WorldCanvasApi["setWheel"]>[0] | null>(null);
+  const { hidden: wheelHidden, segments: wheelSegments } = useWheelPictures(wheel?.odds ?? [], (pics) => {
+    wheelPics.current = pics;
+    canvasApi.current?.setWheel(pics);
+  });
   // Your clothes: chosen at the rack in your own room, gold for the Super Badi.
   // Like the chat log, read from the device right away; it only reaches the canvas, not the first render.
   const [outfitChoice, setOutfitChoice] = useState<OutfitChoice | null>(() => (typeof window === "undefined" ? null : readOutfitChoice(me.id)));
@@ -188,9 +210,28 @@ export function WorldView({
           return next;
         });
       }
+      if (e.type === "wheel") {
+        setSpun((was) => new Set(was).add(e.from));
+        // Everyone sees where it landed once the wheel stops; the one who spun sees it in the app's reveal.
+        if (e.from !== me.id) {
+          setShow({ key: Date.now(), name: e.name, category: e.category, seed: e.seed });
+          clearTimeout(showTimer.current);
+          showTimer.current = setTimeout(() => setShow(null), WHEEL_SPIN_MS + 3500);
+          const text = `${e.name} draaide: ${CATEGORY_META[e.category].label}`;
+          // In the back garden the big wheel shows it; elsewhere a line at the top.
+          if (sceneNowRef.current !== WHEEL_SCENE)
+            setTimeout(() => {
+              setToast(text);
+              clearTimeout(toastTimer.current);
+              toastTimer.current = setTimeout(() => setToast(null), 3500);
+            }, WHEEL_SPIN_MS + 300);
+        }
+        return;
+      }
       if (e.type === "peers") {
         const now = [...l.peers()];
         setPeers(now);
+        setSelfP(l.self());
         // Remember where everyone is, so whoever leaves stays there (offline), also in other rooms.
         setLastKnown((was) => {
           const next = new Map(was);
@@ -475,6 +516,15 @@ export function WorldView({
     setText("");
   };
 
+  // The Weekrad in the back garden: everyone of the group in a square, then one after the other.
+  const ringMembers = me.character ? [me.id, ...members.map((m) => m.id)] : members.map((m) => m.id);
+  const standing = new Map<string, string>();
+  for (const [id, p] of peers) if (p.scene === WHEEL_SCENE && p.intent.kind === "spot" && isSquare(p.intent.id)) standing.set(id, p.intent.id);
+  const mySquare = here.scene === WHEEL_SCENE && selfP?.scene === WHEEL_SCENE && selfP.intent.kind === "spot" && isSquare(selfP.intent.id) ? selfP.intent.id : null;
+  if (mySquare) standing.set(me.id, mySquare);
+  const ring = ringState(ringMembers, standing, spun);
+  const nameOf = (id: string) => (id === me.id ? "jou" : (members.find((m) => m.id === id)?.name ?? peers.find(([pid]) => pid === id)?.[1].name ?? "iemand"));
+
   return (
     <div
       className="fixed inset-x-0 top-0 z-40 overflow-hidden overscroll-none bg-[#f6ece4]"
@@ -502,6 +552,7 @@ export function WorldView({
               syncCanvas();
               canvasApi.current?.setChatTop(chatTop.current);
               canvasApi.current?.setPieces(pieces);
+              if (wheelPics.current) canvasApi.current?.setWheel(wheelPics.current);
             }}
             onPick={(who) => {
               if (who?.self) return openBox();
@@ -627,6 +678,16 @@ export function WorldView({
         />
       ) : null}
       {!edit && !post && hud === "gesprek" ? <ChatLogSheet lines={roomLog(chatLog, here.scene)} me={me.id} room={scene.name} bottom={above} onClose={() => setHud(null)} /> : null}
+      {wheel ? wheelHidden : null}
+      {wheel && show && here.scene === WHEEL_SCENE ? <WheelShow key={show.key} segments={wheelSegments} name={show.name} category={show.category} seed={show.seed} /> : null}
+      {/* Opened from the bar on your turn; stays open for the reveal while the turn moves on. */}
+      {wheel && wheelOpen ? (
+        <WheelTurn
+          data={wheel}
+          onSpun={(category) => link?.wheel({ name: me.name, category, seed: Math.random() })}
+          onClose={() => setWheelOpen(false)}
+        />
+      ) : null}
       {!edit && !post && hud === "kledingrek" && me.character ? <WardrobeSheet character={me.character} wearing={outfit} isSuperBadi={isSuperBadi} bottom={above} onWear={wear} onClose={() => setHud(null)} /> : null}
       {!edit && !post && hud === "missies" ? <MissionsSheet bottom={above} game={game} onClose={() => setHud(null)} /> : null}
       {!edit && !post && choice ? (
@@ -733,6 +794,9 @@ export function WorldView({
                 ) : null}
               </div>
             </div>
+          ) : null}
+          {wheel && !edit && here.scene === WHEEL_SCENE && !visible?.keyboard ? (
+            <WheelBar ring={ring} me={me.id} inSquare={mySquare !== null} total={ringMembers.length} nameOf={nameOf} spunMyself={spun.has(me.id)} onSpin={() => setWheelOpen(true)} />
           ) : null}
           {following ? (
             <div className="flex items-center gap-2 rounded-full bg-white/95 py-1.5 pl-4 pr-1.5 text-[13px] text-text shadow-md ring-1 ring-ink/[0.06]">

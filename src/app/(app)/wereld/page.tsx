@@ -14,6 +14,9 @@ import { currentSuperBadi } from "@/lib/super-badi-server";
 import { todayKey } from "@/lib/dates";
 import { weekStartOf } from "@/lib/checkin-plan";
 import { defaultOutfit, spriteKey } from "@/lib/world/outfits";
+import { loadWheelState } from "@/lib/wheel-server";
+import { nextSpinAt } from "@/lib/wheel";
+import { isDemo } from "@/lib/demo";
 
 export const metadata = { title: "World of Badi" };
 
@@ -30,7 +33,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
   const [ctx, sp] = await Promise.all([requireContext(), searchParams]);
   // Only the admin sees the world while it is being built (WORLD_OPEN in src/lib/world/types.ts).
   if (!canSeeWorld(ctx.membership.role)) notFound();
-  const [{ profile, missingTable }, squad, all, superBadi] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id), currentSuperBadi(ctx)]);
+  const [{ profile, missingTable }, squad, all, superBadi, wheelState] = await Promise.all([ensureWorldProfile(ctx), getSquad(ctx.challenge.id), loadWorldProfiles(ctx.challenge.id), currentSuperBadi(ctx), loadWheelState(ctx)]);
   // The Super Badi of this week wears the gold tracksuit with the crown, also while offline.
   const week = weekStartOf(todayKey(new Date(), ctx.challenge.timezone));
   // The others, with where they were last: shown in a rest pose while they are offline.
@@ -75,6 +78,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ debug?: strin
       notice={missingTable ? "Je plek wordt nog niet bewaard (migratie 0030)" : null}
       superBadi={[...superBadi]}
       week={week}
+      wheel={{ odds: wheelState.odds, spunBy: wheelState.spunBy, nextAt: nextSpinAt(wheelState.weekStart, ctx.challenge.timezone).toISOString(), serverNow: wheelState.now, demo: isDemo() }}
     />
   ) : (
     <Page>

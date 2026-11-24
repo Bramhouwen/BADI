@@ -469,3 +469,12 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Status vanzelf, tenzij je er zelf een koos: bij het fornuis in de woonkamer "koken" (spot `fornuis`), zitten in de woonkamer of de achtertuin "chillen" (`seatStatus`). Bij een andere ruimte vervalt een automatische status weer.
 - Spot-opties: `walkFirst` (eerst erheen lopen, dan de keuze), `doLabel` (tekst van de doe-knop; null is alleen de link), `status`.
 - Kaart: woonkamer, hal, achtertuin, overloop, dan dorp, kantoor, sportschool en de kamers. Op de Squad-kaart tellen hal, overloop en achtertuin als "thuis".
+
+## Samen het Weekrad draaien (24-11-2026)
+
+- In de achtertuin staat het echte Weekrad van de app (`WheelGraphic`, zelfde vakken en kansen) over het getekende rad heen, met de wijzer van de Weekrad-pagina. Voor het rad liggen vier stapstenen: `vak-1` tot `vak-4` (links naar rechts), één persoon per vakje.
+- Regels (`src/lib/world/wheel-ring.ts`): het rad gaat pas open als iedereen van de groep met een poppetje in een vakje staat. Dan draai je om de beurt, in de volgorde van de vakjes; wie deze week al draaide, kijkt alleen. Wie er niet is, houdt het open: er wordt gewacht tot iedereen er is, ook later in de week.
+- Jouw beurt: de balk onderin zegt "Jij bent aan de beurt", en dan opent het rad van de Weekrad-pagina (`SpinWheel`) met dezelfde onthulling, dubbele prijs en claimformulier. De database bepaalt de uitkomst zoals altijd.
+- Iedereen kijkt mee: je draai gaat als broadcast `rad` (categorie en een gedeelde willekeurige stand) naar de anderen. Het rad in de tuin draait mee, en wie in de tuin is krijgt het rad groot in beeld met de uitkomst als het stilstaat. Wie ergens anders is, krijgt een regel bovenin.
+- De Weekrad-pagina draait niet meer zelf: zonder draai van deze week toont ze het rad en een knop "Naar de achtertuin". In de demo kan de pagina nog wel draaien, en komen Sam, Alex en Noor bij je in de vakjes staan en draaien ze om de beurt.
+- Let op: het wachten op iedereen wordt in de app bewaakt, niet in de database. Wie de database direct aanroept, kan nog alleen draaien.

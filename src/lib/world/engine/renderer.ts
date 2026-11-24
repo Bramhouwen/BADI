@@ -124,6 +124,10 @@ export interface Prop {
   /** Highlight while furnishing: its footprint in green (fits) or red (does not). */
   outline?: { poly: Polygon; ok: boolean } | null;
   alpha?: number;
+  /** Turned around the middle of the picture, in degrees clockwise (the Weekrad). */
+  rotate?: number;
+  /** Drawn on top of the picture without turning (the Weekrad's pointer), in the same box. */
+  overlay?: CanvasImageSource;
 }
 
 export interface RenderInput {
@@ -163,7 +167,14 @@ function drawProp(ctx: CanvasRenderingContext2D, p: Prop) {
   if (p.alpha !== undefined) ctx.globalAlpha = p.alpha;
   ctx.translate(p.x, p.y);
   if (p.flip) ctx.scale(-1, 1);
-  ctx.drawImage(p.img, -p.w / 2, -p.h, p.w, p.h);
+  if (p.rotate) {
+    ctx.save();
+    ctx.translate(0, -p.h / 2);
+    ctx.rotate((p.rotate * Math.PI) / 180);
+    ctx.drawImage(p.img, -p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  } else ctx.drawImage(p.img, -p.w / 2, -p.h, p.w, p.h);
+  if (p.overlay) ctx.drawImage(p.overlay, -p.w / 2, -p.h, p.w, p.h);
   ctx.restore();
 }
 

@@ -5,7 +5,8 @@ import { ArrowLeft, Settings2, Trophy } from "lucide-react";
 import { requireContext } from "@/lib/data";
 import { isDemo } from "@/lib/demo";
 import { loadWheelState } from "@/lib/wheel-server";
-import { CATEGORY_META, CHALLENGE_META, WHEEL_CHALLENGES, nextSpinAt } from "@/lib/wheel";
+import { CATEGORY_META, CHALLENGE_META, WHEEL_CHALLENGES, nextSpinAt, segments } from "@/lib/wheel";
+import { WheelGraphic } from "@/components/wheel/wheel-graphic";
 import { Page } from "@/components/ui/page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { SectionTitle } from "@/components/ui/card";
@@ -47,7 +48,20 @@ async function Content() {
         <p className="mx-auto mt-3 w-fit rounded-full bg-white/80 px-4 py-2 text-[13.5px] font-medium text-text shadow-sm">Jouw wekelijkse kans op iets leuks! 🎁</p>
       </header>
 
-      <SpinWheel odds={state.odds} canSpin={!spin || isDemo()} unlimited={isDemo()} nextAt={nextAt} serverNow={state.now} />
+      {/* You spin together in the back garden of World of Badi; this page shows the wheel and your prize. The demo can still spin here. */}
+      {spin || isDemo() ? (
+        <SpinWheel odds={state.odds} canSpin={!spin || isDemo()} unlimited={isDemo()} nextAt={nextAt} serverNow={state.now} />
+      ) : (
+        <div className="flex flex-col items-center">
+          <div className="aspect-square w-full max-w-[300px] rounded-full shadow-[0_26px_50px_-22px_rgba(95,53,41,0.6)]">
+            <WheelGraphic segments={segments(state.odds)} />
+          </div>
+          <p className="mt-5 max-w-[320px] text-center text-[13.5px] text-text">Het Weekrad draai je samen in de achtertuin van World of Badi. Als iedereen in een vakje voor het rad staat, draai je om de beurt.</p>
+          <Link href="/wereld?scene=achtertuin" className="espresso mt-4 flex h-[52px] items-center rounded-full px-8 text-[15px] font-semibold tracking-wide">
+            NAAR DE ACHTERTUIN
+          </Link>
+        </div>
+      )}
 
       {spin ? (
         <Link href="/wheel/prizes" className="glass flex items-center gap-3 rounded-[20px] p-3.5 hover:bg-blush/40">
