@@ -12,7 +12,7 @@ import { ACTIONS, STATUSES, secondsSince, speechSeconds, type StatusKey, type Wo
 import { avatarAt, clampCamera, drawSeatMarker, render, screenToScene, type Camera, type View } from "@/lib/world/engine/renderer";
 import { seatAt } from "@/lib/world/engine/seats";
 import { loadCharacter, type LoadedCharacter } from "@/lib/world/engine/sprites";
-import type { Door, SceneDef, Seat, Spot } from "@/lib/world/engine/scene";
+import { characterHeightAt, type Door, type SceneDef, type Seat, type Spot } from "@/lib/world/engine/scene";
 import type { WorldLink } from "./world-link";
 import { lockBalloonOver, totalUnread, type WorldDm } from "@/lib/world/dm";
 import { basePoint, depthOf, fits, footprintPolygon, freeSpot, seatHip, type Placement } from "@/lib/world/engine/furniture";
@@ -1005,6 +1005,8 @@ export function WorldCanvas({
             }
           }
           for (const a of avatars) {
+            // Smaller upstairs in the dollhouse: walk at the pace of the size you are drawn at.
+            if (scene.heightByY) a.speed = walkSpeedFor(characterHeightAt(scene, a.feet[1]));
             step(a, dt, now);
             endAction(a, now);
           }

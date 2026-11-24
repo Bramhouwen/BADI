@@ -9,7 +9,7 @@ import type { Polygon, Pt } from "./geometry";
 import type { Grid } from "./grid";
 import type { LoadedCharacter } from "./sprites";
 import { frameIndex } from "./sprites";
-import type { SceneDef, Seat } from "./scene";
+import { characterHeightAt, type SceneDef, type Seat } from "./scene";
 import { occluderUnder, seatForeground, seatOccluder } from "./seats";
 import { lineAlpha, placeBalloon, stackTops, type ChatLine } from "./chat-strip";
 
@@ -205,14 +205,14 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
     const a = it.avatar!;
     const c = characters.get(a.character);
     if (!c) continue;
-    if (a.trained && !a.offline) drawGlow(ctx, a, scene.characterHeight, now);
+    if (a.trained && !a.offline) drawGlow(ctx, a, characterHeightAt(scene, a.feet[1]), now);
     if (a.offline) ctx.globalAlpha = 0.6;
-    drawCharacter(ctx, c, a, scene.characterHeight, now, z);
+    drawCharacter(ctx, c, a, characterHeightAt(scene, a.feet[1]), now, z);
     ctx.globalAlpha = 1;
     const seat = a.seat ? scene.seats.find((s) => s.id === a.seat) : null;
     const spot = a.spot ? scene.spots.find((s) => s.id === a.spot) : null;
     const exclude = seat ? seatOccluder(scene.occluders, seat) : spot ? occluderUnder(scene.occluders, spot.at) : a.ignore;
-    for (const o of occludersOver(a.feet, characterBox(c, a, scene.characterHeight), scene.occluders, exclude)) {
+    for (const o of occludersOver(a.feet, characterBox(c, a, characterHeightAt(scene, a.feet[1])), scene.occluders, exclude)) {
       const path = outlines.get(o.id);
       if (!path) continue;
       ctx.save();
@@ -237,7 +237,7 @@ export function render({ ctx, scene, background, outlines, avatars, characters, 
 
 /** Where the top of a character's head is on screen (CSS pixels). */
 function headOnScreen(c: LoadedCharacter, a: Avatar, scene: SceneDef, cam: Camera, view: View): Pt {
-  const box = characterBox(c, a, scene.characterHeight);
+  const box = characterBox(c, a, characterHeightAt(scene, a.feet[1]));
   // The frames have empty space above the head; the head starts about a sixth down.
   const top = box.y + box.h * 0.16;
   return [view.width / 2 + (a.feet[0] - cam.x) * cam.zoom, view.height / 2 + (top - cam.y) * cam.zoom];
@@ -565,7 +565,7 @@ export function avatarAt(sx: number, sy: number, avatars: Avatar[], characters: 
   for (const a of backToFront(avatars).reverse()) {
     const c = characters.get(a.character);
     if (!c) continue;
-    const b = characterBox(c, a, scene.characterHeight);
+    const b = characterBox(c, a, characterHeightAt(scene, a.feet[1]));
     // the drawn figure is narrower than its frame
     const inset = b.w * 0.25;
     if (x >= b.x + inset && x <= b.x + b.w - inset && y >= b.y + b.h * 0.15 && y <= b.y + b.h) return a;

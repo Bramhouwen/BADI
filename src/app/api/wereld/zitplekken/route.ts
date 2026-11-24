@@ -6,7 +6,7 @@ import { canSeeWorld } from "@/lib/world/types";
 
 const pt = z.tuple([z.number().finite(), z.number().finite()]).transform(([x, y]): [number, number] => [Math.round(x), Math.round(y)]);
 const bodySchema = z.object({
-  scene: z.enum(["woonkamer", "kantoor", "sportschool", "buiten"]),
+  scene: z.enum(["kantoor", "sportschool", "buiten"]),
   seats: z.array(z.object({ id: z.string().regex(/^[a-z0-9-]{1,40}$/), hip: pt, facing: z.enum(["left", "right"]), approach: pt, on: z.string().regex(/^[a-z0-9-]{1,40}$/).nullable().optional() })).max(60),
 });
 

@@ -86,8 +86,8 @@ export interface SceneDef {
    * where nothing is drawn on a clean diagonal: square cells of `cell` pixels.
    */
   grid: { kind: "iso"; floor: { top: Pt; right: Pt; bottom: Pt; left: Pt }; tiles: number } | { kind: "screen"; cell: number };
-  /** Where characters may stand: tile centres inside it are walkable. */
-  walkable: Polygon;
+  /** Where characters may stand: tile centres inside it are walkable. Several areas for a house with floors and stairs. */
+  walkable: Polygon | Polygon[];
   /** Floor areas taken by furniture. */
   blockers: Polygon[];
   occluders: Occluder[];
@@ -97,6 +97,13 @@ export interface SceneDef {
   spawn: Pt;
   /** Drawn height of a standing character (frame height) in image pixels. */
   characterHeight: number;
+  /**
+   * A picture where things further up are drawn smaller (the dollhouse: the
+   * upper floor is smaller than the ground floor): the character height at
+   * these heights in the picture, [y, height], in order of y; in between it
+   * runs evenly, above and below it stays. Without it: `characterHeight`.
+   */
+  heightByY?: [number, number][];
   /** Walking speed in background pixels per second, so steps match the walk animation at this size. */
   walkSpeed?: number;
   /**
@@ -111,4 +118,19 @@ export interface SceneDef {
   space?: string;
   /** Your status when you sit down here, unless you picked one yourself (the living room: chillen). */
   seatStatus?: string;
+}
+
+/** How tall a character is drawn with its feet at `y`. */
+export function characterHeightAt(scene: Pick<SceneDef, "characterHeight" | "heightByY">, y: number): number {
+  const steps = scene.heightByY;
+  if (!steps?.length) return scene.characterHeight;
+  if (y <= steps[0][0]) return steps[0][1];
+  for (let i = 1; i < steps.length; i++) {
+    const [y1, h1] = steps[i];
+    if (y <= y1) {
+      const [y0, h0] = steps[i - 1];
+      return h0 + ((h1 - h0) * (y - y0)) / (y1 - y0);
+    }
+  }
+  return steps[steps.length - 1][1];
 }

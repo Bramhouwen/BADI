@@ -4,7 +4,7 @@
  * right wall (u) and along the left wall (v). Outside uses square cells
  * aligned with the screen: (u, v) is column and row.
  */
-import { pointInPolygon, type Pt } from "./geometry";
+import { pointInPolygon, type Polygon, type Pt } from "./geometry";
 import type { SceneDef } from "./scene";
 
 export interface Grid {
@@ -18,6 +18,12 @@ export interface Grid {
   tileAt(p: Pt): [number, number] | null;
   isWalkable(u: number, v: number): boolean;
   nearestWalkable(p: Pt): [number, number] | null;
+}
+
+/** The floor areas of a scene: one, or several (the floors of the house and the stairs between them). */
+export function walkableAreas(scene: Pick<SceneDef, "walkable">): Polygon[] {
+  const w = scene.walkable;
+  return w.length && Array.isArray(w[0][0]) ? (w as Polygon[]) : [w as Polygon];
 }
 
 export function buildGrid(scene: SceneDef): Grid {
@@ -48,7 +54,7 @@ export function buildGrid(scene: SceneDef): Grid {
     const row: boolean[] = [];
     for (let v = 0; v < nv; v++) {
       const c = tileToPx(u + 0.5, v + 0.5);
-      row.push(pointInPolygon(c, scene.walkable) && !scene.blockers.some((b) => pointInPolygon(c, b)));
+      row.push(walkableAreas(scene).some((a) => pointInPolygon(c, a)) && !scene.blockers.some((b) => pointInPolygon(c, b)));
     }
     walk.push(row);
   }

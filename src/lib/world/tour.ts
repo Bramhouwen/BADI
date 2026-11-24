@@ -25,7 +25,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     icon: "🏡",
     title: "Welkom in World of Badi",
-    body: "Jullie eigen dorp in BADI: het huis met de woonkamer en ieders eigen kamer, het dorp, Traffic Today en de sportschool. Je ziet live wie er is en wat die doet.",
+    body: "Jullie eigen dorp in BADI: het huis met de woonkamer, de trap naar boven en ieders eigen kamer, het dorp, Traffic Today en de sportschool. Je ziet live wie er is en wat die doet.",
   },
   {
     icon: "👆",

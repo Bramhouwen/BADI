@@ -478,3 +478,12 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Iedereen kijkt mee: je draai gaat als broadcast `rad` (categorie en een gedeelde willekeurige stand) naar de anderen. Het rad in de tuin draait mee, en wie in de tuin is krijgt het rad groot in beeld met de uitkomst als het stilstaat. Wie ergens anders is, krijgt een regel bovenin.
 - De Weekrad-pagina draait niet meer zelf: zonder draai van deze week toont ze het rad en een knop "Naar de achtertuin". In de demo kan de pagina nog wel draaien, en komen Sam, Alex en Noor bij je in de vakjes staan en draaien ze om de beurt.
 - Let op: het wachten op iedereen wordt in de app bewaakt, niet in de database. Wie de database direct aanroept, kan nog alleen draaien.
+
+## Het huis als poppenhuis (24-11-2026)
+
+- Het huis is nu één ruimte, `huis` (`src/lib/world/scenes/poppenhuis.ts`): een poppenhuis met de voorkant open, beide verdiepingen in één tekening (`public/wereld/scenes/huis.webp`, bron `docs/wereld/bron/huis.png`). Het vervangt de losse hal, woonkamer en overloop van eerder vandaag.
+- Beneden: de hal met de voordeur en de trap, door een open doorgang de woonkamer met keukenhoek (fornuis: koken) en een glazen achterdeur naar de achtertuin. Boven: de overloop achter de leuning en de vier slaapkamers (groen Bram, perzik Anne, blauw Daphne, lila Irene). Je loopt zichtbaar de trap op en de kamers in en uit.
+- Tik op een slaapkamer: je gaat die kamer zelf in (inrichten, kledingrek, extra ruimtes, de hond). De deur daar brengt je terug voor die kamer op de overloop.
+- Boven is kleiner getekend dan beneden, dus de poppetjes ook: `heightByY` op de scene geeft de hoogte per hoogte in de tekening (boven 170, beneden 300, op de trap ertussenin), en de loopsnelheid gaat mee. Een scene mag nu meerdere loopvlakken hebben (`walkable` als lijst: begane grond, trap, bovenverdieping).
+- Opgeslagen plekken in de oude hal, woonkamer of overloop bestaan niet meer; wie daar stond, begint in het huis (slapend op de bank als de plek ontbreekt).
+- `woonkamer.ts` staat niet meer in de wereld, maar blijft voor de engine-tests.
