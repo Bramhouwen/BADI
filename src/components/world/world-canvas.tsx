@@ -718,8 +718,8 @@ export function WorldCanvas({
             },
             setPieces(next) {
               pieces = next.flatMap((r) => toPlacement(r) ?? []);
-              // Every room has a clothing rack: at its own place, or the first free one.
-              if (scene.owner) {
+              // Every room has a clothing rack (not its extra spaces): at its own place, or the first free one.
+              if (scene.owner && !scene.space) {
                 const rack: Placement = { id: RACK.id, item: RACK, ...RACK_AT, flip: false };
                 const at = fits(baseGrid, rack, pieces) ? RACK_AT : freeSpot(baseGrid, rack, pieces);
                 if (at) pieces.push({ ...rack, ...at });

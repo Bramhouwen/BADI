@@ -5,6 +5,7 @@
  * once on kamer-groen.webp (2000 x 1493); the four share the same shape.
  */
 import type { SceneDef } from "../engine/scene";
+import { SPACES, spaceBackground, type SpaceId } from "../spaces";
 
 /** Which room colour belongs to which character. */
 export const ROOM_COLOURS: Record<string, string> = { bram: "groen", anne: "perzik", daphne: "blauw", irene: "lila" };
@@ -13,6 +14,11 @@ const NAMES: Record<string, string> = { bram: "Bram", anne: "Anne", daphne: "Dap
 
 export function roomId(character: string): string {
   return `kamer-${character}`;
+}
+
+/** An extra space of someone's room, like kamer-bram-tuin. */
+export function spaceSceneId(character: string, space: SpaceId): string {
+  return `${roomId(character)}-${space}`;
 }
 
 function room(character: string): SceneDef {
@@ -36,3 +42,21 @@ function room(character: string): SceneDef {
 }
 
 export const ROOMS: SceneDef[] = Object.keys(ROOM_COLOURS).map(room);
+
+/**
+ * The extra spaces: the shape of the room with other walls and floor. Their
+ * one door leads back into the room; you come in there through the room's door.
+ */
+function space(character: string, id: SpaceId, name: string): SceneDef {
+  const base = room(character);
+  return {
+    ...base,
+    id: spaceSceneId(character, id),
+    name: `${name} van ${NAMES[character] ?? character}`,
+    background: spaceBackground(id),
+    doors: [{ ...base.doors[0], label: "Naar de kamer", to: roomId(character), arrive: "deur" }],
+    space: id,
+  };
+}
+
+export const SPACE_ROOMS: SceneDef[] = Object.keys(ROOM_COLOURS).flatMap((c) => SPACES.map((s) => space(c, s.id, s.name)));

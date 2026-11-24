@@ -8,6 +8,8 @@ import { DEMO_CHALLENGE_ID, DEMO_USER_ID } from "./index";
 import { personalRecords, weekStartOf, type RecordSession } from "@/lib/checkin-plan";
 import { todayKey } from "@/lib/dates";
 import { ITEMS } from "@/lib/world/items";
+import { SPACES, spaceItem } from "@/lib/world/spaces";
+import { SUPER_BADI_COINS } from "@/lib/super-badi";
 import { coinsForDay, dayRecords } from "@/lib/world/missions";
 import { availablePrizes, expectedCost, isDuplicateWin, swapOptions, wheelOdds, WHEEL_CHALLENGES, type OwnedSpin, type PrizeLike, type WheelCategory } from "@/lib/wheel";
 
@@ -312,7 +314,7 @@ function squadMemberStats(s: Store, pUser: string): Result {
 }
 
 
-const DEMO_PRICES: Record<string, number> = Object.fromEntries(ITEMS.map((i) => [i.id, i.price]));
+const DEMO_PRICES: Record<string, number> = Object.fromEntries([...ITEMS.map((i) => [i.id, i.price] as const), ...SPACES.map((sp) => [spaceItem(sp.id), sp.price] as const)]);
 
 /** Demo coins for the demo user, with the same rules as world_coins_earned in the database. */
 function demoWorldCoins(s: Store): number {
@@ -325,6 +327,8 @@ function demoWorldCoins(s: Store): number {
   });
   let n = 0;
   for (const d of days.values()) n += coinsForDay(d);
+  // 500 for every week as Super Badi.
+  n += (s.super_badi_awards ?? []).filter((a) => (a.user_ids as string[]).includes(DEMO_USER_ID)).length * SUPER_BADI_COINS;
   return n;
 }
 
@@ -403,6 +407,8 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
       if (spin && !spin.challenge_completed_at) spin.challenge_completed_at = new Date().toISOString();
       return Promise.resolve(ok(null));
     }
+    case "world_spaces_of":
+      return Promise.resolve(ok((s.world_purchases ?? []).filter((r) => r.user_id === args.p_owner && String(r.item_id).startsWith("ruimte-")).map((r) => String(r.item_id).slice(7))));
     case "world_coins_balance":
     case "world_coins_earned": {
       // Demo: the same rules as the database, from the demo data.
@@ -413,6 +419,8 @@ function rpc(name: string, args: Record<string, unknown> = {}): Promise<Result> 
     case "world_buy": {
       const price = DEMO_PRICES[String(args.p_item)];
       if (price === undefined) return Promise.resolve({ data: null, error: { message: "Dit is niet te koop." }, count: null });
+      if (String(args.p_item).startsWith("ruimte-") && (s.world_purchases ?? []).some((r) => r.user_id === DEMO_USER_ID && r.item_id === args.p_item))
+        return Promise.resolve({ data: null, error: { message: "Deze ruimte heb je al." }, count: null });
       const spent = (s.world_purchases ?? []).filter((r) => r.user_id === DEMO_USER_ID).reduce((n, r) => n + Number(r.price), 0);
       if (demoWorldCoins(s) - spent < price) return Promise.resolve({ data: null, error: { message: "Niet genoeg munten." }, count: null });
       const id = demoId();

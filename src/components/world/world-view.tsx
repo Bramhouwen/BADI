@@ -24,9 +24,10 @@ import { TOUR_PARAM, tourSeenKey } from "@/lib/world/tour";
 import { WorldTour } from "./world-tour";
 import type { Spot } from "@/lib/world/engine/scene";
 import type { WorldGame } from "@/lib/world/missions-server";
-import { FurnishBar, NotesSheet, ShopSheet, VisitCard } from "./world-room";
+import { FurnishBar, NotesSheet, ShopSheet, SpacesSheet, VisitCard } from "./world-room";
 import { buyWorldItem, leaveRoomNote, loadRoom, loadRoomNotes, markRoomNotesRead, placeWorldItem, storeWorldItem, type RoomNote, type RoomPiece } from "@/app/actions/world";
-import { roomId } from "@/lib/world/scenes/kamers";
+import { roomId, spaceSceneId } from "@/lib/world/scenes/kamers";
+import { isRoomArea, spaceItem, type RoomArea, type SpaceDef, type SpaceId } from "@/lib/world/spaces";
 import type { ItemDef } from "@/lib/world/items";
 import { DoorOpen, Mail as MailIcon, ShoppingBag, Sofa } from "lucide-react";
 import { currentOutfit, readOutfitChoice, saveOutfitChoice, spriteKey, type OutfitChoice, type OutfitId } from "@/lib/world/outfits";
@@ -124,10 +125,10 @@ export function WorldView({
   const [choice, setChoice] = useState<Spot | null>(null);
   const trained = game?.trainedToday ?? false;
   // Own rooms: what stands in the room you are in, your storage, furnishing, the shop and notes.
-  const [room, setRoom] = useState<{ scene: string; pieces: RoomPiece[]; storage: { id: string; itemId: string }[] | null; coins: number | null } | null>(null);
+  const [room, setRoom] = useState<{ scene: string; pieces: RoomPiece[]; spaces: SpaceId[]; storage: { id: string; itemId: string }[] | null; coins: number | null } | null>(null);
   const [furnishing, setFurnishing] = useState(false);
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
-  const [roomPanel, setRoomPanel] = useState<"winkel" | "briefjes" | "bezoek" | null>(null);
+  const [roomPanel, setRoomPanel] = useState<"winkel" | "briefjes" | "bezoek" | "ruimtes" | null>(null);
   const [buying, setBuying] = useState<string | null>(null);
   const [notes, setNotes] = useState<RoomNote[]>([]);
   // Private messages: unread per sender, the post box and an open conversation.
@@ -356,10 +357,12 @@ export function WorldView({
   const ownerId = sceneNow?.owner ? (sceneNow.owner === me.character ? me.id : (members.find((m) => m.character === sceneNow.owner)?.id ?? null)) : null;
   const ownerName = sceneNow?.owner ? (sceneNow.owner === me.character ? me.name : (members.find((m) => m.character === sceneNow.owner)?.name ?? "")) : "";
   const isMine = Boolean(ownerId && ownerId === me.id);
+  // The room itself, or one of its extra spaces.
+  const area: RoomArea = sceneNow?.space && isRoomArea(sceneNow.space) ? sceneNow.space : "kamer";
   useEffect(() => {
     if (!ownerId || edit) return;
     let alive = true;
-    void loadRoom(ownerId).then((r) => {
+    void loadRoom(ownerId, area).then((r) => {
       if (!alive) return;
       if (r.ok && r.data) setRoom({ scene: here.scene, ...r.data });
       else say2(r.ok ? "Laden is niet gelukt." : r.error);
@@ -389,7 +392,7 @@ export function WorldView({
   }, [furnishing]);
 
   const savePiece = (p: RoomPiece) =>
-    void placeWorldItem(p).then((r) => {
+    void placeWorldItem({ ...p, space: area }).then((r) => {
       if (!r.ok) say2(r.error);
     });
   const updatePieces = (fn: (list: RoomPiece[]) => RoomPiece[], storage?: (list: { id: string; itemId: string }[]) => { id: string; itemId: string }[]) =>
@@ -419,6 +422,20 @@ export function WorldView({
     void storeWorldItem(p.id).then((r) => {
       if (!r.ok) say2(r.error);
     });
+  };
+  const unlockSpace = async (space: SpaceDef) => {
+    setBuying(space.id);
+    const r = await buyWorldItem(spaceItem(space.id));
+    setBuying(null);
+    if (!r.ok || !r.data) return say2(r.ok ? "Ontgrendelen is niet gelukt." : r.error);
+    setRoom((x) => (x ? { ...x, coins: r.data!.coins ?? x.coins, spaces: [...x.spaces, space.id] } : x));
+    refreshGame();
+    say2(`${space.name} ontgrendeld.`);
+  };
+  const goToSpace = (to: RoomArea) => {
+    const owner = sceneNow?.owner;
+    if (!owner) return;
+    enterScene(to === "kamer" ? roomId(owner) : spaceSceneId(owner, to), "deur");
   };
   const buy = async (item: ItemDef) => {
     setBuying(item.id);
@@ -635,6 +652,20 @@ export function WorldView({
         />
       ) : null}
       {!edit && !post && roomPanel === "winkel" ? <ShopSheet bottom={furnishing ? bottom : above} coins={room?.coins ?? game?.coins ?? null} busy={buying} onBuy={(i) => void buy(i)} onClose={() => setRoomPanel(null)} /> : null}
+      {!edit && !post && roomPanel === "ruimtes" && ownerId ? (
+        <SpacesSheet
+          bottom={above}
+          owner={ownerName}
+          mine={isMine}
+          unlocked={room && room.scene === here.scene ? room.spaces : []}
+          here={area}
+          coins={isMine ? (room?.coins ?? game?.coins ?? null) : null}
+          busy={buying}
+          onUnlock={(s) => void unlockSpace(s)}
+          onGo={goToSpace}
+          onClose={() => setRoomPanel(null)}
+        />
+      ) : null}
       {!edit && !post && roomPanel === "briefjes" && isMine ? <NotesSheet bottom={above} notes={notes} nameOf={(id) => members.find((m) => m.id === id)?.name ?? "Iemand"} onClose={() => setRoomPanel(null)} /> : null}
       {!edit && !post && roomPanel === "bezoek" && ownerId && !isMine ? (
         <VisitCard
@@ -708,23 +739,33 @@ export function WorldView({
             </div>
           ) : null}
           {ownerId && !visible?.keyboard && !picked ? (
-            <div className="flex gap-2">
+            <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] [&>*]:shrink-0">
               {isMine ? (
                 <>
-                  <button type="button" onClick={() => (setHud(null), setRoomPanel(null), setFurnishing(true))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(null), setFurnishing(true))} className="flex h-10 items-center gap-1 rounded-full bg-white/95 px-3 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
                     <Sofa className="h-4 w-4" aria-hidden /> Inrichten
                   </button>
-                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "winkel" ? null : "winkel"))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "winkel" ? null : "winkel"))} className="flex h-10 items-center gap-1 rounded-full bg-white/95 px-3 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
                     <ShoppingBag className="h-4 w-4" aria-hidden /> Winkel
+                  </button>
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "ruimtes" ? null : "ruimtes"))} className="flex h-10 items-center gap-1 rounded-full bg-white/95 px-3 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                    <DoorOpen className="h-4 w-4" aria-hidden /> Ruimtes
                   </button>
                   <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "briefjes" ? null : "briefjes"))} aria-label="Achtergelaten in je kamer" className="grid h-10 w-10 place-items-center rounded-full bg-white/95 text-ink shadow-md ring-1 ring-ink/[0.06]">
                     <MailIcon className="h-4 w-4" aria-hidden />
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "bezoek" ? null : "bezoek"))} className="flex h-10 items-center gap-1.5 rounded-full bg-white/95 px-3.5 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
-                  <MailIcon className="h-4 w-4" aria-hidden /> Iets achterlaten voor {ownerName}
-                </button>
+                <>
+                  <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "bezoek" ? null : "bezoek"))} className="flex h-10 items-center gap-1 rounded-full bg-white/95 px-3 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                    <MailIcon className="h-4 w-4" aria-hidden /> Iets achterlaten
+                  </button>
+                  {room && room.scene === here.scene && room.spaces.length ? (
+                    <button type="button" onClick={() => (setHud(null), setRoomPanel(roomPanel === "ruimtes" ? null : "ruimtes"))} className="flex h-10 items-center gap-1 rounded-full bg-white/95 px-3 text-[13px] font-semibold text-ink shadow-md ring-1 ring-ink/[0.06]">
+                      <DoorOpen className="h-4 w-4" aria-hidden /> Ruimtes
+                    </button>
+                  ) : null}
+                </>
               )}
             </div>
           ) : null}

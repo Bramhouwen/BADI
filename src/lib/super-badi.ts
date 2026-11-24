@@ -33,10 +33,13 @@ export function joinNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(", ")} en ${names[names.length - 1]}`;
 }
 
+/** Coins in World of Badi for every week you were the Super Badi (also in the database, migration 0033). */
+export const SUPER_BADI_COINS = 500;
+
 /** Baddy's message in the squad chat. */
 export function superBadiMessage(names: readonly string[], points: number): string {
   const who = joinNames(names);
   return names.length > 1
-    ? `🏆 Gefeliciteerd ${who}, jullie waren samen de Super Badi van vorige week met ${points} punten! Houden jullie de kroon vast, of geven jullie de troon deze week aan iemand anders?`
-    : `🏆 Gefeliciteerd ${who}, jij was de Super Badi van vorige week met ${points} punten! Hou je de kroon vast, of geef je de troon deze week aan iemand anders?`;
+    ? `🏆 Gefeliciteerd ${who}, jullie waren samen de Super Badi van vorige week met ${points} punten! Jullie krijgen elk ${SUPER_BADI_COINS} munten in World of Badi. Houden jullie de kroon vast, of geven jullie de troon deze week aan iemand anders?`
+    : `🏆 Gefeliciteerd ${who}, jij was de Super Badi van vorige week met ${points} punten! Je krijgt ${SUPER_BADI_COINS} munten in World of Badi. Hou je de kroon vast, of geef je de troon deze week aan iemand anders?`;
 }

@@ -22,7 +22,7 @@ describe("Super Badi of the week", () => {
   it("writes Baddy's message for one or more winners", () => {
     expect(joinNames(["Sam", "Noor", "Alex"])).toBe("Sam, Noor en Alex");
     expect(superBadiMessage(["Irene"], 44)).toBe(
-      "🏆 Gefeliciteerd Irene, jij was de Super Badi van vorige week met 44 punten! Hou je de kroon vast, of geef je de troon deze week aan iemand anders?",
+      "🏆 Gefeliciteerd Irene, jij was de Super Badi van vorige week met 44 punten! Je krijgt 500 munten in World of Badi. Hou je de kroon vast, of geef je de troon deze week aan iemand anders?",
     );
     expect(superBadiMessage(["Irene", "Daphne"], 40)).toContain("jullie waren samen de Super Badi");
   });

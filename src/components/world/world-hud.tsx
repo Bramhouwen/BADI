@@ -117,7 +117,8 @@ export function MapSheet({
   const order = ["woonkamer", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
   // Own rooms after the shared places, yours first.
   const rooms = Object.values(SCENES)
-    .filter((s) => s.owner)
+    // The extra spaces are reached from the room itself.
+    .filter((s) => s.owner && !s.space)
     .sort((a, b) => (a.id === myRoom ? -1 : b.id === myRoom ? 1 : a.name.localeCompare(b.name)))
     .map((s) => s.id);
   return (

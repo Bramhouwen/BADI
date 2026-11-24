@@ -101,4 +101,6 @@ export interface SceneDef {
   camera?: { start?: "overview" | "close"; close?: number };
   /** Someone's own room: the character key of the one who lives here; furnished from the database. */
   owner?: string;
+  /** An extra space of that room (bathroom, garden, ...), unlocked with coins; absent for the room itself. */
+  space?: string;
 }

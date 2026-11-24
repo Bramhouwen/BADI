@@ -4,7 +4,7 @@ import { BUITEN } from "./buiten";
 import { KANTOOR } from "./kantoor";
 import { SPORTSCHOOL } from "./sportschool";
 import { WOONKAMER } from "./woonkamer";
-import { ROOMS } from "./kamers";
+import { ROOMS, SPACE_ROOMS } from "./kamers";
 
 export const SCENES: Record<string, SceneDef> = {
   [WOONKAMER.id]: WOONKAMER,
@@ -12,6 +12,7 @@ export const SCENES: Record<string, SceneDef> = {
   [KANTOOR.id]: KANTOOR,
   [SPORTSCHOOL.id]: SPORTSCHOOL,
   ...Object.fromEntries(ROOMS.map((r) => [r.id, r])),
+  ...Object.fromEntries(SPACE_ROOMS.map((r) => [r.id, r])),
 };
 
 export const FIRST_SCENE = WOONKAMER.id;

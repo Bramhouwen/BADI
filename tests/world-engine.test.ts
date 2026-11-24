@@ -163,8 +163,10 @@ describe("seats", () => {
 
 describe("scenes", () => {
   const scenes = Object.values(SCENES);
-  it("has the living room, outside, the office, the gym and four own rooms", () => {
-    expect(Object.keys(SCENES).sort()).toEqual(["buiten", "kamer-anne", "kamer-bram", "kamer-daphne", "kamer-irene", "kantoor", "sportschool", "woonkamer"]);
+  it("has the living room, outside, the office, the gym and four own rooms, each with its extra spaces", () => {
+    const rooms = ["kamer-anne", "kamer-bram", "kamer-daphne", "kamer-irene"];
+    const spaces = rooms.flatMap((r) => ["badkamer", "gym", "tuin", "zolder"].map((s) => `${r}-${s}`));
+    expect(Object.keys(SCENES).sort()).toEqual(["buiten", ...rooms, ...spaces, "kantoor", "sportschool", "woonkamer"].sort());
   });
   for (const scene of scenes) {
     describe(scene.id, () => {

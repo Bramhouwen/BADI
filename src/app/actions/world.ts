@@ -11,6 +11,7 @@ import { firstName } from "@/lib/utils";
 import { attachmentLabel } from "@/lib/chat";
 import { loadChatList, loadPeople, loadThread } from "@/lib/chat-data";
 import type { WorldDm } from "@/lib/world/dm";
+import { SPACE_BY_ID, isRoomArea, isSpaceItem, type RoomArea, type SpaceId } from "@/lib/world/spaces";
 import { loadWorldGame, type WorldGame } from "@/lib/world/missions-server";
 
 const schema = z.object({
@@ -104,30 +105,46 @@ export interface RoomPiece {
 }
 
 export interface RoomState {
-  /** What stands in the room. */
+  /** What stands in the room, or in the space asked for. */
   pieces: RoomPiece[];
+  /** The extra spaces the owner has unlocked. */
+  spaces: SpaceId[];
   /** Your own room: what you have in storage, and your coins to spend. */
   storage: { id: string; itemId: string }[] | null;
   coins: number | null;
 }
 
-/** The furniture in someone's room (everyone in the group may visit), plus your storage and coins in your own room. */
-export async function loadRoom(ownerId: string): Promise<ActionResult<RoomState>> {
-  if (!peerId.safeParse(ownerId).success) return { ok: false, error: "Onbekende kamer." };
+const missingColumn = (e: { code?: string } | null) => e?.code === "42703" || e?.code === "PGRST204";
+
+/**
+ * The furniture in someone's room or one of its spaces (everyone in the group
+ * may visit), the spaces they unlocked, plus your storage and coins in your own.
+ * Storage is shared by the room and its spaces.
+ */
+export async function loadRoom(ownerId: string, area: RoomArea = "kamer"): Promise<ActionResult<RoomState>> {
+  if (!peerId.safeParse(ownerId).success || !isRoomArea(area)) return { ok: false, error: "Onbekende kamer." };
   const ctx = await requireContext();
   if (!canSeeWorld(ctx.membership.role)) return { ok: false, error: "De wereld is nog niet open." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("world_room_items").select("purchase_id, item_id, u, v, flip").eq("challenge_id", ctx.challenge.id).eq("user_id", ownerId);
+  type Row = { purchase_id: string; item_id: string; u: number; v: number; flip: boolean; space?: string };
+  const query = (cols: string) => supabase.from("world_room_items").select(cols).eq("challenge_id", ctx.challenge.id).eq("user_id", ownerId);
+  let { data, error }: { data: unknown; error: { code?: string; message?: string } | null } = await query("purchase_id, item_id, u, v, flip, space");
+  // Before migration 0033 there are no spaces: everything stands in the room.
+  if (missingColumn(error)) ({ data, error } = await query("purchase_id, item_id, u, v, flip"));
   if (error) return { ok: false, error: notYet(error) ? NOT_YET : "Laden is niet gelukt." };
-  const pieces = ((data ?? []) as { purchase_id: string; item_id: string; u: number; v: number; flip: boolean }[]).map((r) => ({ id: r.purchase_id, itemId: r.item_id, u: r.u, v: r.v, flip: r.flip }));
-  if (ownerId !== ctx.userId) return { ok: true, data: { pieces, storage: null, coins: null } };
+  const rows = (data ?? []) as Row[];
+  const pieces = rows.filter((r) => (r.space ?? "kamer") === area).map((r) => ({ id: r.purchase_id, itemId: r.item_id, u: r.u, v: r.v, flip: r.flip }));
+  const { data: unlocked } = await supabase.rpc("world_spaces_of", { p_owner: ownerId });
+  const spaces = ((unlocked ?? []) as unknown[]).filter((v): v is SpaceId => typeof v === "string" && SPACE_BY_ID.has(v as SpaceId));
+  if (ownerId !== ctx.userId) return { ok: true, data: { pieces, spaces, storage: null, coins: null } };
   const [{ data: bought }, { data: balance }] = await Promise.all([
     supabase.from("world_purchases").select("id, item_id").eq("user_id", ctx.userId).order("created_at"),
     supabase.rpc("world_coins_balance"),
   ]);
-  const placed = new Set(pieces.map((p) => p.id));
-  const storage = ((bought ?? []) as { id: string; item_id: string }[]).filter((b) => !placed.has(b.id)).map((b) => ({ id: b.id, itemId: b.item_id }));
-  return { ok: true, data: { pieces, storage, coins: typeof balance === "number" ? balance : null } };
+  // In storage: what you bought and is nowhere yet; a space is not a piece.
+  const placed = new Set(rows.map((p) => p.purchase_id));
+  const storage = ((bought ?? []) as { id: string; item_id: string }[]).filter((b) => !placed.has(b.id) && !isSpaceItem(b.item_id)).map((b) => ({ id: b.id, itemId: b.item_id }));
+  return { ok: true, data: { pieces, spaces, storage, coins: typeof balance === "number" ? balance : null } };
 }
 
 /** Buys a piece for your room. The database checks the price and your coins. */
@@ -139,7 +156,8 @@ export async function buyWorldItem(itemId: string): Promise<ActionResult<{ id: s
   const { data, error } = await supabase.rpc("world_buy", { p_item: itemId });
   if (error || typeof data !== "string") {
     if (notYet(error)) return { ok: false, error: NOT_YET };
-    return { ok: false, error: /genoeg munten/i.test(error?.message ?? "") ? "Je hebt niet genoeg munten." : "Kopen is niet gelukt." };
+    const message = error?.message ?? "";
+    return { ok: false, error: /genoeg munten/i.test(message) ? "Je hebt niet genoeg munten." : /ruimte heb je al/i.test(message) ? "Deze ruimte heb je al." : "Kopen is niet gelukt." };
   }
   const { data: balance } = await supabase.rpc("world_coins_balance");
   return { ok: true, data: { id: data, coins: typeof balance === "number" ? balance : null } };
@@ -151,10 +169,11 @@ const pieceSchema = z.object({
   u: z.number().int().min(0).max(64),
   v: z.number().int().min(0).max(64),
   flip: z.boolean(),
+  space: z.string().refine(isRoomArea).default("kamer"),
 });
 
-/** Puts one of your pieces in your room, or moves it. The database only allows what you bought yourself. */
-export async function placeWorldItem(input: RoomPiece): Promise<ActionResult> {
+/** Puts one of your pieces in your room or one of its spaces, or moves it. The database only allows what you bought yourself, in a space you unlocked. */
+export async function placeWorldItem(input: RoomPiece & { space?: RoomArea }): Promise<ActionResult> {
   const parsed = pieceSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Ongeldige plek." };
   const ctx = await requireContext();
@@ -163,7 +182,9 @@ export async function placeWorldItem(input: RoomPiece): Promise<ActionResult> {
   const p = parsed.data;
   const { error } = await supabase
     .from("world_room_items")
-    .upsert({ purchase_id: p.id, user_id: ctx.userId, challenge_id: ctx.challenge.id, item_id: p.itemId, u: p.u, v: p.v, flip: p.flip, updated_at: new Date().toISOString() }, { onConflict: "purchase_id" });
+    // Without migration 0033 there is no space column: only the room itself.
+    .upsert({ purchase_id: p.id, user_id: ctx.userId, challenge_id: ctx.challenge.id, item_id: p.itemId, u: p.u, v: p.v, flip: p.flip, ...(p.space !== "kamer" ? { space: p.space } : {}), updated_at: new Date().toISOString() }, { onConflict: "purchase_id" });
+  if (error && p.space !== "kamer" && missingColumn(error)) return { ok: false, error: "De extra ruimtes staan nog niet in de database (migratie 0033)." };
   return error ? { ok: false, error: notYet(error) ? NOT_YET : "Neerzetten is niet gelukt." } : { ok: true };
 }
 

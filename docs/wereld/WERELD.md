@@ -443,3 +443,12 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - Wat je draagt gaat live mee naar de anderen (het veld `character` van je presence is de map met frames, zoals `bram-goud`). Offline ziet iedereen de standaard: goud voor de Super Badi. Een Super Badi die het pak uittrok en offline gaat, staat offline dus weer in goud.
 - Frames: per outfit een sheet `public/sprites/<naam>-<outfit>.webp`, gemaakt door de gewone sheet met het beeldmodel te laten omkleden (gpt_image_2_6, zelfde raster, zelfde poses) en dan `npm run sprite -- <sheet> <naam>-goud --fit-rows`. `--fit-rows` zet elke rij midden in het vak, zodat kroon en voeten niet wegvallen. `npm run wereld:poppetjes` maakt er `public/wereld/poppetjes/<naam>-goud/` van, met een zitanker afgeleid van het gewone poppetje. Bram heeft een eigen zit-tekening in goud (`docs/wereld/bron/bram-zitten-goud.png`).
 - Het script zet de zit-animatie nu ook zelf op één frame (eerst handmatig in de manifests).
+
+## Super Badi-munten en extra ruimtes (24-11-2026)
+
+- Elke week dat je Super Badi was, krijg je 500 munten (`SUPER_BADI_COINS`), ook voor de weken van voor deze regel. De database telt ze mee in `world_coins_earned` uit `super_badi_awards` (migratie 0033). Baddy noemt de munten in het felicitatiebericht.
+- Extra ruimtes (`src/lib/world/spaces.ts`): badkamer 150, tuin 200, zolder 250, eigen gym 300 munten. Knop "Ruimtes" in je kamer: ontgrendelen (tweede tik bevestigt), naar binnen gaan, terug naar de kamer. Bezoekers zien de knop als de bewoner ruimtes heeft.
+- Een ruimte is een edit van de lege kamer (`public/wereld/scenes/ruimte-<id>.webp`, bron in `docs/wereld/bron/kamers/ruimte-*.png`), dus dezelfde vloer, hetzelfde raster en dezelfde deur. De deur leidt terug naar de kamer; je komt daar binnen bij de kamerdeur. Scènes heten `kamer-<naam>-<ruimte>` (`SPACE_ROOMS` in `scenes/kamers.ts`), staan niet op de kaart maar op de Squad-kaart wel als "thuis".
+- Een ruimte begint leeg en richt je in met hetzelfde magazijn als je kamer. `world_room_items.space` zegt waar een meubel staat (`kamer` of de ruimte). De database laat alleen neerzetten in je kamer of in een ruimte die je hebt; een ruimte zelf is geen meubel. Een ruimte kun je maar één keer kopen. `world_spaces_of(owner)` vertelt bezoekers welke ruimtes er zijn.
+- Het kledingrek staat alleen in de kamer zelf, niet in de ruimtes.
+- Getest in PGlite (munten met en zonder Super Badi, dubbel kopen, neerzetten in een ruimte die je niet hebt, iets van een ander verschuiven) en in de demo.

@@ -7,10 +7,11 @@
  */
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Coins, FlipHorizontal2, Mail, PackageOpen, ShoppingBag, X } from "lucide-react";
+import { Check, Coins, FlipHorizontal2, Lock, Mail, PackageOpen, ShoppingBag, X } from "lucide-react";
 import { CATEGORY_NAMES, ITEMS, ITEM_BY_ID, itemImage, type ItemDef } from "@/lib/world/items";
 import { relativeTimeNl } from "@/lib/dates";
 import type { RoomNote } from "@/app/actions/world";
+import { SPACES, spaceBackground, type RoomArea, type SpaceDef, type SpaceId } from "@/lib/world/spaces";
 import { sheet } from "./world-hud";
 
 function Header({ title, onClose, children }: { title: string; onClose: () => void; children?: React.ReactNode }) {
@@ -194,5 +195,111 @@ export function NotesSheet({ bottom, notes, nameOf, onClose }: { bottom: number 
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * The extra spaces of a room: go into the ones that are unlocked; in your own
+ * room, unlock the others with coins. A space starts empty.
+ */
+export function SpacesSheet({
+  bottom,
+  owner,
+  mine,
+  unlocked,
+  here,
+  coins,
+  busy,
+  onUnlock,
+  onGo,
+  onClose,
+}: {
+  bottom: number | string;
+  /** First name of whose room it is. */
+  owner: string;
+  mine: boolean;
+  unlocked: readonly SpaceId[];
+  /** The space you are in now, or "kamer". */
+  here: RoomArea;
+  coins: number | null;
+  busy: string | null;
+  onUnlock: (space: SpaceDef) => void;
+  onGo: (space: RoomArea) => void;
+  onClose: () => void;
+}) {
+  const shown = mine ? SPACES : SPACES.filter((s) => unlocked.includes(s.id));
+  // Unlocking costs a lot of coins at once: the first tap asks, the second buys.
+  const [asking, setAsking] = useState<SpaceId | null>(null);
+  return (
+    <section aria-label="Ruimtes" className={`${sheet} flex max-h-[min(72%,600px)] flex-col`} style={{ bottom }}>
+      <Header title={mine ? "Jouw ruimtes" : `Ruimtes van ${owner}`} onClose={onClose}>
+        {mine && coins !== null ? (
+          <span className="flex items-center gap-1 text-[12.5px] font-semibold text-muted">
+            <Coins className="h-3.5 w-3.5" aria-hidden /> {coins}
+          </span>
+        ) : null}
+      </Header>
+      <ul className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto p-3">
+        {here !== "kamer" ? (
+          <li>
+            <SpaceTile name={mine ? "Jouw kamer" : `Kamer van ${owner}`} background={null} note="Terug naar de kamer" onClick={() => onGo("kamer")} />
+          </li>
+        ) : null}
+        {shown.map((s) => {
+          const open = unlocked.includes(s.id);
+          const there = here === s.id;
+          return (
+            <li key={s.id}>
+              <SpaceTile
+                name={s.name}
+                background={spaceBackground(s.id)}
+                locked={!open}
+                note={
+                  there
+                    ? "Je bent hier"
+                    : open
+                      ? "Naar binnen"
+                      : busy === s.id
+                        ? "Bezig…"
+                        : coins !== null && coins < s.price
+                          ? `${s.price} munten, je hebt er ${coins}`
+                          : asking === s.id
+                            ? `Tik nog een keer: ${s.price} munten betalen`
+                            : `Ontgrendelen voor ${s.price} munten`
+                }
+                asking={asking === s.id}
+                disabled={there || busy !== null || (!open && coins !== null && coins < s.price)}
+                onClick={() => {
+                  if (open) return onGo(s.id);
+                  if (asking !== s.id) return setAsking(s.id);
+                  setAsking(null);
+                  onUnlock(s);
+                }}
+              />
+            </li>
+          );
+        })}
+      </ul>
+      {!mine && !shown.length ? <p className="px-4 pb-4 text-[13.5px] text-muted">{owner} heeft nog geen extra ruimtes.</p> : null}
+    </section>
+  );
+}
+
+function SpaceTile({ name, background, note, locked = false, asking = false, disabled = false, onClick }: { name: string; background: string | null; note: string; locked?: boolean; asking?: boolean; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative block h-[118px] w-full overflow-hidden rounded-[16px] bg-[#f6ece4] text-left disabled:opacity-80 ${asking ? "ring-2 ring-[#d9a63c]" : "ring-1 ring-ink/[0.08]"}`}
+      style={background ? { backgroundImage: `url(${background})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+    >
+      {locked ? <span className="absolute inset-0 bg-black/35" aria-hidden /> : null}
+      {locked ? <Lock className="absolute right-2 top-2 h-4 w-4 text-white" aria-label="Op slot" /> : null}
+      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2.5 pb-2 pt-6">
+        <span className="block truncate text-[13.5px] font-semibold text-white">{name}</span>
+        <span className="block text-[11.5px] leading-tight text-white/90">{note}</span>
+      </span>
+    </button>
   );
 }
