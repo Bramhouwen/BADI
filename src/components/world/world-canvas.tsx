@@ -142,6 +142,7 @@ export function WorldCanvas({
   onPieceMoved,
   onPieceSelected,
   onRack,
+  onArrive,
 }: {
   scene: SceneDef;
   /** `look`: the frames you are drawn with when that is an outfit; read when the scene starts, later changes go through setLook. */
@@ -181,6 +182,8 @@ export function WorldCanvas({
   onPieceSelected?: (id: string | null) => void;
   /** You walked up to the clothing rack of this room. */
   onRack?: () => void;
+  /** You arrived at a spot, or sat down: for the status that goes with it. */
+  onArrive?: (at: { spot: Spot } | { seat: string }) => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const fpsRef = useRef<HTMLParagraphElement>(null);
@@ -196,9 +199,11 @@ export function WorldCanvas({
   const onPieceMovedRef = useRef(onPieceMoved);
   const onPieceSelectedRef = useRef(onPieceSelected);
   const onRackRef = useRef(onRack);
+  const onArriveRef = useRef(onArrive);
   const lookRef = useRef(me.look);
   useEffect(() => {
     onRackRef.current = onRack;
+    onArriveRef.current = onArrive;
     lookRef.current = me.look;
     onPieceMovedRef.current = onPieceMoved;
     onPieceSelectedRef.current = onPieceSelected;
@@ -406,11 +411,15 @@ export function WorldCanvas({
             return;
           }
           const spot = scene.spots.find((s) => pointInPolygon(p, s.tap));
-          // A spot with a choice (the treadmill) asks first.
-          if (spot?.link && onSpotRef.current) return onSpotRef.current(spot);
-          if (spot) return move({ kind: "spot", id: spot.id });
+          // A spot with a choice (the treadmill) asks first; the Weekrad asks once you are there.
+          if (spot?.link && !spot.walkFirst && onSpotRef.current) return onSpotRef.current(spot);
+          if (spot)
+            return move({ kind: "spot", id: spot.id }, () => {
+              onArriveRef.current?.({ spot });
+              if (spot.walkFirst && spot.link) onSpotRef.current?.(spot);
+            });
           const seat = seatAt(live(), p);
-          if (seat) return move({ kind: "seat", id: seat.id });
+          if (seat) return move({ kind: "seat", id: seat.id }, () => onArriveRef.current?.({ seat: seat.id }));
           move({ kind: "stand", to: p });
         };
         actionsRef.current = {
@@ -762,7 +771,8 @@ export function WorldCanvas({
             },
             doSpot(id) {
               stopFollowing();
-              move({ kind: "spot", id });
+              const spot = scene.spots.find((s) => s.id === id);
+              move({ kind: "spot", id }, () => (spot ? onArriveRef.current?.({ spot }) : undefined));
             },
             setPieces(next) {
               pieces = next.flatMap((r) => toPlacement(r) ?? []);

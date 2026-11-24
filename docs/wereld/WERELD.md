@@ -458,3 +458,14 @@ Wie de wereld verlaat, blijft offline staan of zitten waar die was, ook als je d
 - 24 nieuwe spullen in de winkel, zes per ruimte (categorieën Badkamer, Tuin, Zolder, Gym in `items.ts`, prijzen 15 tot 130, migratie 0034). Ze mogen overal staan; de winkel opent wel op de categorie van de ruimte waar je bent. Zitten kan op de loungebank, de zitkussens en de sportbank.
 - Gemaakt met het beeldmodel (gpt_image_2_6) met de kledingkast als stijlvoorbeeld, op wit, daarna uitgeknipt. Bronnen in `docs/wereld/bron/kamers/meubel-*.png`. Bij open frames (squat rack, tuinset, handdoekenrek, loopband, sportbank) zijn ook de ingesloten witte vlakken weggehaald.
 - Daphne heeft een golden retriever die in haar kamer woont (`src/lib/world/engine/pet.ts`, `PETS`). Hij loopt naar een vrije plek tussen de meubels, blijft daar staan, zitten, liggen of slapen, en loopt weer verder. Elke telefoon laat de hond zelf lopen, dus hij staat niet bij iedereen op dezelfde plek. Frames in `public/wereld/dieren/hond/` (vier looppasjes, staan, zitten, liggen, slapen), bron `docs/wereld/bron/hond.png`. Niet in de extra ruimtes.
+
+## Het complete BADI-huis (24-11-2026)
+
+- Nieuwe ruimtes (`src/lib/world/scenes/huis.ts`), allemaal bewerkingen van de lege kamer en daarna gemeten op 2000 x 1493 (bronnen `docs/wereld/bron/hal.png`, `overloop.png`, `achtertuin.png`):
+  - **Hal**: voordeur naar het dorp, deur naar de woonkamer, glazen achterdeur naar de achtertuin, trap naar boven.
+  - **Overloop**: trap naar beneden en vier slaapkamerdeuren: links Anne (voor) en Bram (achter), rechts Daphne (achter) en Irene (voor) (`LANDING_DOORS`).
+  - **Achtertuin**: het Weekrad op een vlonder (tik erop, je loopt erheen en krijgt "Draai het Weekrad", naar /wheel), twee tuinbanken om een vuurkorf (zitplekken, met occluders zodat je achter de banken en de vuurkorf langs loopt).
+- Deuren omgezet: dorp → hal (niet meer de woonkamer), woonkamer → hal, eigen kamer → overloop. Elke deur heeft een deur terug (getest).
+- Status vanzelf, tenzij je er zelf een koos: bij het fornuis in de woonkamer "koken" (spot `fornuis`), zitten in de woonkamer of de achtertuin "chillen" (`seatStatus`). Bij een andere ruimte vervalt een automatische status weer.
+- Spot-opties: `walkFirst` (eerst erheen lopen, dan de keuze), `doLabel` (tekst van de doe-knop; null is alleen de link), `status`.
+- Kaart: woonkamer, hal, achtertuin, overloop, dan dorp, kantoor, sportschool en de kamers. Op de Squad-kaart tellen hal, overloop en achtertuin als "thuis".

@@ -66,6 +66,12 @@ export interface Spot {
   pose: string;
   /** Besides doing it here, a page in the app for it (the treadmill: log a training). Tapping the spot then asks which. */
   link?: { label: string; href: string };
+  /** With a link: walk to the spot first and ask there (the Weekrad), instead of asking right away. */
+  walkFirst?: boolean;
+  /** The button for doing it here in that choice; null: only the link. Default "Rennen". */
+  doLabel?: string | null;
+  /** Your status once you are there, unless you picked one yourself (the stove: koken). */
+  status?: string;
 }
 
 export interface SceneDef {
@@ -103,4 +109,6 @@ export interface SceneDef {
   owner?: string;
   /** An extra space of that room (bathroom, garden, ...), unlocked with coins; absent for the room itself. */
   space?: string;
+  /** Your status when you sit down here, unless you picked one yourself (the living room: chillen). */
+  seatStatus?: string;
 }

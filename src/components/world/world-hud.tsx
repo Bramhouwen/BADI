@@ -114,7 +114,7 @@ export function MapSheet({
   onGo: (scene: string) => void;
   onClose: () => void;
 }) {
-  const order = ["woonkamer", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
+  const order = ["woonkamer", "hal", "achtertuin", "overloop", "buiten", "kantoor", "sportschool"].filter((id) => SCENES[id]);
   // Own rooms after the shared places, yours first.
   const rooms = Object.values(SCENES)
     // The extra spaces are reached from the room itself.
@@ -220,11 +220,13 @@ export function SpotChoice({ spot, bottom, onDo, onClose }: { spot: Spot; bottom
     <section aria-label={spot.label} className={sheet} style={{ bottom }}>
       <SheetHeader title={spot.label} onClose={onClose} />
       <div className="grid grid-cols-2 gap-2 p-3">
-        <button type="button" onClick={onDo} className="flex h-14 items-center justify-center gap-2 rounded-[16px] bg-[#f6ece4] text-[14px] font-semibold text-text">
-          <Footprints className="h-4 w-4" aria-hidden /> Rennen
-        </button>
+        {spot.doLabel !== null ? (
+          <button type="button" onClick={onDo} className="flex h-14 items-center justify-center gap-2 rounded-[16px] bg-[#f6ece4] text-[14px] font-semibold text-text">
+            <Footprints className="h-4 w-4" aria-hidden /> {spot.doLabel ?? "Rennen"}
+          </button>
+        ) : null}
         {spot.link ? (
-          <Link href={spot.link.href} className="espresso flex h-14 items-center justify-center rounded-[16px] text-[14px] font-semibold">
+          <Link href={spot.link.href} className={`espresso flex h-14 items-center justify-center rounded-[16px] text-[14px] font-semibold ${spot.doLabel === null ? "col-span-2" : ""}`}>
             {spot.link.label}
           </Link>
         ) : null}

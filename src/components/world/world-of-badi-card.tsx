@@ -28,7 +28,7 @@ type PlaceKey = (typeof PLACES)[number]["key"];
 /** Which place on the map a scene belongs to: the living room and the own rooms are in the house. */
 export function placeOf(scene: string | null | undefined): PlaceKey | null {
   if (!scene) return null;
-  if (scene === "woonkamer" || scene.startsWith("kamer-")) return "huis";
+  if (scene === "woonkamer" || scene === "hal" || scene === "overloop" || scene === "achtertuin" || scene.startsWith("kamer-")) return "huis";
   if (scene === "buiten") return "dorp";
   if (scene === "kantoor") return "kantoor";
   if (scene === "sportschool") return "sport";

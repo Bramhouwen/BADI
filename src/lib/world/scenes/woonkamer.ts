@@ -83,8 +83,10 @@ export const WOONKAMER: SceneDef = {
     },
   ],
   seats: readSeats(zitplekken),
-  doors: [{ id: "voordeur", label: "Naar buiten", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [215, 932], to: "buiten", arrive: "huis" }],
-  spots: [],
+  doors: [{ id: "voordeur", label: "Naar de hal", tap: [[55, 500], [205, 455], [218, 470], [218, 870], [80, 938], [55, 930]], approach: [215, 932], to: "hal", arrive: "woonkamer" }],
+  // The stove in the kitchen corner: stand there and you are cooking.
+  spots: [{ id: "fornuis", label: "Koken", tap: [[340, 620], [490, 580], [495, 800], [350, 840]], approach: [470, 930], at: [470, 930], facing: "left", pose: "staan", status: "koken" }],
+  seatStatus: "chillen",
   spawn: [262, 948],
   characterHeight: 340,
 };

@@ -92,7 +92,7 @@ export const BUITEN: SceneDef = {
   ],
   seats: readSeats(zitplekken),
   doors: [
-    { id: "huis", label: "Naar binnen", tap: [[550, 267], [607, 262], [607, 402], [550, 405]], approach: [592, 440], to: "woonkamer", arrive: "voordeur" },
+    { id: "huis", label: "Naar binnen", tap: [[550, 267], [607, 262], [607, 402], [550, 405]], approach: [592, 440], to: "hal", arrive: "voordeur" },
     { id: "kantoor", label: "Traffic Today", tap: [[1472, 305], [1580, 305], [1580, 420], [1472, 420]], approach: [1525, 450], to: "kantoor", arrive: "glazen-deur" },
     { id: "sportschool", label: "Sportschool", tap: [[1433, 813], [1544, 813], [1544, 920], [1433, 920]], approach: [1488, 950], to: "sportschool", arrive: "deur" },
   ],

@@ -293,7 +293,7 @@ export function WorldView({
     setFurnishing(false);
     setSelectedPiece(null);
     setRoomPanel(null);
-    if (to === "sportschool" && !status) setStatus("trainen", true);
+    if (to === "sportschool" && (!status || autoStatus.current)) setStatus("trainen", true);
     else if (to !== "sportschool" && autoStatus.current) setStatus(null);
     setTimeout(() => setHere((h) => ({ scene: to, arrive, n: h.n + 1 })), FADE_MS);
   };
@@ -522,6 +522,11 @@ export function WorldView({
               savePiece(p);
             }}
             onPieceSelected={setSelectedPiece}
+            onArrive={(at) => {
+              // Cooking at the stove, chilling on the sofa: unless you picked a status yourself.
+              const next = "spot" in at ? at.spot.status : SCENES[here.scene]?.seatStatus;
+              if (next && Object.hasOwn(STATUSES, next) && (!status || autoStatus.current)) setStatus(next as StatusKey, true);
+            }}
             onRack={() => {
               if (isMine) openHud("kledingrek");
               else say2(`Dit is het kledingrek van ${ownerName}. Omkleden doe je in je eigen kamer.`);

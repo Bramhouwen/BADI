@@ -163,10 +163,10 @@ describe("seats", () => {
 
 describe("scenes", () => {
   const scenes = Object.values(SCENES);
-  it("has the living room, outside, the office, the gym and four own rooms, each with its extra spaces", () => {
+  it("has the house (living room, hall, landing, back garden, four own rooms with their extra spaces), outside, the office and the gym", () => {
     const rooms = ["kamer-anne", "kamer-bram", "kamer-daphne", "kamer-irene"];
     const spaces = rooms.flatMap((r) => ["badkamer", "gym", "tuin", "zolder"].map((s) => `${r}-${s}`));
-    expect(Object.keys(SCENES).sort()).toEqual(["buiten", ...rooms, ...spaces, "kantoor", "sportschool", "woonkamer"].sort());
+    expect(Object.keys(SCENES).sort()).toEqual(["buiten", ...rooms, ...spaces, "kantoor", "sportschool", "woonkamer", "hal", "overloop", "achtertuin"].sort());
   });
   for (const scene of scenes) {
     describe(scene.id, () => {
@@ -185,7 +185,7 @@ describe("scenes", () => {
           expect(d.to && SCENES[d.to]).toBeTruthy();
           const back = SCENES[d.to!].doors.find((x) => x.id === d.arrive);
           expect(back).toBeTruthy();
-          // Own rooms open onto the living room's front door; every other door has its own door back.
+          // An extra space opens onto its room's door, which leads to the landing; every other door has its own door back.
           if (!scene.owner) {
             expect(back?.to).toBe(scene.id);
             expect(back?.arrive).toBe(d.id);
@@ -196,7 +196,8 @@ describe("scenes", () => {
         for (const s of scene.seats) expect(reach(s.approach), s.id).toBe(true);
         for (const s of scene.spots) {
           expect(reach(s.approach), s.id).toBe(true);
-          expect(pointInPolygon(s.at, s.tap), s.id).toBe(true);
+          // On it (a treadmill), or on free floor in front of it (the stove, the Weekrad).
+          expect(pointInPolygon(s.at, s.tap) || reach(s.at), s.id).toBe(true);
         }
       });
       it("a seat names furniture that exists", () => {
