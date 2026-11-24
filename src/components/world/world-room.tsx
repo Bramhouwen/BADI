@@ -125,7 +125,7 @@ export function FurnishBar({
         <button type="button" onClick={onShop} className="flex h-11 items-center justify-center gap-1.5 rounded-[14px] bg-[#f6ece4] text-[13px] font-semibold text-text">
           <ShoppingBag className="h-4 w-4" aria-hidden /> Winkel
         </button>
-        <button type="button" onClick={onDone} className="flex h-11 items-center justify-center gap-1.5 rounded-[14px] bg-[#2b1d18] text-[13px] font-semibold text-white">
+        <button type="button" onClick={onDone} className="flex h-11 items-center justify-center gap-1.5 espresso rounded-[14px] text-[13px] font-semibold">
           <Check className="h-4 w-4" aria-hidden /> Klaar
         </button>
       </div>
@@ -169,7 +169,7 @@ export function VisitCard({ bottom, owner, onLeave, onClose }: { bottom: number 
         <button type="button" disabled={busy} onClick={() => leave("highfive")} className="flex h-11 items-center justify-center gap-1.5 rounded-[14px] bg-[#f6ece4] text-[13px] font-semibold text-text disabled:opacity-50">
           <span aria-hidden>🙌</span> High five
         </button>
-        <button type="button" disabled={busy || !text.trim()} onClick={() => leave("briefje")} className="flex h-11 items-center justify-center gap-1.5 rounded-[14px] bg-[#2b1d18] text-[13px] font-semibold text-white disabled:opacity-40">
+        <button type="button" disabled={busy || !text.trim()} onClick={() => leave("briefje")} className="flex h-11 items-center justify-center gap-1.5 espresso rounded-[14px] text-[13px] font-semibold disabled:opacity-40">
           <Mail className="h-4 w-4" aria-hidden /> Briefje achterlaten
         </button>
       </div>

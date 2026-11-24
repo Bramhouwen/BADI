@@ -215,7 +215,7 @@ export function WorldThread({
           const mine = m.from === me;
           return (
             <li key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <span className={`max-w-[78%] rounded-[16px] px-3 py-1.5 text-[14px] leading-snug ${mine ? "bg-[#2b1d18] text-white" : "bg-[#f3e9e1] text-text"}`} title={relativeTimeNl(m.at)}>
+              <span className={`max-w-[78%] rounded-[16px] px-3 py-1.5 text-[14px] leading-snug ${mine ? "bg-[#6b3d30] text-paper" : "bg-[#f3e9e1] text-text"}`} title={relativeTimeNl(m.at)}>
                 {m.text}
               </span>
             </li>

@@ -576,7 +576,7 @@ export function WorldView({
                     </button>
                   </>
                 ) : null}
-                <button type="button" onClick={() => openThread({ id: picked.id, name: picked.name })} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#2b1d18] text-[11.5px] font-semibold text-white">
+                <button type="button" onClick={() => openThread({ id: picked.id, name: picked.name })} className="flex h-14 flex-col items-center justify-center gap-0.5 rounded-[14px] bg-[#f6ece4] text-[11.5px] font-semibold text-text">
                   <Lock className="h-4 w-4" aria-hidden /> Privé
                 </button>
                 {members.find((m) => m.id === picked.id)?.character ? (

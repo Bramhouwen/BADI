@@ -189,7 +189,7 @@ export function MissionsSheet({ bottom, game, onClose }: { bottom: number | stri
               </span>
               <span className="text-[12.5px] font-semibold text-[#9a6b1f]">+{m.coins}</span>
               {!m.done ? (
-                <Link href={m.href} className="rounded-full bg-[#2b1d18] px-3 py-1.5 text-[12.5px] font-semibold text-white">
+                <Link href={m.href} className="espresso rounded-full px-3 py-1.5 text-[12.5px] font-semibold">
                   Doen
                 </Link>
               ) : null}
@@ -223,7 +223,7 @@ export function SpotChoice({ spot, bottom, onDo, onClose }: { spot: Spot; bottom
           <Footprints className="h-4 w-4" aria-hidden /> Rennen
         </button>
         {spot.link ? (
-          <Link href={spot.link.href} className="flex h-14 items-center justify-center rounded-[16px] bg-[#2b1d18] text-[14px] font-semibold text-white">
+          <Link href={spot.link.href} className="espresso flex h-14 items-center justify-center rounded-[16px] text-[14px] font-semibold">
             {spot.link.label}
           </Link>
         ) : null}
